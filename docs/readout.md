@@ -65,7 +65,7 @@ Q3 expansion was **$63.7K** of new monthly revenue from existing customers, down
 | P5 | Test a capped Basic package before deciding to revert | Product / Pricing | +0.12 pts (about +0.7 pts a year once rolled out) | 50/50 on new signups | Loses the conversion gain the change was meant to buy |
 | P4 | Premium trial for the Basic accounts most likely to upgrade | Sales-assist | +0.07 pts | 30% control group | Pulls forward upgrades that would have happened anyway |
 | P6 | Better onboarding and an annual offer for Paid Social signups | Growth Marketing | +0.04 pts (most value lands after next year) | Alternate signup weeks | Fewer signups; needs acquisition cost data |
-| | **Total** | | **≈ +1.5 pts (range +0.8 to +2.4)** | | |
+| | **Total** | | **≈ +1.5 pts (range +0.7 to +2.4)** | | |
 
 Each figure = revenue on the target list today × how much similar accounts lost (or added) in the past × the share of that we expect the action to change. The last part is an assumption — none of these has been tried here — which is why every action has a control group and a read-out date (`notebooks/05_recommendations.ipynb`). Each account counts in one action only.
 

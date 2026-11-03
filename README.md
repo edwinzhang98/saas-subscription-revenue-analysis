@@ -33,16 +33,16 @@ Seven plays, each with an owner, a control group and stated risks. Five work fro
 | P5 | Test a capped Basic package on new signups before reverting | Product / Pricing | +0.12 pts (≈ +0.7 pts a year once rolled out) | 50/50 test, decision read Jul 2027 |
 | P4 | Premium trial for the top 100 upgrade candidates each quarter | Sales-assist | +0.07 pts | 30% holdout |
 | P6 | Activation + annual offer for Paid Social cohorts | Growth Marketing | +0.04 pts (most value after next year) | Alternate signup weeks |
-| | **Total** | | **≈ +1.5 pts** (range +0.8 to +2.4) | |
+| | **Total** | | **≈ +1.5 pts** (range +0.7 to +2.4) | |
 
-The CS team works from [`docs/account_health_list.csv`](docs/account_health_list.csv): 1,289 accounts with queue, priority, reason codes, evidence in plain words, ARR at stake and the play. The board memo is [`docs/readout.md`](docs/readout.md); the recurring monthly review is [`docs/monthly_revenue_review.md`](docs/monthly_revenue_review.md).
+The CS team works from [`docs/account_health_list.csv`](docs/account_health_list.csv): 1,408 accounts (989 on the risk list, 119 Technology renewals no risk flag caught, 300 upgrade opportunities) with queue, priority, reason codes, evidence in plain words, ARR at stake and the play. The board memo is [`docs/readout.md`](docs/readout.md); the recurring monthly review is [`docs/monthly_revenue_review.md`](docs/monthly_revenue_review.md).
 
 ## Key charts
 
 | | |
 |---|---|
 | ![YoY expansion bridge](reports/figures/expansion_bridge_yoy.png) | ![NRR trend](reports/figures/nrr_trend.png) |
-| **Expansion bridge vs Q3 2025:** a bigger base adds $42K; Technology and plan upgrades take away $38K | **NRR / GRR:** June's peak is the one-off; the dotted line removes it |
+| **Expansion bridge vs Q3 2025:** a bigger base adds $42K; Technology and plan upgrades take away $38K | **NRR / GRR:** the May peak is the one-off rollout; the dotted line removes it |
 | ![Basic upgrade rate](reports/figures/upgrade_rate_monthly.png) | ![Silent churn trend](reports/figures/silent_churn_trend.png) |
 | **Basic → Premium upgrades:** a step down after April on top of an earlier drift | **ARR at risk from silent contraction** quadrupled in a year |
 | ![Early-warning trade-off](reports/figures/early_warning_tradeoff.png) | ![Play impact](reports/figures/recommendations_impact.png) |
@@ -56,7 +56,7 @@ Every page opens with the one question it answers and ends with "How to read thi
 
 | | |
 |---|---|
-| ![Overview](reports/screenshots/01_overview.png) **1. Overview** — board numbers and the three things to know | ![Data Model](reports/screenshots/02_data_model.png) **2. Data Model** — tables, generation rules, data-quality and known-answer checks |
+| ![Overview](reports/screenshots/01_overview.png) **1. Overview** — board numbers and the four things to know | ![Data Model](reports/screenshots/02_data_model.png) **2. Data Model** — tables, generation rules, data-quality and known-answer checks |
 | ![MRR Waterfall](reports/screenshots/03_mrr_waterfall.png) **3. MRR Waterfall** — monthly / quarterly movements and the expansion bridges | ![NRR Cohorts](reports/screenshots/04_nrr_cohorts.png) **4. NRR / GRR Cohorts** — retention by segment and signup cohort |
 | ![Plan Transitions](reports/screenshots/05_plan_transitions.png) **5. Plan Transitions** — Sankey, upgrade rate before / after, mix vs rate, downgrades | ![Expansion Signals](reports/screenshots/06_expansion_signals.png) **6. Expansion Signals** — what precedes an upgrade, model, opportunity list |
 | ![Silent Churn](reports/screenshots/07_silent_churn.png) **7. Silent Churn Watchlist** — who is shrinking, early-warning back-test, CS list | ![Recommendations](reports/screenshots/08_recommendations.png) **8. Recommendations** — plays with adjustable assumptions |
@@ -72,7 +72,7 @@ Every page opens with the one question it answers and ends with "How to read thi
 ## Limitations
 
 - **Synthetic data:** effect sizes come from rules I wrote; findings describe this dataset only. The generator was calibrated until the VP's premise held, which is disclosed in the data model.
-- **Observational, not causal:** the packaging and Technology findings line up in time with known events. Because Basic upgrades were already drifting down before April, the part of the fall that lines up with the packaging change is 0.4 to 0.8 points of the monthly upgrade rate, depending on how much of the earlier drift would have continued — a range, not a measured effect. The proposed tests are the clean answer. The proposed tests are the clean answer.
+- **Observational, not causal:** the packaging and Technology findings line up in time with known events. Because Basic upgrades were already drifting down before April, the part of the fall that lines up with the packaging change is 0.4 to 0.8 points of the monthly upgrade rate, depending on how much of the earlier drift would have continued — a range, not a measured effect. The proposed tests are the clean answer.
 - **Small samples where flagged:** 73 post-change upgrades, 43 CS saves with follow-up, two prior years for seasonality — intervals are shown.
 - **Play effects are assumptions** until each holdout reads out; plan on the low end.
 - **What I would want next:** sales pipeline data for sales-assisted expansion, CRM notes and headcount signals for Technology accounts, user-level product events, and trial data to measure the packaging change's conversion goal.
