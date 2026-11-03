@@ -75,7 +75,8 @@ prof = d["profile"]
 tech = prof[(prof["dimension"] == "industry") & (prof["value"] == "Technology")].iloc[0]
 
 c = st.columns(5)
-c[0].metric("Silent accounts", f"{n_silent:,}", delta_pct(n_silent / june["accounts"] - 1, 0, " vs Jun 2026") if june is not None else "",
+june_silent = d["trend"][(d["trend"]["month_end"] == pd.Timestamp("2026-06-30")) & (d["trend"]["contraction_class"] == "silent")]["accounts"].sum()
+c[0].metric("Silent accounts", f"{n_silent:,}", delta_pct(n_silent / june_silent - 1, 0, " vs Jun 2026") if june_silent else "",
             delta_color="inverse", border=True, help="Contraction came from the customer: seat cuts, right-sizing, downgrades.")
 c[1].metric("Saved by CS (re-risk)", f"{n_saved:,}", "reported separately", delta_color="off", delta_arrow="off", border=True,
             help="The account asked to cancel and was kept on smaller terms (change_source = customer_success).")

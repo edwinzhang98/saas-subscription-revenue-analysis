@@ -364,9 +364,9 @@ These are deliberate, so the analysis has realistic, overlapping drivers to unta
 | Orphan `plan_changes` (keyed in after cancellation) | 0.2% of rows → 13 `seat_decrease` rows (−1 seat, source `self_serve`) with `effective_date` 0–20 days on or after the subscription's `end_date` | Dropped by the validity rule `start_date ≤ effective_date < end_date` in `stg_plan_changes` and counted (`02 §3`) |
 | Duplicated usage rows (pipeline double-load) | 0.4% of rows → 6,004 exact duplicates | De-duplicated on (`customer_id`, `week_start`, `event_name`) in `stg_usage_events` |
 | Voided duplicate invoice lines | 0.5% of lines → 236 lines (`INV-V…`, `status = void`, `payment_attempts = 0`), plus the 37 void lines of internal accounts | `status = 'void'` excluded in `stg_invoices` |
-| Missing industry (self-serve SMB, not asked at signup) | 2% of self-serve SMB → 48 accounts | Bucketed as `Unknown` with an `industry_missing` flag; segment is always present |
-| Missing `employee_count` | 3% of real accounts → 148 nulls | Kept null; never used for segmentation |
-| `employee_count` outside the segment band (enrichment updated the count after signup) | 3% of real accounts → 155 (SMB shown with 101–179 employees; Mid-Market with 60–99 or 1,001–1,399; Enterprise with 700–999) | `segment` is the system of record; mismatches are flagged in `03_data_quality_checks.md`, never re-segmented |
+| Missing industry (self-serve SMB, not asked at signup) | 2% of self-serve SMB → 47 accounts | Bucketed as `Unknown` with an `industry_missing` flag; segment is always present |
+| Missing `employee_count` | 3% of real accounts → 147 nulls | Kept null; never used for segmentation |
+| `employee_count` outside the segment band (enrichment updated the count after signup) | 3% of real accounts → 155 in the raw table, 149 after excluding internal and duplicate records (the count in `03_data_quality_checks.md` VR07) (SMB shown with 101–179 employees; Mid-Market with 60–99 or 1,001–1,399; Enterprise with 700–999) | `segment` is the system of record; mismatches are flagged in `03_data_quality_checks.md`, never re-segmented |
 | Usage after cancellation (grace period) | 2 weeks per ended subscription, at 50% then 20% of normal activity | Kept in `stg_usage_events`; never used for MRR; usage metrics are computed on weeks with a live subscription |
 | Partial final week (28–30 Sep 2026 has 3 of 7 days) | 1 week | `is_complete_week = false`; excluded from weekly trends (`02 §2`, §12) |
 | WAU above seats (allowed overage, up to 10%) | a few % of account-weeks | Kept; utilization can exceed 100% (a signal, not an error) |
@@ -395,7 +395,7 @@ All 18 checks pass on the published run (`reports/generator_sanity_checks.json`)
 | 15 | Technology seat-add events per account-month, Jun–Sep 2026 vs prior 12 months | −90% to −40% | −77.0% | PASS | S4 |
 | 16 | Voluntary Basic upgrade rate, Q3 2026 vs Q3 2025 (relative) | −70% to −30% | −63.6% | PASS | S3 (×0.50) compounded with the S2 mix shift |
 | 17 | Basic monthly logo churn (non-Paid-Social), May–Sep 2026 vs May–Sep 2025 | −35% to −5% | −7.3% | PASS | S3 upside is real but small, so the Product decision is a trade-off |
-| 18 | Silent contraction at 2026-09-30, share of MRR | 2% – 12% | 3.97% (309 accounts) | PASS | Material but not dominant; computed with the billing-neutral definition (`02 §9`) |
+| 18 | Silent contraction at 2026-09-30, share of MRR | 2% – 12% | 3.97% (309 accounts) | PASS | Material but not dominant. This check is a pandas approximation of `02 §9` on the raw tables (it counts any billing-neutral drop); the SQL definition, which also requires the drop to come through a Contraction movement, finds 307 accounts |
 
 ## 9. Calibration change log
 

@@ -134,6 +134,7 @@ def write_mbr() -> Path:
                         "Q3 2026 rate (of start)": ["", pct(q3["new_rate"]), pct(q3["expansion_rate"]), pct(q3["reactivation_rate"]), pct(q3["contraction_rate"]), pct(q3["churn_rate"]), ""],
                         "Q3 2025 rate": ["", pct(q.loc["2025-Q3", "new_rate"]), pct(q.loc["2025-Q3", "expansion_rate"]), pct(q.loc["2025-Q3", "reactivation_rate"]), pct(q.loc["2025-Q3", "contraction_rate"]), pct(q.loc["2025-Q3", "churn_rate"]), ""]})
     trend = n[n.index.month.isin([3, 6, 9, 12]) & (n.index >= "2025-06-30")][["base_customers", "nrr", "grr", "logo_retention"]].reset_index()
+    trend["Note"] = np.where(trend["base_customers"] < 1000, "base < 1,000 customers: greyed in charts, read with care (scope §3)", "")
     trend["month_end"] = trend["month_end"].dt.strftime("%b %Y")
     trend = trend.rename(columns={"month_end": "Quarter end", "base_customers": "Base customers", "nrr": "NRR", "grr": "GRR", "logo_retention": "Logo retention"})
     segt = seg[seg["dimension"].isin(["segment", "industry"])][["dimension", "dimension_value", "base_customers", "nrr", "nrr_year_ago", "grr"]]

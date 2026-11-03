@@ -42,7 +42,7 @@ k = key_numbers("metrics")
 cc = st.columns([1, 1, 2])
 which = cc[0].radio("Compare Q3 2026 with", ["Q2 2026 (sequential)", "Q3 2025 (same quarter last year)"], index=0)
 excl = cc[1].toggle("Remove the one-off rollout", value=True,
-                    help=f"{k['one_off_company']} tripled seats in May 2026 (+{money(k['one_off_expansion_mrr'])} MRR, "
+                    help=f"{k['one_off_company']} doubled its seats in May 2026 (+{money(k['one_off_expansion_mrr'])} MRR, "
                          f"{pct(k['one_off_share_of_q2'], 0)} of Q2 expansion). Sales confirmed it is not repeatable.")
 cc[2].markdown(
     f"<div class='note'>Seasonality check (n = 2): the expansion rate moved "

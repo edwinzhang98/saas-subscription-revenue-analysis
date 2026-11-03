@@ -148,18 +148,21 @@ def nrr_excluding(customer_ids: list[str]) -> pd.DataFrame:
 
 
 def top_movers(quarter: str, n: int = 10) -> pd.DataFrame:
+    """Largest expansion / contraction / churn accounts in the quarter. mrr_start = MRR just before the first
+    movement of that kind in the quarter (so a customer who joined and churned inside the quarter shows the MRR it
+    churned from, not 0); mrr_end = MRR at the quarter's last month-end."""
     mv = marts.load("fct_mrr_movements")
-    q = mv[mv["quarter_label"] == quarter]
-    agg = q.groupby("customer_id", as_index=False).agg(
-        expansion=("expansion_mrr", "sum"), contraction=("contraction_mrr", "sum"), churn=("churn_mrr", "sum"),
-        mrr_start=("mrr_prev", "first"), mrr_end=("mrr", "last"))
+    q = mv[mv["quarter_label"] == quarter].sort_values(["customer_id", "month_end"])
+    end = q.groupby("customer_id")["mrr"].last()
     cust = marts.load("stg_customers")[["customer_id", "company_name", "segment", "industry", "cs_coverage", "csm_owner"]]
-    agg = agg.merge(cust, on="customer_id")
     out = []
     for kind in ("expansion", "contraction", "churn"):
-        top = agg[agg[kind] > 0].nlargest(n, kind).copy()
+        col = f"{kind}_mrr"
+        rows = q[q[col] > 0]
+        g = rows.groupby("customer_id", as_index=False).agg(amount=(col, "sum"), mrr_start=("mrr_prev", "first"))
+        g["mrr_end"] = g["customer_id"].map(end)
+        top = g.nlargest(n, "amount").merge(cust, on="customer_id")
         top.insert(0, "mover_type", kind)
-        top["amount"] = top[kind]
         out.append(top)
     return pd.concat(out, ignore_index=True)[[
         "mover_type", "customer_id", "company_name", "segment", "industry", "csm_owner", "mrr_start", "mrr_end", "amount"]]

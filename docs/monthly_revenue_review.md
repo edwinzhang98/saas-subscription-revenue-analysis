@@ -42,14 +42,14 @@ Chart: `reports/figures/mrr_waterfall.png` (monthly movements since Oct 2024) an
 
 **12-month NRR / GRR by quarter-end**
 
-| Quarter end | Base customers | NRR | GRR | Logo retention |
-|---|---|---|---|---|
-| Jun 2025 | 861 | 105.7% | 87.4% | 80.7% |
-| Sep 2025 | 1,118 | 104.8% | 85.9% | 81.1% |
-| Dec 2025 | 1,405 | 105.2% | 85.9% | 81.9% |
-| Mar 2026 | 1,738 | 103.1% | 84.8% | 80.9% |
-| Jun 2026 | 2,054 | 107.0% | 85.8% | 82.4% |
-| Sep 2026 | 2,377 | 103.5% | 84.6% | 81.9% |
+| Quarter end | Base customers | NRR | GRR | Logo retention | Note |
+|---|---|---|---|---|---|
+| Jun 2025 | 861 | 105.7% | 87.4% | 80.7% | base < 1,000 customers: greyed in charts, read with care (scope §3) |
+| Sep 2025 | 1,118 | 104.8% | 85.9% | 81.1% |  |
+| Dec 2025 | 1,405 | 105.2% | 85.9% | 81.9% |  |
+| Mar 2026 | 1,738 | 103.1% | 84.8% | 80.9% |  |
+| Jun 2026 | 2,054 | 107.0% | 85.8% | 82.4% |  |
+| Sep 2026 | 2,377 | 103.5% | 84.6% | 81.9% |  |
 
 **By segment and industry (12-month NRR, base = customers paying a year earlier)**
 
@@ -132,7 +132,7 @@ in Q3 2025 — −1.5 pts, beyond the 1.0-pt threshold → **re-forecast Q4 expa
 | Lakefield Studios | Enterprise | Media & Marketing | CSM-02 | $4.0K → $0 | $4.0K |
 | Summitline Associates | Mid-Market | Professional Services | CSM-08 | $2.6K → $0 | $2.6K |
 | Oakloop Advisory | Mid-Market | Professional Services | CSM-05 | $1.6K → $0 | $1.6K |
-| Lumenhub Consulting | Mid-Market | Professional Services | CSM-09 | $0 → $0 | $1.6K |
+| Lumenhub Consulting | Mid-Market | Professional Services | CSM-09 | $1.6K → $0 | $1.6K |
 
 ## 6. Who works which accounts (`docs/account_health_list.csv`)
 

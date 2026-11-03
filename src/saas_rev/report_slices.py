@@ -140,7 +140,7 @@ def s_silent() -> dict:
     body += finding(
         f"<b>{k['flagged_accounts']:,} paying accounts have cut their spend by at least 20% in six months without cancelling</b> — "
         f"{money(k['arr_at_risk'], 2)} of ARR still on the books ({pct(k['arr_at_risk_share_of_arr'])} of ARR) and {money(k['lost_arr'])} already gone. "
-        f"The list tripled in a year ({k['flagged_accounts_2025_09']} accounts in Sep 2025, {k['flagged_accounts_2026_06']} in June). "
+        f"The list more than tripled in a year ({k['flagged_accounts_2025_09']} accounts in Sep 2025, {k['flagged_accounts_2026_06']} in June). "
         f"Technology accounts are {pct(prof['technology_share_flagged'], 0)} of them vs {pct(prof['technology_share_other'], 0)} of other paying "
         f"accounts; their flag rate went from {pct(prof['technology_flag_rate_2026_06'], 1)} in June to {pct(prof['technology_flag_rate'], 1)} in "
         f"September, while other industries stayed near {pct(prof['other_flag_rate'], 1)} — consistent with the hiring slowdown CSMs reported.")

@@ -1,6 +1,6 @@
 # 02 — Metric definitions (single source of truth)
 
-**Owner:** Revenue Analytics (RevOps) · **Reviewed with:** Finance (board pack), Customer Success Ops · **Version:** 1.1 (2026-11-03, change log at the end)
+**Owner:** Revenue Analytics (RevOps) · **Reviewed with:** Finance (board pack), Customer Success Ops · **Version:** 1.2 (2026-11-03, change log at the end)
 Every number in the board pack, the monthly revenue review, the dashboard and the CS lists comes from these definitions. The SQL implementation is in `sql/` (one file per model, §16). An independent Python implementation (`src/saas_rev/crosscheck.py`, written from this document alone) must match MRR, movements, NRR and GRR **to the cent per customer-month**; results are in `03_data_quality_checks.md`.
 
 ---
@@ -200,7 +200,7 @@ One row per account: the risk watchlist (§9, §9.1) and the top 300 upgrade opp
 
 | Field | Definition |
 |---|---|
-| `queue` | Who works the account this quarter: `csm` (P1 — the first 120 CSM-covered risk accounts by priority; CS capacity, assumption A9), `renewal_desk` (P3 — Technology annual renewals within 6 months on the risk list, not in P1), `digital` (P2 — the rest of the risk list), `sales_assist` (P4 — top 100 upgrade opportunities), `in_app` (the next 200 opportunities; in-app prompt only) |
+| `queue` | Who works the account this quarter: `csm` (P1 — the first 120 CSM-covered risk accounts by priority; CS capacity, assumption A9), `renewal_desk` (P3 — Technology annual renewals within 6 months on the risk list, not in P1; P3's full target also includes Technology renewals that are not flagged, which the renewal desk takes from the renewal calendar), `digital` (P2 — the rest of the risk list), `sales_assist` (P4 — top 100 upgrade opportunities), `in_app` (the next 200 opportunities; in-app prompt only) |
 | `priority_rank` | Rank within the queue: annual renewals within 120 days first, then `arr_at_stake` |
 | `play` | The recommendation the account belongs to (`notebooks/05_recommendations.ipynb`); each account is in one play only |
 | `list_type` | `risk` (silent contraction §9, CS saves, or early-warning flag §9.1) or `expansion` (upgrade propensity §13) |
@@ -252,7 +252,7 @@ One row per account: the risk watchlist (§9, §9.1) and the top 300 upgrade opp
 - **"Do failed payments count as churn immediately?"** No — only when the subscription is canceled after the 14-day dunning window.
 - **"Segment changed during the year?"** Segments are static in this data. Plan and billing period are taken at the start of the measurement window.
 - **"Why is GRR capped per customer instead of (start − churn − contraction) ÷ start?"** The capped point-to-point version is what investors compare across companies: one customer's expansion cannot offset another's loss. It does ignore a contraction fully recovered by *t* (NRR makes the same choice); the monthly flow rates in §5 capture those.
-- **"Why is TTM NRR still above 105% if expansion slowed?"** TTM NRR averages four quarters; one weak quarter moves it by roughly a quarter of the change. The run-rate NRR in §7 shows the Q3 change directly.
+- **"Why is TTM NRR still above 100% if expansion slowed?"** TTM NRR compares MRR today with MRR twelve months ago, so it carries the strong quarters (and the May one-off rollout) until they drop out of the window; one weak quarter moves it by roughly a quarter of the change. The run-rate NRR in §7 shows the Q3 change directly (92.9% annualised vs 103.5% TTM).
 
 ## 18. Change log
 
