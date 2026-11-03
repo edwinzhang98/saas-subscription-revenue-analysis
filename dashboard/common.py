@@ -30,10 +30,15 @@ def page_header(title: str, question: str) -> None:
     st.markdown(f"<div class='page-question'>{question}</div>", unsafe_allow_html=True)
 
 
+def md_escape(text: str) -> str:
+    """Streamlit markdown reads a pair of $ as LaTeX math; escape them in plain-markdown text (not in HTML blocks)."""
+    return text.replace("$", "\\$")
+
+
 def how_to_read(markdown: str) -> None:
     st.divider()
     with st.expander("How to read this", expanded=False, icon=":material/help_outline:"):
-        st.markdown(markdown)
+        st.markdown(md_escape(markdown))
     st.markdown(f"<div class='note'>Synthetic data · data as of {AS_OF_LABEL} · definitions in "
                 "docs/02_metric_definitions.md</div>", unsafe_allow_html=True)
 

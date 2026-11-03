@@ -6,6 +6,11 @@ from saas_rev.analysis import recommendations as R
 from saas_rev.theme import money, pct
 
 
+def _md(text: str) -> str:
+    """Escape dollar signs: Streamlit markdown reads a pair of $ as LaTeX math."""
+    return text.replace("$", "\\$")
+
+
 @st.cache_data(show_spinner=False)
 def _plays():
     return R.build_plays()
@@ -57,9 +62,9 @@ for r in t.sort_values("nrr_pts", ascending=False).itertuples():
         top[0].markdown(f"#### {r.id} · {r.play}\n**Owner:** {r.owner}")
         top[1].metric("NRR impact", f"+{r.nrr_pts * 100:.2f} pts", f"{money(r.impact_mrr * 12)} ARR", delta_color="off",
                       delta_arrow="off")
-        st.markdown(f"**Who:** {r.who}  \n**What:** {r.what}  \n**Evidence:** {r.evidence}  \n"
-                    f"**How we will know:** {r.measure}  \n**Risks:** {r.risk}")
-        st.markdown(f"<span class='note'>Sizing: {r.sizing_text}. {r.sizing_note}</span>", unsafe_allow_html=True)
+        st.markdown(_md(f"**Who:** {r.who}  \n**What:** {r.what}  \n**Evidence:** {r.evidence}  \n"
+                        f"**How we will know:** {r.measure}  \n**Risks:** {r.risk}"))
+        st.markdown(_md(f"<span class='note'>Sizing: {r.sizing_text}. {r.sizing_note}</span>"), unsafe_allow_html=True)
 
 data_table(t[["id", "play", "owner", "accounts", "addressable_mrr", "outcome_rate", "effect_used", "reach", "impact_mrr",
               "nrr_pts", "nrr_pts_low", "nrr_pts_high"]], "Show the sizing table")

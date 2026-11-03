@@ -108,11 +108,13 @@ def s_summary() -> dict:
         ("Paying customers", f"{k['paying_customers']:,}", f"ARPA {money(k['arpa'], 0)}"),
     ])
     body += "<p class='lead'>The board asked for NRR and why expansion slowed last quarter. Short answer:</p>"
-    body += finding(f"<b>Expansion did slow, and most of the slowdown is structural.</b> Q3 expansion was {money(k['expansion_q3_2026'])}, "
-                    f"{pct(k['expansion_change_qoq'], 0, signed=True)} vs Q2 — but {pct(k['one_off_share_of_q2'], 0)} of Q2 was a one-off "
-                    f"rollout at {k['one_off_company']}. Like for like, the expansion rate fell from {pct(k['expansion_rate_q2_2026_ex_one_off'])} "
-                    f"(Q2) and {pct(k['expansion_rate_q3_2025'])} (Q3 2025) to {pct(k['expansion_rate_q3_2026'])} of starting MRR — more than the "
-                    "1-point threshold the VP set for re-forecasting.")
+    drop = k["expansion_q2_2026"] - k["expansion_q3_2026"]
+    body += finding(f"<b>Expansion did slow. Most of the drop from Q2 is a one-off, but the like-for-like rate fell too — and that part "
+                    f"is structural.</b> Q3 expansion was {money(k['expansion_q3_2026'])}, {pct(k['expansion_change_qoq'], 0, signed=True)} vs Q2; "
+                    f"{pct(k['one_off_share_of_q2'], 0)} of Q2's expansion was a one-off rollout at {k['one_off_company']} "
+                    f"({pct(k['one_off_expansion_mrr'] / drop, 0)} of the {money(drop)} drop). Like for like, the expansion rate fell from "
+                    f"{pct(k['expansion_rate_q2_2026_ex_one_off'])} (Q2) and {pct(k['expansion_rate_q3_2025'])} (Q3 2025) to "
+                    f"{pct(k['expansion_rate_q3_2026'])} of starting MRR — more than the 1-point threshold the VP set for re-forecasting.")
     body += finding(f"<b>Two drivers explain it:</b> Technology-sector accounts stopped adding seats and started cutting "
                     f"({money(abs(k['bridge_yoy']['Technology (all)']))} less expansion than their Q3 2025 rate), and Basic → Premium upgrades "
                     f"roughly halved after the April packaging change ({money(abs(k['bridge_yoy']['Non-Tech plan upgrades']))} less). "

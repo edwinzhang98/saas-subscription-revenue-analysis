@@ -17,7 +17,7 @@
     {
       "event": "S3 Basic packaging change (2026-04-15)",
       "planted": "upgrade hazard \u00d7 0.5, paywall hits \u00d7 0.4; upside: Basic churn \u00d7 0.85",
-      "recovered": "voluntary Basic upgrade rate 1.49% \u2192 0.69% per month (non-Paid-Social 1.58% \u2192 0.77%); paywall hits per active user \u00d7 0.39; automation runs \u00d7 2.95; Basic monthly churn 1.93% \u2192 1.79%",
+      "recovered": "voluntary Basic upgrade rate 1.51% \u2192 0.69% per month (non-Paid-Social 1.60% \u2192 0.77%); paywall hits per active user \u00d7 0.39; automation runs \u00d7 2.95; Basic monthly churn 1.93% \u2192 1.79%",
       "naive_cut": "a before/after on the pooled Basic upgrade rate also picks up the Paid Social mix shift",
       "verdict": "recovered"
     },
@@ -86,9 +86,9 @@
       "tech_nrr_2026_09": 0.9554793308164926
     },
     "s3": {
-      "upgrade_rate_pre": 0.014850504917167183,
+      "upgrade_rate_pre": 0.015142150803461063,
       "upgrade_rate_post": 0.006852529803811133,
-      "upgrade_rate_pre_non_paid_social": 0.01578403894379702,
+      "upgrade_rate_pre_non_paid_social": 0.01599779340780582,
       "upgrade_rate_post_non_paid_social": 0.0076550714848587186,
       "gate_hits_per_wau_ratio_post_pre": 0.3906017169799963,
       "automation_per_wau_ratio_post_pre": 2.9451799999422783,

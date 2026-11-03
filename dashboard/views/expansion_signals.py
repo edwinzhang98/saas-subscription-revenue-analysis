@@ -64,7 +64,7 @@ data_table(sig[["name", "n_upgraders", "n_stayers", "median_upgraders", "median_
                           "smd_hi": st.column_config.NumberColumn("SMD high", format="%.2f"),
                           "median_upgraders": st.column_config.NumberColumn("Median, upgraders", format="%.3f"),
                           "median_stayers": st.column_config.NumberColumn("Median, stayers", format="%.3f"),
-                          "top_quintile_rate": st.column_config.NumberColumn("Top-bin upgrade rate", format="%.1f%%"),
+                          "top_quintile_rate": st.column_config.NumberColumn("Top-bin upgrade rate", format="percent"),
                           "top_quintile_lift": st.column_config.NumberColumn("Top-bin lift", format="%.2fx"),
                           "top_quintile_lift_lo": st.column_config.NumberColumn("Lift low", format="%.2fx"),
                           "top_quintile_lift_hi": st.column_config.NumberColumn("Lift high", format="%.2fx")})
@@ -97,18 +97,18 @@ t[4].metric("Upgrades captured", pct(r["recall"], 0), f"{r['upgrades_above']} of
 q = quint[(quint["signal"] == signal) & (quint["period"] == period)]
 plot(E.fig_quintile_lift(signal, period, q=q))
 data_table(q[["bin", "quintile_span", "n", "upgrades", "rate", "rate_lo", "rate_hi", "lift", "share_of_rows"]], "Show the bins",
-           column_config={"rate": st.column_config.NumberColumn("Upgrade rate", format="%.2f%%"),
-                          "rate_lo": st.column_config.NumberColumn("Rate low", format="%.2f%%"),
-                          "rate_hi": st.column_config.NumberColumn("Rate high", format="%.2f%%"),
+           column_config={"rate": st.column_config.NumberColumn("Upgrade rate", format="percent"),
+                          "rate_lo": st.column_config.NumberColumn("Rate low", format="percent"),
+                          "rate_hi": st.column_config.NumberColumn("Rate high", format="percent"),
                           "lift": st.column_config.NumberColumn("Lift", format="%.2fx"),
-                          "share_of_rows": st.column_config.NumberColumn("Share of rows", format="%.0f%%")})
+                          "share_of_rows": st.column_config.NumberColumn("Share of rows", format="percent")})
 
 # ------------------------------------------------------------------ 3. drift
 st.subheader("3. Did the signals survive the April 2026 packaging change?")
 plot(E.fig_gate_drift(weekly))
 data_table(drift_dist[["period", "name", "account_months", "mean", "p10", "p25", "p50", "p75", "p90", "share_zero"]],
            "Show the before / after distributions",
-           column_config={"share_zero": st.column_config.NumberColumn("Share at zero", format="%.0f%%")})
+           column_config={"share_zero": st.column_config.NumberColumn("Share at zero", format="percent")})
 plot(E.fig_lift_pre_post(sig))
 data_table(sig[["name", "top_quintile_lift_pre", "top_quintile_lift_pre_lo", "top_quintile_lift_pre_hi", "top_quintile_lift_post",
                 "top_quintile_lift_post_lo", "top_quintile_lift_post_hi", "top_quintile_n_post", "top_quintile_upgrades_post"]],
@@ -130,16 +130,13 @@ m[1].metric("Recall (before / after April)", f"{pct(pre['recall'], 0)} / {pct(po
 m[2].metric("Upgrades captured per month", f"{pre['upgrades_per_month']:.1f} / {post['upgrades_per_month']:.1f}",
             f"of {pre['upgrades_total_per_month']:.0f} / {post['upgrades_total_per_month']:.0f} upgrades a month", delta_color="off",
             border=True)
-m[3].metric("MRR of captured upgrades / month", f"{money(pre['mrr_covered_per_month'], 1)} / {money(post['mrr_covered_per_month'], 1)}",
+m[3].metric("MRR of captured upgrades / month", f"{money(pre['mrr_covered_per_month'], 1)} / {money(post['mrr_covered_per_month'], 1)}".replace("$", "\\$"),
             "seats × (Premium − Basic) list price", delta_color="off", border=True)
 m[4].metric("Model AUC (test)", f"{k['auc_test']:.2f}", f"{k['auc_test_pre']:.2f} before · {k['auc_test_post']:.2f} after",
             delta_color="off", border=True)
 plot(E.fig_capture_curve(cap, curve))
-cols2 = st.columns(2)
-with cols2[0]:
-    plot(E.fig_odds_ratios(ors))
-with cols2[1]:
-    plot(E.fig_calibration("all", cal))
+plot(E.fig_odds_ratios(ors))
+plot(E.fig_calibration("all", cal))
 data_table(ors[["label", "coef", "odds_ratio", "or_lo", "or_hi"]], "Show the model coefficients",
            column_config={"coef": st.column_config.NumberColumn("Coefficient (per 1 SD)", format="%.3f"),
                           "odds_ratio": st.column_config.NumberColumn("Odds ratio", format="%.2f"),
@@ -147,10 +144,10 @@ data_table(ors[["label", "coef", "odds_ratio", "or_lo", "or_hi"]], "Show the mod
                           "or_hi": st.column_config.NumberColumn("OR high", format="%.2f")})
 data_table(cal[cal["period"] == "all"][["decile", "n", "upgrades", "predicted", "observed", "observed_lo", "observed_hi"]],
            "Show the calibration table (test period)",
-           column_config={"predicted": st.column_config.NumberColumn("Mean predicted", format="%.1f%%"),
-                          "observed": st.column_config.NumberColumn("Observed", format="%.1f%%"),
-                          "observed_lo": st.column_config.NumberColumn("Observed low", format="%.1f%%"),
-                          "observed_hi": st.column_config.NumberColumn("Observed high", format="%.1f%%")})
+           column_config={"predicted": st.column_config.NumberColumn("Mean predicted", format="percent"),
+                          "observed": st.column_config.NumberColumn("Observed", format="percent"),
+                          "observed_lo": st.column_config.NumberColumn("Observed low", format="percent"),
+                          "observed_hi": st.column_config.NumberColumn("Observed high", format="percent")})
 
 # ------------------------------------------------------------------ 5. opportunity list
 st.subheader(f"5. Upgrade opportunities at 30 Sep 2026 — the top {cap} by expected MRR")
@@ -175,7 +172,7 @@ show = opp.head(cap)[["rank", "company_name", "customer_id", "segment", "cs_cove
 st.dataframe(show, hide_index=True, width="stretch",
              column_config={"current_arr": st.column_config.NumberColumn("Current ARR", format="$%.0f"),
                             "next_renewal_date": st.column_config.DateColumn("Next renewal", format="YYYY-MM-DD"),
-                            "propensity": st.column_config.NumberColumn("Propensity (90 d)", format="%.1f%%"),
+                            "propensity": st.column_config.NumberColumn("Propensity (90 d)", format="percent"),
                             "incremental_mrr_if_upgrade": st.column_config.NumberColumn("MRR if upgraded", format="$%.0f"),
                             "expected_mrr": st.column_config.NumberColumn("Expected MRR", format="$%.0f")})
 st.download_button("Download the full ranked list (CSV)", opp.to_csv(index=False).encode(), "expansion_opportunities.csv", "text/csv")

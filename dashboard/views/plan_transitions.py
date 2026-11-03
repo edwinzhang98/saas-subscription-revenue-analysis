@@ -47,12 +47,12 @@ links = T.sankey_links(horizon, flt, cohort_window)
 if not links.empty:
     data_table(links.assign(state_from=links["state_from"].map(T.PLAN_LABELS), state_to=links["state_to"].map(T.PLAN_LABELS))
                [["stage_from", "state_from", "stage_to", "state_to", "customers", "share_of_from"]], "Show the Sankey flows",
-               column_config={"share_of_from": st.column_config.NumberColumn("Share of source", format="%.1f%%")})
+               column_config={"share_of_from": st.column_config.NumberColumn("Share of source", format="percent")})
 plot(T.fig_transition_heatmap(horizon, flt))
 tm = T.transition_matrix(flt, horizons=(horizon,))
 data_table(tm.assign(from_plan=tm["from_plan"].map(T.PLAN_LABELS), to_state=tm["to_state"].map(T.PLAN_LABELS))
            [["horizon_months", "from_plan", "to_state", "customer_months", "share_of_from_plan", "from_mrr", "to_mrr"]],
-           "Show the transition matrix", column_config={"share_of_from_plan": st.column_config.NumberColumn(format="%.1f%%")})
+           "Show the transition matrix", column_config={"share_of_from_plan": st.column_config.NumberColumn(format="percent")})
 
 # ------------------------------------------------------------------------------- 2. why upgrades fell
 st.subheader("2. Why did Basic upgrades fall in 2026 — channel mix or lower rates?")
@@ -134,14 +134,11 @@ st.dataframe(ds[["flow", "source_label", "downgrades", "customers", "mrr_before"
              column_config={"flow": "Downgrade", "source_label": "Initiated by", "downgrades": "Downgrades (last 12 months)",
                             "customers": "Accounts", "mrr_before": st.column_config.NumberColumn("MRR before", format="$%.0f"),
                             "mrr_delta": st.column_config.NumberColumn("MRR change", format="$%.0f"),
-                            "mrr_retained_share": st.column_config.NumberColumn("MRR kept", format="%.0f%%"),
-                            "seats_cut_share": st.column_config.NumberColumn("Seats cut too", format="%.0f%%"),
-                            "observed_6m": "Observed 6 months", "paying_6m_share": st.column_config.NumberColumn("Still paying at 6 months", format="%.0f%%")})
-c1, c2 = st.columns(2)
-with c1:
-    plot(T.fig_downgrades_quarterly())
-with c2:
-    plot(T.fig_downgrade_survival(6))
+                            "mrr_retained_share": st.column_config.NumberColumn("MRR kept", format="percent"),
+                            "seats_cut_share": st.column_config.NumberColumn("Seats cut too", format="percent"),
+                            "observed_6m": "Observed 6 months", "paying_6m_share": st.column_config.NumberColumn("Still paying at 6 months", format="percent")})
+plot(T.fig_downgrades_quarterly())
+plot(T.fig_downgrade_survival(6))
 ddim = st.selectbox("Who downgrades from Premium — break down by", ["segment", "industry", "acquisition_channel", "tenure_band"],
                     format_func=T.DIMENSION_LABELS.get, key="pt_ddim")
 plot(T.fig_downgrade_rate(ddim))

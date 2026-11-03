@@ -56,7 +56,7 @@ def recovered() -> dict:
                  "tech_nrr_2026_09": float(tnrr.get(pd.Timestamp("2026-09-30"), np.nan))}
     # S3 packaging: voluntary Basic upgrade rate and paywall hits before / after 2026-04-15
     up = marts.load("fct_basic_upgrade_monthly")
-    pre = up[(up["month_end"] >= "2025-05-31") & (up["month_end"] <= "2026-03-31")]
+    pre = up[(up["month_end"] >= "2025-04-30") & (up["month_end"] <= "2026-03-31")]
     post = up[(up["month_end"] >= "2026-05-31") & (up["month_end"] <= "2026-09-30")]
     pre_np, post_np = pre[pre["acquisition_channel"] != "Paid Social"], post[post["acquisition_channel"] != "Paid Social"]
     uw = marts.load("fct_account_usage_weekly")

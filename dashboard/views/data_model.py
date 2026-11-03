@@ -64,7 +64,7 @@ with right:
                  column_config={"Rows": st.column_config.NumberColumn(format="%d")})
     st.markdown("""
 - 36 months: GA on 2 Oct 2023 → data cutoff 30 Sep 2026
-- seat-based pricing, 3 tiers (Basic $15 / Premium $35 per seat-month; Enterprise $600 per seat-year, negotiated)
+- seat-based pricing, 3 tiers (Basic \\$15 / Premium \\$35 per seat-month; Enterprise \\$600 per seat-year, negotiated)
 - monthly and annual billing, prorated increases, decreases at period end, card dunning, win-backs
 - MRR is never stored: it is derived in SQL from the terms on each subscription
 """)

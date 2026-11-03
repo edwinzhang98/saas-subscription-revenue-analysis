@@ -25,11 +25,13 @@ c[4].metric("Paying customers", f"{k['paying_customers']:,}", f"ARPA {money(k['a
             delta_arrow="off", border=True)
 
 st.subheader("What to know")
-finding(f"<b>Expansion did slow, but a third of the headline drop is a one-off.</b> Q3 expansion was "
-        f"{money(k['expansion_q3_2026'])}, {pct(k['expansion_change_qoq'], 0, signed=True)} vs Q2. Q2 included a "
-        f"{money(k['one_off_expansion_mrr'])} company-wide rollout at {k['one_off_company']}. Like for like, the expansion "
-        f"rate fell from {pct(k['expansion_rate_q2_2026_ex_one_off'])} to {pct(k['expansion_rate_q3_2026'])} "
-        f"(and from {pct(k['expansion_rate_q3_2025'])} a year ago).")
+drop = k['expansion_q2_2026'] - k['expansion_q3_2026']
+finding(f"<b>Most of the drop from Q2 is a one-off, but the underlying rate is down too.</b> Q3 expansion was "
+        f"{money(k['expansion_q3_2026'])}, {pct(k['expansion_change_qoq'], 0, signed=True)} vs Q2; Q2 included a "
+        f"{money(k['one_off_expansion_mrr'])} company-wide rollout at {k['one_off_company']} ({pct(k['one_off_expansion_mrr'] / drop, 0)} "
+        f"of the {money(drop)} drop). Like for like, the expansion rate fell from {pct(k['expansion_rate_q2_2026_ex_one_off'])} "
+        f"to {pct(k['expansion_rate_q3_2026'])} of starting MRR, and from {pct(k['expansion_rate_q3_2025'])} a year ago — past the "
+        f"1-point re-forecast line.")
 finding(f"<b>Two structural drivers:</b> Technology accounts stopped adding seats "
         f"({money(abs(k['bridge_yoy']['Technology (all)']))} less expansion than their Q3 2025 rate implies), and "
         f"plan upgrades from Basic halved after the April packaging change "
