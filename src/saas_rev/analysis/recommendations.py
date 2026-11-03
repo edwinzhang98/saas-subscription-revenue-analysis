@@ -376,7 +376,7 @@ def build_plays() -> list[Play]:
              "the account on the list (Premium paywall hits, automation use, team growth)",
         evidence=(f"In the purged time-split back-test (Oct–Dec 2025 held out) the top {UPGRADE_LIST} accounts upgraded at {pct(ex.get('precision_at_100_all'), 1)} within 90 days "
                   f"vs a {pct(ex.get('base_rate_test'), 1)} base rate ({ex.get('lift_at_100_all', float('nan')):.1f}× lift; test AUC "
-                  f"{ex.get('auc_test', float('nan')):.2f}); a list brings about {money(per_list)} of upgrade MRR a quarter on its own. "
+                  f"{ex.get('auc_test', float('nan')):.2f}); one list of 100 brings about {money(per_list)} of upgrade MRR within 90 days on its own (average over the test months). "
                   "Basic → Premium upgrades are small (about $200 MRR each), so this is a cheap play, not a big one") if ex else
                  "Upgrade signals precede upgrades",
         measure="Randomised: 70% of each quarter's list gets the trial + outreach, 30% holdout; KPI = 90-day voluntary upgrade "

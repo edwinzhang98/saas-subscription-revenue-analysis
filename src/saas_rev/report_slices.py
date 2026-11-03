@@ -18,6 +18,15 @@ def _k(topic: str) -> dict:
 
 
 # =============================================================================== plan transitions
+def _save_12m_note() -> str:
+    d = marts.load("transitions__downgrade_survival")
+    r = d[(d["horizon_months"] == 12) & (d["change_source"] == "customer_success")]
+    if r.empty:
+        return "not yet observable"
+    r = r.iloc[0]
+    return (f"weaker: {pct(r['paying_share'], 0)} still paying (95% {pct(r['lo'], 0)}–{pct(r['hi'], 0)}, n = {int(r['downgrades'])}) vs "
+            f"{pct(r['comparable_paying'], 0)} of comparable accounts — the save holds at six months, not clearly at twelve")
+
 def s_transitions() -> dict:
     from .analysis import transitions as T
     k = _k("transitions")
@@ -65,11 +74,12 @@ def s_transitions() -> dict:
                 f"have churned ({k['signups_observed_12m']:,} customers followed from their first paid month). Counted over every Basic "
                 f"account-month, which includes accounts past their first year, {pct(t12['churned'], 0)} are churned 12 months on.")
     body += finding(
-        f"<b>Downgrades are rare and CS saves mostly hold.</b> {k['downgrades_last_12m']} plan downgrades in the last 12 months "
+        f"<b>Downgrades are rare, and CS saves hold at six months.</b> {k['downgrades_last_12m']} plan downgrades in the last 12 months "
         f"({money(k['downgrades_last_12m_mrr_delta'])} MRR; {k['downgrades_last_12m_by_source'].get('customer_success', 0)} were CS saves of "
         f"accounts that asked to cancel). {pct(k['cs_save_paying_6m_share'], 0)} of saved accounts were still paying 6 months later "
         f"(95%: {pct(k['cs_save_paying_6m_lo'], 0)}–{pct(k['cs_save_paying_6m_hi'], 0)}, n = {k['cs_save_downgrades_observed_6m']}) vs "
-        f"{pct(k['cs_save_comparable_paying_6m_share'], 0)} of comparable accounts that never downgraded.")
+        f"{pct(k['cs_save_comparable_paying_6m_share'], 0)} of comparable accounts that never downgraded. The 12-month read is thinner and "
+        + _save_12m_note() + ".")
     ttu = k["time_to_upgrade_12m_by_channel"]
     others = [v for c, v in ttu.items() if c != "Paid Social"]
     body += fig(T.fig_time_to_upgrade("acquisition_channel"),
