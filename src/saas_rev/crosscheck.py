@@ -70,7 +70,7 @@ TERM_ATTRS = ("plan_id", "seats", "billing_period", "unit_price", "discount_pct"
 MONTHS_PER_PERIOD = {"monthly": 1, "annual": 12}
 
 # §4: movement labels (order of the definitions table) and amount columns
-MOVEMENT_TYPES = ("new", "reactivation", "expansion", "contraction", "churn", "unchanged")
+MOVEMENT_TYPES = ("new", "reactivation", "expansion", "contraction", "churn", "unchanged", "not_paying")
 AMOUNT_COLUMNS = ("new_mrr", "reactivation_mrr", "expansion_mrr", "contraction_mrr", "churn_mrr")
 
 # §4.1: components in the fixed decomposition order, and the waterfall columns
@@ -373,7 +373,8 @@ def mrr_movements(panel: MrrPanel) -> pd.DataFrame:
         "expansion": (prev > 0) & (cur > prev),
         "contraction": (prev > 0) & paying & (cur < prev),
         "churn": (prev > 0) & ~paying,
-        "unchanged": prev == cur,
+        "unchanged": (prev > 0) & (cur == prev),
+        "not_paying": (prev == 0) & ~paying,   # a state, not a movement (§4, v1.1)
     }
     assert np.all(np.sum(list(conditions.values()), axis=0) == 1), "movement rules must partition the panel"
     movement = np.select(list(conditions.values()), list(conditions), default="")
@@ -752,7 +753,7 @@ WAREHOUSE_QUERIES = {
                                      comp_seats, comp_billing_period, comp_discount, comp_other, change_rows
                               FROM fct_mrr_movement_components""",
     "cohorts": """SELECT cohort_grain, cohort, months_since_first_paid, cohort_customers, customers_observed,
-                         base_mrr, mrr_k, nrr, grr, logo_retention, is_complete
+                         base_mrr, mrr_k, nrr, grr, logo_retention, nrr_observed_members, is_complete
                   FROM rpt_cohort_retention""",
 }
 
@@ -866,14 +867,9 @@ def run_comparisons(metrics: Metrics, warehouse: dict[str, pd.DataFrame]) -> lis
     money, ratio, count, label = "money", "ratio", "count", "label"
     cm_keys, cohort_keys = ["customer_id", "month_end"], ["cohort_grain", "cohort", "months_since_first_paid"]
     mov_py, mov_sql = metrics.movements, warehouse["movements"]
-    # The §4 table has no "not paying" state (prev = cur = 0 satisfies "Unchanged: prev = cur");
-    # the mapped variant isolates real classification differences from that label difference.
-    mov_sql_mapped = mov_sql.assign(movement_type=mov_sql["movement_type"].replace({"not_paying": "unchanged"}))
     coh_py, coh_sql = metrics.cohorts, warehouse["cohorts"]
-    coh_py_partial = coh_py[~coh_py["is_complete"]].assign(
-        base_mrr=lambda d: d["base_mrr_observed"], nrr=lambda d: d["nrr_observed"],
-        grr=lambda d: d["grr_observed"], logo_retention=lambda d: d["logo_retention_observed"])
-    cohort_values = {"base_mrr": money, "mrr_k": money, "nrr": ratio, "grr": ratio, "logo_retention": ratio}
+    coh_py_partial = coh_py[~coh_py["is_complete"]].assign(nrr_observed_members=lambda d: d["nrr_observed"])
+    cohort_values = {"mrr_k": money, "nrr": ratio, "grr": ratio, "logo_retention": ratio}
 
     checks = [
         compare_frames("customer_mrr", metrics.customer_mrr, warehouse["customer_mrr"], cm_keys,
@@ -881,9 +877,7 @@ def run_comparisons(metrics: Metrics, warehouse: dict[str, pd.DataFrame]) -> lis
                         "cohort_month_end": label},
                        "§3 customer MRR at every month-end of the dense panel (cent level)"),
         compare_frames("movement_type", mov_py, mov_sql, cm_keys, {"movement_type": label},
-                       "§4 movement type per customer-month, labels as published"),
-        compare_frames("movement_type_mapped", mov_py, mov_sql_mapped, cm_keys, {"movement_type": label},
-                       "§4 movement type, reading SQL 'not_paying' (prev = cur = 0) as 'unchanged'"),
+                       "§4 movement type per customer-month (incl. the 'not paying' state)"),
         compare_frames("movement_prev_cur", mov_py, mov_sql, cm_keys,
                        {"mrr_prev": money, "mrr": money, "net_change": money},
                        "§4 prev / cur MRR and net change per customer-month (cent level)"),
@@ -926,11 +920,11 @@ def run_comparisons(metrics: Metrics, warehouse: dict[str, pd.DataFrame]) -> lis
         compare_frames("cohort_cells", coh_py, coh_sql, cohort_keys,
                        {"is_complete": label, "cohort_customers": count, "customers_observed": count},
                        "§10 cohort cells: which cells exist, members, members observed, completeness flag"),
-        compare_frames("cohort_values_complete", coh_py[coh_py["is_complete"]], coh_sql[coh_sql["is_complete"]],
-                       cohort_keys, cohort_values, "§10 cohort NRR / GRR / logo retention on complete cells"),
-        compare_frames("cohort_values_partial", coh_py_partial, coh_sql[~coh_sql["is_complete"]], cohort_keys,
-                       cohort_values,
-                       "Partial cells (§10: blank); compared over the members observed at k, for information",
+        compare_frames("cohort_values", coh_py, coh_sql, cohort_keys, cohort_values,
+                       "§10 cohort NRR / GRR / logo retention (partial cells blank on both sides)"),
+        compare_frames("cohort_values_partial_observed", coh_py_partial, coh_sql[~coh_sql["is_complete"]],
+                       cohort_keys, {"nrr_observed_members": ratio},
+                       "Partial cells: NRR over the members observed at k (published for information only)",
                        informational=True),
     ]
     return checks
@@ -1035,6 +1029,7 @@ def ambiguities(metrics: Metrics) -> list[dict[str, Any]]:
             "also": "The document never says which customer-months form the movement panel (from the first paid "
                     "month-end, or every month since GA); that choice changes the count of 'unchanged' rows.",
             "impact_here": f"Labels of {not_paying:,} non-paying customer-months; no amounts.",
+            "status": "resolved in 02 v1.1: 'Not paying' added as a state (prev = cur = 0); Unchanged needs prev > 0",
         },
         {
             "section": "§4.1 component formulas",
@@ -1051,6 +1046,7 @@ def ambiguities(metrics: Metrics) -> list[dict[str, Any]]:
                     "Annual list ÷ 12 ($50) is used here, as §3's billing-neutral MRR does, but §4.1 does not say so.",
             "impact_here": f"None: {checks['change_terms_off_list_price']} change-row terms are off list, so all "
                            "readings give identical components.",
+            "status": "resolved in 02 v1.1: Enterprise uses annual / 12 on monthly billing; an unchanged plan keeps its price",
         },
         {
             "section": "§4.1 customer-month components",
@@ -1081,6 +1077,7 @@ def ambiguities(metrics: Metrics) -> list[dict[str, Any]]:
                          "'zz_test_enterprise' if `_` counts as a separator)."],
             "impact_here": "None: exactly the 6 expected internal accounts are excluded either way; real names "
                            "such as 'Granitestack' contain 'test' and are kept.",
+            "status": "resolved in 02 v1.1: wording says which patterns are whole words and which are literal tags",
         },
         {
             "section": "§10 right-censoring",
@@ -1089,7 +1086,8 @@ def ambiguities(metrics: Metrics) -> list[dict[str, Any]]:
             "readings": ["The cell has no value (this implementation).",
                          "The cell is stored with a value and an is_complete flag, and blanked only on display "
                          "(SQL)."],
-            "impact_here": "24 partial quarterly cells; see discrepancy cohort_partial_cells_published.",
+            "impact_here": "24 partial quarterly cells.",
+            "status": "resolved: rpt_cohort_retention now leaves partial cells blank (observed-member NRR kept separately)",
         },
         {
             "section": "§7 quarterly run-rate NRR",
@@ -1102,6 +1100,7 @@ def ambiguities(metrics: Metrics) -> list[dict[str, Any]]:
                          "be read next to §8 GRR."],
             "impact_here": "Informational columns only; the quarterly GRR matches the §8-style analogue computed "
                            "here.",
+            "status": "resolved in 02 v1.1: quarterly GRR and the NRR decomposition are defined",
         },
     ]
 
@@ -1146,15 +1145,13 @@ def run(settings: Settings | None = None) -> dict[str, Any]:
     comparisons = run_comparisons(metrics, warehouse)
     core = [c for c in comparisons if not c["informational"]]
     results = {
-        "meta": {
-            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "meta": {   # no machine paths or timestamps: the committed file only changes when results change
             "definitions": f"{DOC} v{DOC_VERSION}",
             "as_of_date": settings.as_of_date.isoformat(),
-            "raw_dir": str(settings.raw_dir),
-            "warehouse": str(settings.warehouse_path),
+            "raw_dir": "<data_dir>/raw (config.yaml)",
+            "warehouse": "<data_dir>/warehouse.duckdb (config.yaml)",
+            "seed": settings.seed,
             "tolerances": {"money_usd": MONEY_TOL, "ratio_abs": RATIO_TOL, "count": 0, "label": "exact"},
-            "seconds_compute": round(seconds_compute, 2),
-            "seconds_total": round(time.perf_counter() - started, 2),
         },
         "summary": {
             "checks": len(comparisons),
@@ -1195,13 +1192,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="where to write the results (default: reports/crosscheck_results.json)")
     args = parser.parse_args(argv)
 
+    t0 = time.perf_counter()
     results = run()
+    elapsed = time.perf_counter() - t0
     args.json.parent.mkdir(parents=True, exist_ok=True)
     args.json.write_text(json.dumps(results, indent=2, ensure_ascii=False) + "\n")
 
     h, s = results["headline"], results["summary"]
     print(f"As of {h['as_of']}: MRR ${h['mrr']:,.2f} | {h['paying_customers']:,} paying | "
-          f"TTM NRR {h['ttm_nrr']:.1%} | GRR {h['ttm_grr']:.1%}   ({results['meta']['seconds_total']} s)\n")
+          f"TTM NRR {h['ttm_nrr']:.1%} | GRR {h['ttm_grr']:.1%}   ({elapsed:.1f} s)\n")
     print(format_table(results))
     print(f"\n{s['core_checks_matching']}/{s['core_checks']} core checks match. Discrepancies: "
           + (", ".join(d["id"] for d in results["discrepancies"]) or "none"))

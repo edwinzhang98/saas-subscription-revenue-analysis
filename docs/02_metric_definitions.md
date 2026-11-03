@@ -152,10 +152,12 @@ Each customer is capped at its own starting MRR, so GRR excludes expansion and c
 
 | Item | Definition |
 |---|---|
-| Eligible (account, *t*) | Paying at *t*; no cancellation requested on or before *t*; no Contraction movement in *t−2 … t* (so the flag is early); outcome window fully observed (*t* ≤ 2026-06-30 for monthly-billed; renewal month-end ≤ 2026-09-30 for annual-billed). |
+| Eligible (account, *t*) | Paying at *t*; no cancellation requested on or before *t*; no Contraction movement in *t−2 … t* (so the flag is early); outcome window fully observed (*t* ≤ 2026-06-30 for monthly-billed; renewal month-end ≤ 2026-09-30 for annual-billed); 13 complete weeks of usage before *t* (the rule needs the full window). |
 | Outcome window | Monthly-billed at *t*: month-ends *t+1 … t+3*. Annual-billed at *t*: month-ends *t+1* … the first renewal month-end after *t*, and only if that renewal is within *t+6* (otherwise the row is not eligible — annual customers cannot shrink before renewal). |
 | Outcome = 1 | `min(mrr_norm over the window) ≤ 0.90 × mrr_norm_t` (churn, MRR = 0, qualifies). |
-| Flag (v1.1) | Seat utilization over the 13 complete weeks ending at *t* **< 60%** AND average WAU in the last 4 complete weeks vs the 9 weeks before them **≤ −15%**. Thresholds chosen in `notebooks/04_silent_churn.ipynb`; the dashboard shows the trade-off for other values. |
+| Flag (v1.2) | Seat utilization over the 13 complete weeks ending at *t* **< 50%** (no WAU condition). |
+| How the threshold was chosen | Grid of utilization thresholds 40–80% (step 5 pts) × WAU-trend conditions (none, or last 4 weeks vs the 9 before ≤ 0%, −5% … −40%), scored on every eligible (account, *t*). Criterion, fixed before looking at the grid: **highest recall among rules with precision ≥ 2× the base rate and on average ≤ 120 distinct CSM-covered accounts flagged per quarter** (CS capacity, assumption A9; quarters Q3 2025 – Q2 2026); precision breaks ties. `notebooks/04_silent_churn.ipynb`. |
+| Back-test result | Base rate 17.0% of eligible account-months; flagged precision 39.5% (lift 2.3), recall 30%; 36% of accounts that later contracted or churned were flagged before it; median lead 4 month-ends (monthly-billed 3, annual-billed 6). The v1.0 draft (utilization < 60% AND WAU ≤ −15%) scored precision 32% (lift 1.9), recall 15%, median lead 2; adding a WAU condition never raised recall at this capacity. Most outcomes are **not** caught — the rule is a prioritisation aid for the CSM queue, not a churn predictor. |
 | Metrics | Precision, recall and lift (precision ÷ base rate) at the (account, *t*) grain; account-level recall (share of accounts with an outcome flagged at least once before it) also reported. |
 | Lead time | Month-ends from the first flag of the uninterrupted flag run that ends at the outcome month, to the outcome month; reported as a distribution. |
 | Watchlist | The rule scored at *t* = 2026-09-30 (no outcome yet), plus the §9 flags. |
@@ -182,7 +184,9 @@ Each customer is capped at its own starting MRR, so GRR excludes expansion and c
 - **Population:** month-ends *t* at which the customer is paying on Basic with ≥ 3 months since its first paid month-end.
 - **Label:** a **voluntary** upgrade (Basic → Premium / Enterprise, `change_source ≠ 'system'`) effective in `(t, t + 90 days]`. Forced seat-cap upgrades are excluded from the signal table and reported separately. Churn within the window (MRR = 0 at any of *t+1 … t+3*) is a separate competing outcome.
 - **Features:** only data observable at *t* — usage in the 13 complete weeks ending at *t*, seats and terms at *t* and *t − 3 months*, static attributes, `prior_higher_tier` (ever on Premium / Enterprise before *t*). Nothing after *t*.
-- **Comparison table (upgraders vs stayers):** upgraders — the last month-end before the upgrade (one row per upgrade); stayers — one eligible month-end per account that did not upgrade or churn in the window, drawn from the same calendar-month × tenure-band stratum as the upgraders (tenure bands 3–6, 7–12, 13–24, 25+ months).
+- **Comparison table (upgraders vs stayers):** upgraders — the last month-end before the upgrade (one row per upgrade); stayers — one eligible month-end per account that did not upgrade or churn in the window, drawn from the same calendar-month × tenure-band stratum as the upgraders (tenure bands 3–6, 7–12, 13–24, 25+ months), 1 : 1, accounts disjoint from the upgraders (an account that upgrades later is never a stayer).
+- **Tenure and win-backs:** tenure counts from the first paid month-end and does not reset on a win-back, so a won-back account can be eligible with fewer than 3 months on its new subscription; its `seat_growth_3m` is undefined (no seats 3 months earlier) and is treated as 0.
+- **Signals that depend on packaging:** Premium paywall hits fell sharply after 2026-04-15 (features moved into Basic), so the model uses them as within-month percentiles of the Basic base rather than raw levels, and the opportunity list states thresholds relative to the current month.
 - **Ranking model:** all eligible rows, weighted 1 ÷ (rows per account); time-based split — train on *t* ≤ 2025-12-31, test on 2026-01-31 … 2026-06-30, test metrics reported before and after the 2026-04-15 packaging change. Rows with *t* + 90 days > 2026-09-30 are never used for training or evaluation; they are only scored for the opportunity list at *t* = 2026-09-30.
 
 ## 14. Reconciliation to billing
@@ -192,19 +196,21 @@ Each customer is capped at its own starting MRR, so GRR excludes expansion and c
 
 ## 15. CS account health list (`docs/account_health_list.csv`)
 
+One row per account: the risk watchlist (§9, §9.1) and the top 300 upgrade opportunities (§13); an account on both is listed as risk.
+
 | Field | Definition |
 |---|---|
-| `customer_id`, `company_name`, `segment`, `cs_coverage`, `csm_owner` | From `stg_customers` |
-| `plan`, `billing_period`, `seats`, `current_arr` | Terms and ARR at 2026-09-30 |
+| `queue` | Who works the account this quarter: `csm` (P1 — the first 120 CSM-covered risk accounts by priority; CS capacity, assumption A9), `renewal_desk` (P3 — Technology annual renewals within 6 months on the risk list, not in P1), `digital` (P2 — the rest of the risk list), `sales_assist` (P4 — top 100 upgrade opportunities), `in_app` (the next 200 opportunities; in-app prompt only) |
+| `priority_rank` | Rank within the queue: annual renewals within 120 days first, then `arr_at_stake` |
+| `play` | The recommendation the account belongs to (`notebooks/05_recommendations.ipynb`); each account is in one play only |
 | `list_type` | `risk` (silent contraction §9, CS saves, or early-warning flag §9.1) or `expansion` (upgrade propensity §13) |
-| `next_renewal_date`, `days_to_renewal` | Annual: end of the current annual term. Monthly: next billing date. |
-| `arr_at_stake` | Risk: current ARR × historical precision of the flag that fired (expected ARR at risk). Expansion: seats × (Premium − Basic price per seat-month on the account's billing period) × 12 × upgrade propensity. |
-| `priority_rank` | Within each owner tier: renewals within 120 days first, then by `arr_at_stake` |
-| `reason_code_1..3` | e.g. `UTIL_BELOW_60`, `WAU_DOWN_15PCT`, `SEATS_CUT_20PCT_6M`, `DOWNGRADED_6M`, `SAVED_BY_CS_6M`, `GATE_HITS_TOP_DECILE`, `TEAM_GROWTH_10PCT_13W`, `AT_BASIC_INTEGRATION_CAP` |
+| `customer_id`, `company_name`, `segment`, `industry`, `cs_coverage`, `csm_owner` | From `stg_customers` |
+| `plan`, `billing_period`, `seats`, `current_arr` | Terms and ARR at 2026-09-30 |
+| `next_renewal_date`, `days_to_renewal`, `renewal_within_120d` | Annual: end of the current annual term. Monthly: next billing date (monthly accounts never count as "renewal within 120 days" — every month is a billing date) |
+| `arr_at_stake` | Risk: current ARR × the historical hit rate of the flag that fired (silent / saved: share of newly flagged accounts that churned or contracted again within 6 months; early warning: back-test precision for the account's billing period); an account with both flags takes the higher rate. Expansion: expected upgrade ARR = 12 × (Premium − Basic price per seat-month on the account's billing period) × seats × upgrade propensity |
+| `reason_code_1..3` | Risk: `SAVED_BY_CS_6M`, `DOWNGRADED_6M`, `SEATS_CUT_20PCT_6M`, `RENEWAL_RIGHTSIZED_6M`, `SPEND_DOWN_20PCT_6M`, `UTIL_BELOW_50`, `WAU_DOWN_15PCT`, `RENEWAL_WITHIN_120D` (in that priority order). Expansion: the three behaviours that contribute most to the account's upgrade score (§13), e.g. `GATE_USERS_TOP_DECILE`, `AUTOMATION_ABOVE_MEDIAN`, `TEAM_GROWTH_10PCT_3M` |
 | `evidence` | The numbers behind the reasons, in plain words |
-| `suggested_play` | From the recommendations (`notebooks/05_recommendations.ipynb`) |
-
-The top 120 accounts with a named or pooled CSM form the CSM queue (CS capacity, assumption A9); everything else is the digital (tech-touch) queue.
+| `suggested_play` | What to do with the account (from the play); prefixed "Urgent" when an annual renewal is less than 45 days away |
 
 ## 16. Where each metric is implemented
 
@@ -247,3 +253,4 @@ The top 120 accounts with a named or pooled CSM form the CSM queue (CS capacity,
 |---|---|---|
 | 1.0 | 2026-11-03 | First version. |
 | 1.1 | 2026-11-03 | After independent review: billing-neutral MRR for silent contraction and early-warning outcomes (annual list is exactly 80% of monthly, so v1.0 flagged every monthly → annual switch); sequential per-attribute component decomposition (v1.0 proportional allocation could divide by zero and hide opposite-sign changes); renewal-aware outcome windows for the early-warning back-test; voluntary vs forced upgrades and calendar-matched comparison for upgrade signals; term-chaining invariant and tie-break; cent rounding; whole-token internal-account rule; monthly flow retention and quarterly run-rate NRR defined; corrected GRR rationale and reconciliation explanation; CS list schema. |
+| 1.2 | 2026-11-03 | Early-warning rule set to the back-tested operating point (utilization < 50%, no WAU condition) with the selection criterion and results in §9.1; `not_paying` state and partial cohort cells defined after the independent cross-check; CS list (§15) rebuilt around queues and plays, reason codes and `arr_at_stake` aligned with the watchlist and opportunity builds; §13 stayer sampling, win-back tenure and percentile signals written out. |

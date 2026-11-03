@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaaS Revenue Review — Q3 2026</title>
+<style>
+  :root {
+    --surface: #fcfcfb; --page: #f9f9f7; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --accent: #2a78d6; --accent-wash: #eef4fc; --warn-wash: #fdf6e7;
+    --border: rgba(11,11,11,0.10);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1440px; margin: 0 auto; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 28px 18px 28px 24px; border-right: 1px solid var(--grid); font-size: 14px; }
+  nav.toc .brand { font-weight: 650; margin-bottom: 4px; }
+  nav.toc .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; }
+  nav.toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 5px 8px; border-radius: 6px; }
+  nav.toc a:hover { background: #efeee9; color: var(--ink); }
+  nav.toc a.l2 { padding-left: 20px; font-size: 13px; color: var(--muted); }
+  main { padding: 32px 48px 80px; min-width: 0; }
+  header.title h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header.title p { margin: 0; color: var(--ink-2); }
+  .banner { margin: 18px 0 8px; padding: 12px 16px; border-radius: 8px; background: var(--warn-wash); border: 1px solid #f0dfb3; font-size: 14.5px; }
+  section { margin-top: 44px; }
+  section h2 { font-size: 23px; margin: 0 0 10px; padding-top: 6px; border-top: 1px solid var(--grid); padding-top: 22px; }
+  section h3 { font-size: 18px; margin: 28px 0 6px; }
+  p, li { max-width: 78ch; }
+  .lead { font-size: 17px; color: var(--ink-2); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .kpi .label { font-size: 13px; color: var(--ink-2); }
+  .kpi .value { font-size: 26px; font-weight: 600; margin: 2px 0; }
+  .kpi .delta { font-size: 12.5px; color: var(--muted); }
+  .finding { border-left: 3px solid var(--accent); background: var(--accent-wash); padding: 10px 14px; margin: 10px 0; border-radius: 0 6px 6px 0; max-width: 90ch; }
+  .chart { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 8px 2px; margin: 16px 0 6px; }
+  .read { color: var(--ink-2); font-size: 15px; margin: 4px 0 18px; max-width: 90ch; }
+  .read b { color: var(--ink); }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  th { background: #f3f2ee; font-weight: 600; color: var(--ink-2); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .tablewrap { overflow-x: auto; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; background: #efeee9; padding: 1px 5px; border-radius: 4px; }
+  .play { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px 18px 10px; margin: 14px 0; max-width: 100ch; }
+  .play h3 { margin: 14px 0 4px; }
+  .play p { margin: 6px 0; font-size: 15px; }
+  .play .meta { color: var(--ink-2); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+  .muted { color: var(--muted); font-size: 13.5px; }
+  .er svg { width: 100%; height: auto; }
+  footer { margin-top: 60px; color: var(--muted); font-size: 13px; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--grid); } main { padding: 20px 16px 60px; } }
+  @media print { nav.toc { display: none; } .wrap { grid-template-columns: 1fr; } .chart { break-inside: avoid; } }
+</style>
+<script>{{ plotly_js }}</script>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc">
+    <div class="brand">Revenue review · Q3 2026</div>
+    <div class="sub">Revenue Analytics (RevOps) · data as of {{ as_of }}</div>
+    {% for s in sections %}<a href="#{{ s.id }}">{{ s.title }}</a>{% for c in s.children %}<a class="l2" href="#{{ c.id }}">{{ c.title }}</a>{% endfor %}{% endfor %}
+  </nav>
+  <main>
+    <header class="title">
+      <h1>Why did expansion slow in Q3 2026 — and where should CS focus?</h1>
+      <p>Revenue analysis for the VP of Revenue and the Head of Customer Success · NRR / GRR, the Q3 expansion bridge, plan transitions, upgrade signals, silent churn and plays</p>
+    </header>
+    <div class="banner"><b>Synthetic data.</b> Public SaaS billing data with plan changes, seat changes and product usage does not exist, so the data model was designed first and 36 months of data for ~5,300 accounts were generated from documented rules (<code>docs/data_model.md</code>). Some business events were built in on purpose — the <a href="#validation">method-validation</a> section compares what was planted with what the analysis recovered. The numbers describe a fictional company; the metric definitions, SQL, decomposition method and plays are what transfer.</div>
+    {% for s in sections %}
+    <section id="{{ s.id }}">
+      <h2>{{ s.title }}</h2>
+      {{ s.html }}
+    </section>
+    {% endfor %}
+    <footer>Generated by <code>python run.py report</code> from the parquet marts of the SQL metric layer · every number on this page is computed, not typed · {{ generated_note }}</footer>
+  </main>
+</div>
+</body>
+</html>

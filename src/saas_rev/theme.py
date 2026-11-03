@@ -103,6 +103,7 @@ def apply(fig: go.Figure, title: str | None = None, subtitle: str | None = None,
         fig.update_layout(title=dict(text=text), margin=dict(t=max(top, int(fig.layout.margin.t or 0))))
     if height:
         fig.update_layout(height=height)
+    fig.update_layout(paper_bgcolor=SURFACE, plot_bgcolor=SURFACE)   # explicit: survives any host template
     return fig
 
 
@@ -115,6 +116,15 @@ def qname(q: str) -> str:
     """'2026-Q3' -> 'Q3 2026'."""
     y, n = q.split("-Q")
     return f"Q{n} {y}"
+
+
+def quarter_ticks(months) -> list:
+    """Quarter-start tick positions inside the plotted months (no dangling tick after the last month)."""
+    import pandas as pd
+    x = month_x(pd.Series(months))
+    lo, hi = x.min(), x.max()
+    ticks = pd.date_range(lo - pd.offsets.QuarterBegin(startingMonth=1), hi, freq="QS")
+    return [t for t in ticks if lo <= t <= hi]
 
 
 def month_x(s):

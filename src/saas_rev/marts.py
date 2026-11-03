@@ -22,6 +22,7 @@ WAREHOUSE_TABLES = [
     "meta_run",
     "stg_customers",
     "stg_plans",
+    "stg_invoices",
     "dim_month",
     "fct_customer_mrr_monthly",
     "fct_mrr_movements",

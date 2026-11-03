@@ -14,7 +14,7 @@ c = st.columns(4)
 c[0].metric("12-month NRR", pct(k["nrr_ttm"]), delta_pts(k["nrr_ttm"] - k["nrr_ttm_2025_09"], suffix=" vs Sep 2025"), border=True)
 c[1].metric("12-month GRR", pct(k["grr_ttm"]), delta_pts(k["grr_ttm"] - k["grr_ttm_2025_09"], suffix=" vs Sep 2025"), border=True)
 c[2].metric("Logo retention", pct(k["logo_retention_ttm"]), f"base {k['nrr_base_customers']:,} customers",
-            delta_color="off", border=True)
+            delta_color="off", delta_arrow="off", border=True)
 c[3].metric("Q3 run-rate NRR", pct(k["nrr_runrate_q3_2026"]),
             delta_pts(k["nrr_runrate_q3_2026"] - k["nrr_runrate_q3_2025"], suffix=" vs Q3 2025"), border=True,
             help="Quarterly same-customer retention, annualised. Leading but noisy.")

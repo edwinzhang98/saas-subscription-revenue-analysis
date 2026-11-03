@@ -10,10 +10,10 @@ Steps
     marts       parquet cache for the dashboard + every analysis module's tables and key numbers
     crosscheck  independent Python re-implementation of MRR / movements / NRR vs SQL
     validate    known-answer tests (planted effects vs recovered) + data-quality summary
+    docs        docs/03_data_quality_checks.md, docs/monthly_revenue_review.md, docs/account_health_list.csv
     figures     static PNG charts for the README (reports/figures/)
     notebooks   execute notebooks/0*.ipynb in place and export HTML to reports/
     report      reports/report.html (standalone)
-    docs        docs/monthly_revenue_review.md and docs/account_health_list.csv
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT / "data_gen"))
 from saas_rev.config import get_settings  # noqa: E402
 
 ANALYSES = ["datamodel", "metrics", "transitions", "expansion", "silent_churn", "recommendations"]
-STEPS = ["generate", "sanity", "warehouse", "marts", "crosscheck", "validate", "figures", "notebooks", "report", "docs"]
+STEPS = ["generate", "sanity", "warehouse", "marts", "crosscheck", "validate", "docs", "figures", "notebooks", "report"]
 
 
 def step_generate() -> None:

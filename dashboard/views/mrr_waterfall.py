@@ -23,12 +23,12 @@ r = q.loc[sel_q]
 c = st.columns(5)
 c[0].metric("MRR at quarter end", money(r["mrr_end_of_quarter"]),
             delta_pct(r["mrr_end_of_quarter"] / r["mrr_start_of_quarter"] - 1, 1, suffix=" in the quarter"), border=True)
-c[1].metric("New MRR", money(r["new_mrr"]), f"{pct(r['new_rate'])} of start", delta_color="off", border=True)
+c[1].metric("New MRR", money(r["new_mrr"]), f"{pct(r['new_rate'])} of start", delta_color="off", delta_arrow="off", border=True)
 c[2].metric("Expansion MRR", money(r["expansion_mrr"]), f"{pct(r['expansion_rate'])} of start", delta_color="off",
-            border=True)
+            delta_arrow="off", border=True)
 c[3].metric("Contraction MRR", money(r["contraction_mrr"]), f"{pct(r['contraction_rate'])} of start",
-            delta_color="off", border=True)
-c[4].metric("Churned MRR", money(r["churn_mrr"]), f"{pct(r['churn_rate'])} of start", delta_color="off", border=True)
+            delta_color="off", delta_arrow="off", border=True)
+c[4].metric("Churned MRR", money(r["churn_mrr"]), f"{pct(r['churn_rate'])} of start", delta_color="off", delta_arrow="off", border=True)
 
 title = None if not any(filters.values()) else "Monthly MRR movements — filtered customers"
 plot(M.fig_monthly_movements(wf, start="2024-10-31", title=title))

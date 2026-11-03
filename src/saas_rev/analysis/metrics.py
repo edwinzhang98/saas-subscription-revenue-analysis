@@ -91,7 +91,7 @@ def bridge(q_from: str, q_to: str, exclude_one_offs: bool = True) -> pd.DataFram
     f_ex = f[~f["customer_id"].isin(one_offs)]
     rate_f = f_ex["expansion_mrr"].sum() / boq_f
     base_effect = rate_f * boq_t - f_ex["expansion_mrr"].sum()
-    rows = [{"step": f"{q_from} expansion", "kind": "total", "value": exp_f}]
+    rows = [{"step": f"{theme.qname(q_from)} expansion", "kind": "total", "value": exp_f}]
     if exclude_one_offs and one_off:
         rows.append({"step": "Remove one-off rollout", "kind": "delta", "value": -one_off})
     rows.append({"step": f"Base growth (starting MRR {pct(boq_t / boq_f - 1, 0, signed=True)})", "kind": "delta",
@@ -100,7 +100,7 @@ def bridge(q_from: str, q_to: str, exclude_one_offs: bool = True) -> pd.DataFram
         r_f = f_ex.loc[f_ex["bucket"] == k, "expansion_mrr"].sum() / boq_f
         r_t = t.loc[t["bucket"] == k, "expansion_mrr"].sum() / boq_t
         rows.append({"step": k, "kind": "delta", "value": (r_t - r_f) * boq_t, "rate_from": r_f, "rate_to": r_t})
-    rows.append({"step": f"{q_to} expansion", "kind": "total", "value": t["expansion_mrr"].sum()})
+    rows.append({"step": f"{theme.qname(q_to)} expansion", "kind": "total", "value": t["expansion_mrr"].sum()})
     out = pd.DataFrame(rows)
     out.insert(0, "bridge", f"{q_from} -> {q_to}")
     gap = out.loc[out.kind == "total", "value"].iloc[0] + out.loc[out.kind == "delta", "value"].sum() \
@@ -281,7 +281,8 @@ def _month_axis(fig: go.Figure, months: pd.Series | None = None) -> None:
     fig.update_xaxes(tickformat="%b %Y", dtick="M3")
     if months is not None and len(months):
         x = theme.month_x(pd.Series(months))
-        fig.update_xaxes(range=[x.min() - pd.Timedelta(days=20), x.max() + pd.Timedelta(days=20)])
+        fig.update_xaxes(range=[x.min() - pd.Timedelta(days=20), x.max() + pd.Timedelta(days=20)],
+                         tickvals=theme.quarter_ticks(months))
 
 
 def fig_mrr_trend(start: str | None = None) -> go.Figure:
@@ -298,7 +299,7 @@ def fig_mrr_trend(start: str | None = None) -> go.Figure:
                              marker=dict(color=theme.ACCENT, size=9, line=dict(color=theme.SURFACE, width=2)),
                              text=[f"{money(last['mrr_end'])}"], textposition="top left",
                              textfont=dict(color=theme.INK), hoverinfo="skip", showlegend=False))
-    fig.update_yaxes(tickprefix="$", tickformat="~s", rangemode="tozero")
+    fig.update_yaxes(tickprefix="$", tickformat="~s", range=[0, wf["mrr_end"].max() * 1.12])
     _month_axis(fig, wf["month_end"])
     fig.update_layout(showlegend=False)
     return theme.apply(fig, f"MRR reached {money(last['mrr_end'])} (ARR {money(last['arr_end'])}) by Sep 2026",
@@ -410,11 +411,11 @@ def fig_expansion_rate_by_bucket() -> go.Figure:
     fig = go.Figure()
     for k in BUCKETS:
         s = g[g["bucket"] == k]
-        fig.add_trace(go.Bar(x=s["quarter_label"], y=s["rate"], name=k,
+        fig.add_trace(go.Bar(x=s["quarter_label"].map(theme.qname), y=s["rate"], name=k,
                              marker=dict(color=BUCKET_COLORS[k], line=dict(color=theme.SURFACE, width=1)),
                              hovertemplate="%{x}<br>" + k + " %{y:.2%} of starting MRR<extra></extra>"))
     tot = g.groupby("quarter_label")["rate"].sum()
-    fig.add_trace(go.Scatter(x=tot.index, y=tot.values, mode="text", text=[pct(v, 1) for v in tot.values],
+    fig.add_trace(go.Scatter(x=[theme.qname(q) for q in tot.index], y=tot.values, mode="text", text=[pct(v, 1) for v in tot.values],
                              textposition="top center", textfont=dict(color=theme.INK), showlegend=False,
                              hoverinfo="skip"))
     fig.update_layout(barmode="stack", bargap=0.45)
@@ -448,8 +449,9 @@ def fig_nrr_trend() -> go.Figure:
                              hovertemplate="%{x|%b %Y}<br>NRR excl. one-off %{y:.1%}<extra></extra>"))
     fig.add_hline(y=1.0, line=dict(color=theme.AXIS, width=1))
     fig.update_yaxes(tickformat=".0%")
-    fig.update_xaxes(tickformat="%b %Y", dtick="M3", range=[theme.month_x(n["month_end"]).min() - pd.Timedelta(days=20),
-                                                           theme.month_x(n["month_end"]).max() + pd.Timedelta(days=80)])
+    fig.update_xaxes(tickformat="%b %Y", tickvals=theme.quarter_ticks(n["month_end"]),
+                     range=[theme.month_x(n["month_end"]).min() - pd.Timedelta(days=20),
+                            theme.month_x(n["month_end"]).max() + pd.Timedelta(days=80)])
     last = rep.iloc[-1]
     return theme.apply(fig, f"12-month NRR {pct(last['nrr'])} at Sep 2026, GRR {pct(last['grr'])}",
                        "Same-customer, point-to-point, base = customers paying 12 months earlier; gray = base under 1,000 customers",
@@ -460,7 +462,7 @@ def fig_nrr_runrate() -> go.Figure:
     rr = marts.load("rpt_nrr_quarterly_runrate")
     rr = rr[rr["quarter_label"] >= "2024-Q4"]
     colors = [theme.ACCENT if q == Q_CUR else theme.DEEMPH for q in rr["quarter_label"]]
-    fig = go.Figure(go.Bar(x=rr["quarter_label"], y=rr["nrr_runrate_annualized"] - 1, base=1, marker=dict(color=colors),
+    fig = go.Figure(go.Bar(x=rr["quarter_label"].map(theme.qname), y=rr["nrr_runrate_annualized"] - 1, base=1, marker=dict(color=colors),
                            text=[pct(v, 1) for v in rr["nrr_runrate_annualized"]], textposition="outside",
                            textfont=dict(color=theme.INK), cliponaxis=False,
                            hovertemplate="%{x}<br>run-rate NRR %{text}<extra></extra>"))

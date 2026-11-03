@@ -10,7 +10,6 @@ page_header("Revenue review — Q3 2026",
 
 k = key_numbers("metrics")
 sc = key_numbers("silent_churn")
-ex = key_numbers("expansion")
 
 c = st.columns(5)
 c[0].metric("ARR", money(k["arr"]), delta_pct(k['mrr_yoy_growth'], 0, suffix=" vs Sep 2025"), border=True,
@@ -23,7 +22,7 @@ c[3].metric("Q3 expansion rate", pct(k["expansion_rate_q3_2026"]),
             delta_pts(k["expansion_rate_q3_2026"] - k["expansion_rate_q3_2025"], suffix=" vs Q3 2025"), border=True,
             help="Expansion MRR in the quarter ÷ MRR at the start of the quarter.")
 c[4].metric("Paying customers", f"{k['paying_customers']:,}", f"ARPA {money(k['arpa'], 0)}", delta_color="off",
-            border=True)
+            delta_arrow="off", border=True)
 
 st.subheader("What to know")
 finding(f"<b>Expansion did slow, but a third of the headline drop is a one-off.</b> Q3 expansion was "
@@ -36,9 +35,13 @@ finding(f"<b>Two structural drivers:</b> Technology accounts stopped adding seat
         f"plan upgrades from Basic halved after the April packaging change "
         f"({money(abs(k['bridge_yoy']['Non-Tech plan upgrades']))} less). Non-Tech seat expansion is healthy.")
 if sc:
-    finding(f"<b>Quiet downgrades are concentrated and visible early.</b> {sc.get('silent_accounts', 0):,} paying accounts "
-            f"cut spend ≥ 20% in six months without cancelling ({money(sc.get('silent_arr', 0))} ARR still at risk). "
-            f"Low seat utilization flags most of them before they contract.")
+    prof, rule = sc.get("profile", {}), sc.get("rule", {})
+    finding(f"<b>Quiet downgrades are growing and concentrated in Technology.</b> {sc.get('flagged_accounts', 0):,} paying "
+            f"accounts cut spend ≥ 20% in six months without cancelling ({money(sc.get('arr_at_risk', 0), 2)} ARR still on the "
+            f"books), up from {sc.get('flagged_accounts_2025_09', 0):,} a year ago; {pct(prof.get('technology_share_flagged'), 0)} "
+            f"are Technology vs {pct(prof.get('technology_share_other'), 0)} of other accounts. In the back-test, low seat "
+            f"utilization flagged {pct(rule.get('account_recall'), 0)} of the accounts that later contracted or churned, a median "
+            f"{rule.get('lead_median', 0):.0f} months ahead — enough to rank the CSM queue, not to predict every loss.")
 else:
     finding(f"<b>Contraction doubled year over year</b> ({pct(k['contraction_rate_q3_2025'])} → "
             f"{pct(k['contraction_rate_q3_2026'])} of starting MRR), mostly seat cuts at Technology accounts.")
