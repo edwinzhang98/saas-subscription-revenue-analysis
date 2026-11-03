@@ -1,4 +1,15 @@
 {
+  "holdout_share": {
+    "P1": 0.2,
+    "P2": 0.5,
+    "P3": 0.5,
+    "P4": 0.3,
+    "P5": 0.0,
+    "P6": 0.5,
+    "P7": 0.5
+  },
+  "total_nrr_pts_holdouts_all_year": 0.009634064383852654,
+  "total_nrr_pts_holdouts_two_quarters": 0.012203553048064069,
   "forward_base_mrr": 2062545.14,
   "csm_capacity_per_quarter": 120,
   "total_impact_mrr_base": 30470.065386671085,
@@ -137,7 +148,7 @@
     },
     {
       "id": "P4",
-      "play": "Premium trial for the highest-propensity Basic accounts",
+      "play": "Premium trial for top Basic accounts by expected MRR",
       "owner": "Sales-assist + Product",
       "accounts": 100.0,
       "addressable_mrr": 5088.0,

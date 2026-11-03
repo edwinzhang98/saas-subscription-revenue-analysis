@@ -298,6 +298,8 @@ in Q3 2025 — {pts(k['expansion_rate_q3_2026'] - k['expansion_rate_q3_2025'])},
                                                 "at_stake": "ARR at stake"})
         parts.append(f"""## 6. Who works which accounts (`docs/account_health_list.csv`)
 
+Snapshot at the 30 Sep 2026 data cut-off; days to renewal are counted from that date.
+
 {_md_table(qs, {'Accounts': lambda v: f'{int(v):,}', 'ARR': money, 'ARR at stake': money})}
 
 `csm` = the first {CSM_CAPACITY} CSM-covered risk accounts by priority (CS capacity) — play P1; `renewal_desk` = every Technology
@@ -362,7 +364,8 @@ def _default_next_month(k: dict) -> str:
 1. **Board pack (VP Revenue, by 12 Nov):** report 12-month NRR {pct(k['nrr_ttm'])} with the definition footnote, NRR excluding the one-off
    ({pct(k['nrr_ttm_ex_one_off'])}) and the Q3 run-rate ({pct(k['nrr_runrate_q3_2026'])}) as the leading indicator.
 2. **Re-forecast Q4 expansion** at the Q3 like-for-like rate ({pct(k['expansion_rate_q3_2026'])} of starting MRR), not the Q2 rate.
-3. **CS (P1):** start the CSM renewal reviews on the `csm` queue of the account list in priority order, with a 1-in-5 holdout.
+3. **CS (P1):** start the CSM renewal reviews on the `csm` queue of the account list in priority order, with a 1-in-5 holdout,
+   after refreshing the queue with October data (renewals already past drop out) and rechecking the 60% trigger.
 4. **Sales + Finance (P3):** approve the seat-band offer for Technology renewals in the next 6 months.
 5. **Product (P5):** bring the packaging test design to the December pricing council instead of a straight revert.
 6. **October flash** after the 7 Nov close: watch whether Technology contraction continues at renewals and whether the expansion rate stays near Q3.

@@ -15,8 +15,8 @@
 - **Billing agrees with MRR:** invoices spread over their service periods match daily-MRR revenue within
   0.08% per calendar year and
   0.01% over the last 12 months.
-- **Two implementations agree:** an independent Python re-implementation written from `02_metric_definitions.md` alone matches the SQL
-  to the cent on every customer-month (16/16 core comparisons match, max money difference ≤ $0.00).
+- **Two implementations agree:** An independent Python re-implementation, written from the metric definitions alone without reading
+  the SQL, matches the SQL to the cent on every customer-month (16/16 core comparisons match, max money difference ≤ $0.00).
 - **Known-answer tests:** the injected data-quality issues are found with the exact injected counts, and the planted business effects are
   recovered by the metric layer (table at the end).
 
@@ -142,9 +142,9 @@ renewals whose period was invoiced in full while service stopped 14 days in (dun
 
 ## SQL vs independent Python implementation
 
-`src/saas_rev/crosscheck.py` was written by a second analyst from `02_metric_definitions.md` only (without reading `sql/`);
-money is compared in whole cents, ratios to 1e-9. The comparator itself was tested by injecting a 1-cent change, a dropped row and a
-relabelled movement (each was caught).
+An independent Python re-implementation, written from the metric definitions alone without reading the SQL, is in
+`src/saas_rev/crosscheck.py`; money is compared in whole cents, ratios to 1e-9. The comparator itself was tested by injecting a 1-cent
+change, a dropped row and a relabelled movement (each was caught).
 
 | Check | Rows | Only in one side | Max abs diff | Mismatching rows | Status |
 |---|---|---|---|---|---|

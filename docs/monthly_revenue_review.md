@@ -136,6 +136,8 @@ in Q3 2025 — −1.5 pts, beyond the 1.0-pt threshold → **re-forecast Q4 expa
 
 ## 6. Who works which accounts (`docs/account_health_list.csv`)
 
+Snapshot at the 30 Sep 2026 data cut-off; days to renewal are counted from that date.
+
 | Queue | Accounts | ARR | ARR at stake |
 |---|---|---|---|
 | csm | 120 | $2.4M | $1.1M |
@@ -203,7 +205,8 @@ assigns — the queue is not cut per CSM, so the load below is what each owner w
 1. **Board pack (VP Revenue, by 12 Nov):** report 12-month NRR 103.5% with the definition footnote, NRR excluding the one-off
    (101.0%) and the Q3 run-rate (92.9%) as the leading indicator.
 2. **Re-forecast Q4 expansion** at the Q3 like-for-like rate (3.4% of starting MRR), not the Q2 rate.
-3. **CS (P1):** start the CSM renewal reviews on the `csm` queue of the account list in priority order, with a 1-in-5 holdout.
+3. **CS (P1):** start the CSM renewal reviews on the `csm` queue of the account list in priority order, with a 1-in-5 holdout,
+   after refreshing the queue with October data (renewals already past drop out) and rechecking the 60% trigger.
 4. **Sales + Finance (P3):** approve the seat-band offer for Technology renewals in the next 6 months.
 5. **Product (P5):** bring the packaging test design to the December pricing council instead of a straight revert.
 6. **October flash** after the 7 Nov close: watch whether Technology contraction continues at renewals and whether the expansion rate stays near Q3.

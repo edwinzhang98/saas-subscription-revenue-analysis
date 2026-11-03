@@ -1,7 +1,7 @@
 """Recommendations: the plays, who owns them, and what each is worth in NRR points (with adjustable assumptions)."""
 import streamlit as st
 
-from common import data_table, how_to_read, page_header, plot
+from common import data_table, how_to_read, key_numbers, page_header, plot
 from saas_rev.analysis import recommendations as R
 from saas_rev.theme import money, pct
 
@@ -26,10 +26,13 @@ page_header("Recommendations",
 
 plays = _plays()
 base_mrr = _base_mrr()
+rec = key_numbers("recommendations")
 
 st.caption("Each play's size = addressable MRR (measured) × expected loss or opportunity (measured) × effect of the play "
-           "(assumption, adjustable) × reach (share of the list the team works). Each account counts in one play only. Change the "
-           "assumptions below; everything on this page is recalculated.")
+           "(assumption, adjustable) × reach (share of the list the team works). Accounts in P1–P4 and P6 are assigned to one play only. "
+           "P5 and P7 act on future signups and failed charges, which can overlap those accounts (involuntary churn is also inside "
+           "the loss rates P1 and P2 are sized on), so the total is a simple sum and may count a little twice. Change the "
+           "assumptions below to recalculate the play sizes.")
 
 overrides = {}
 with st.expander("Adjust reach and effect assumptions", expanded=False, icon=":material/tune:"):
@@ -46,7 +49,8 @@ t = R.plays_table(plays, overrides)
 total, lo, hi = t["nrr_pts"].sum(), t["nrr_pts_low"].sum(), t["nrr_pts_high"].sum()
 c = st.columns(4)
 c[0].metric("Expected NRR impact", f"+{total * 100:.1f} pts", f"range +{lo * 100:.1f} to +{hi * 100:.1f}", delta_color="off",
-            delta_arrow="off", border=True, help="Next year's NRR base = MRR of today's paying customers")
+            delta_arrow="off", border=True, help="Next year's NRR base = MRR of today's paying customers. At the default assumptions, "
+                                                "play sizes assume full reach, before control groups.")
 c[1].metric("ARR protected or added", money(t["impact_mrr"].sum() * 12), "12-month run-rate", delta_color="off",
             delta_arrow="off", border=True)
 c[2].metric("Plays", f"{len(t)}", "all with holdouts", delta_color="off", delta_arrow="off", border=True,
@@ -72,7 +76,7 @@ for r in t.sort_values("nrr_pts", ascending=False).itertuples():
 data_table(t[["id", "play", "owner", "accounts", "addressable_mrr", "outcome_rate", "effect_used", "reach", "impact_mrr",
               "nrr_pts", "nrr_pts_low", "nrr_pts_high"]], "Show the sizing table")
 
-how_to_read("""
+how_to_read(f"""
 **What the numbers mean.** Five plays have a target list that exists today (four in the account health list, P6 by
 acquisition-channel cohort); P5 and P7 act on future signups and failed charges. Each play has an action and an expected
 effect on next year's NRR. The expected effect is built from three parts:
@@ -83,13 +87,18 @@ effect on next year's NRR. The expected effect is built from three parts:
 3. **Reach** — the share of the list the team actually works. The CSM desk is already capped at CS capacity
    (120 reviews a quarter), so its default reach is 100% of those 120.
 
-**No double counting.** Every account is assigned to one play (CSM desk first, then Technology renewals, the digital
-play, upgrade outreach, Paid Social), so the plays add up. Plays that act on new signups (the packaging test, most of the
+**Overlap.** Accounts in P1–P4 and P6 are assigned to one play only. P5 and P7 act on future signups and failed charges,
+which can overlap those accounts (involuntary churn is also inside the loss rates P1 and P2 are sized on), so the total
+is a simple sum and may count a little twice. Plays that act on new signups (the packaging test, most of the
 Paid Social play) barely move next year's NRR — new customers are not in its base — and are sized only on what reaches
 existing customers within 12 months.
 
 **NRR points.** Impact in MRR divided by the MRR of today's paying customers (the base of next year's NRR). +1 point
 means next year's NRR would be one percentage point higher if the play works as assumed.
+
+**Full reach at the default assumptions.** Sizes assume the play reaches its whole list; if every control group is kept
+all year the total is about +{rec.get('total_nrr_pts_holdouts_all_year', float('nan')) * 100:.1f} pts, about
++{rec.get('total_nrr_pts_holdouts_two_quarters', float('nan')) * 100:.1f} if each holdout reads out after two quarters and the play then goes to everyone.
 
 **How to read the bar chart.** Each bar is the base case; the whisker spans the low and high assumption. Plays with long
 bars and short whiskers are the safest bets; plays with wide whiskers need the holdout test before anyone counts on them.

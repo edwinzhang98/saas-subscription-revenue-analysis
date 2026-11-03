@@ -212,8 +212,8 @@ usage loads, orphan plan changes, duplicate CRM records). Full list in <code>doc
 {table(yr.rename(columns={'period': 'Period', 'billed_serviced': 'Billed recurring revenue', 'daily_mrr_revenue': 'Revenue implied by MRR', 'gap_pct': 'Gap'}),
        {'Billed recurring revenue': money, 'Revenue implied by MRR': money, 'Gap': lambda v: pct(v, 3)},
        num_cols=('Billed recurring revenue', 'Revenue implied by MRR', 'Gap'))}
-<p><b>Two independent implementations agree.</b> A second analyst re-implemented MRR, movements, components, NRR / GRR and cohorts in Python
-from the definitions document alone (without reading the SQL): {sum(c['status'] == 'match' for c in core)}/{len(core)} comparisons match to
+<p><b>Two independent implementations agree.</b> An independent Python re-implementation, written from the metric definitions alone without reading the SQL,
+covers MRR, movements, components, NRR / GRR and cohorts: {sum(c['status'] == 'match' for c in core)}/{len(core)} comparisons match to
 the cent on {cc['comparisons'][0]['rows_compared']:,} customer-months. The two differences it found were gaps in the documentation, now fixed.</p>
 """ if cc else ""
     if ak:

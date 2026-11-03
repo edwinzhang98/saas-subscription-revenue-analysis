@@ -12,9 +12,11 @@ How the impact is sized. For every play:
     impact (MRR)       = addressable MRR × expected outcome × effect × reach   (MRR in 12 months)
     impact (NRR pts)   = impact ÷ MRR of customers paying on 30 Sep 2026 (the base of next year's NRR)
 
-Each account counts in one play only (P1 CSM desk > P3 Technology renewals > P2 digital > P4 upgrades > P6
-Paid Social). Plays that act on new signups (P5 test cell, most of P6) barely move next year's NRR — new
-customers are not in its base — and are sized only on what reaches existing customers within 12 months.
+Accounts in P1–P4 and P6 are assigned to one play only. P5 and P7 act on future signups and failed charges,
+which can overlap those accounts (involuntary churn is also inside the loss rates P1 and P2 are sized on),
+so the total is a simple sum and may count a little twice. Plays that act on new signups (P5 test cell, most of P6)
+barely move next year's NRR — new customers are not in its base — and are sized only on what reaches existing
+customers within 12 months.
 The dashboard's Recommendations page lets you change reach and effect for each play and recomputes everything.
 """
 from __future__ import annotations
@@ -369,16 +371,18 @@ def build_plays() -> list[Play]:
     g4 = a[a["play"] == "P4"]
     per_list = float(ex.get("mrr_covered_per_month_at_100_all", 0.0)) if ex else 0.0
     plays.append(Play(
-        id="P4", title="Premium trial for the highest-propensity Basic accounts", owner="Sales-assist + Product",
+        id="P4", title="Premium trial for top Basic accounts by expected MRR", owner="Sales-assist + Product",
         who=f"Each quarter, the top {UPGRADE_LIST} Basic accounts on the upgrade-opportunity list that are not on the risk list "
             f"(today: {len(g4)} accounts, {money(g4['mrr'].sum() * 12)} ARR)",
         what="Unlock a 14-day Premium trial in-app, with sales-assist outreach for Mid-Market; lead with the behaviour that put "
              "the account on the list (Premium paywall hits, automation use, team growth)",
-        evidence=(f"In the purged time-split back-test (Oct–Dec 2025 held out) the top {UPGRADE_LIST} accounts upgraded at {pct(ex.get('precision_at_100_all'), 1)} "
+        evidence=(f"In the purged time-split back-test of the propensity ranking (Oct–Dec 2025 held out), the top {UPGRADE_LIST} accounts by propensity upgraded at {pct(ex.get('precision_at_100_all'), 1)} "
                   f"(95% {pct(ex.get('precision_at_100_all_lo'), 1)}–{pct(ex.get('precision_at_100_all_hi'), 1)}) within 90 days "
                   f"vs a {pct(ex.get('base_rate_test'), 1)} base rate ({ex.get('lift_at_100_all', float('nan')):.1f}× lift, "
                   f"{ex.get('lift_at_100_all_lo', float('nan')):.1f}–{ex.get('lift_at_100_all_hi', float('nan')):.1f}×; test AUC "
-                  f"{ex.get('auc_test', float('nan')):.2f}); one list of 100 brings about {money(per_list)} of upgrade MRR within 90 days on its own (average over the test months). "
+                  f"{ex.get('auc_test', float('nan')):.2f}); one propensity-ranked list of 100 brought about {money(per_list)} of upgrade MRR within 90 days on its own (average over the test months); "
+                  "the P4 list orders by expected upgrade MRR (propensity × upgrade size), which was not back-tested separately, "
+                  "so this is a benchmark for it, not a measured result. "
                   "Basic → Premium upgrades are small (about $200 MRR each), so this is a cheap play, not a big one") if ex else
                  "Upgrade signals precede upgrades",
         measure="Randomised: 70% of each quarter's list gets the trial + outreach, 30% holdout; KPI = 90-day voluntary upgrade "
@@ -387,7 +391,9 @@ def build_plays() -> list[Play]:
              "expectations if Sales leads with price",
         addressable_mrr=4 * per_list, outcome_rate=1.0, effect=(0.15, 0.30, 0.50), accounts=len(g4),
         effect_label="relative lift in the upgrade rate",
-        addressable_label="upgrade MRR four quarterly lists bring without the play (back-test)"))
+        addressable_label="upgrade MRR four quarterly lists bring without the play (propensity-ranking back-test benchmark)",
+        sizing_note="The P4 list orders by expected upgrade MRR (propensity × upgrade size), which was not back-tested separately; "
+                    "the propensity-ranking back-test is a benchmark for it, not a measured result."))
 
     # ---- P5 packaging follow-up ------------------------------------------------------------------
     # foregone upgrade MRR a month if the April step is due to the change, measured from the pre-April level (the raw
@@ -398,7 +404,8 @@ def build_plays() -> list[Play]:
         id="P5", title="Basic packaging: test a capped version before deciding", owner="Product / Pricing",
         who="New Basic signups from Jan 2027 (50/50 test for two quarters); then, if the test wins, every Basic account from Aug 2027",
         what="Keep advanced automations in Basic but cap them (e.g. a monthly run limit), or move analytics dashboards behind "
-             "the Premium gate; decide at the end of the test on 6-month revenue per new Basic signup",
+             "the Premium gate; decide in Jul 2027 on the signups with a complete 90-day window (the Jan–Apr cohorts), "
+             "confirm on 6-month revenue per new Basic signup in Dec 2027",
         evidence=(f"Outside Paid Social the voluntary Basic → Premium rate was already drifting down before April "
                   f"({pct(tr.get('non_ps_rate_apr_sep_2025'), 1)} a month in Apr–Sep 2025, {pct(tr.get('non_ps_rate_oct_2025_mar_2026'), 1)} in "
                   f"Oct 2025 – Mar 2026) and stepped down to {pct(tr.get('upgrade_rate_non_ps_post'), 2)} after it; "
@@ -407,7 +414,7 @@ def build_plays() -> list[Play]:
                   f"{pct(tr.get('mix_share_of_change'), 0)} of the fall and the retention upside is not distinguishable from zero, so the "
                   f"step is worth about {money(foregone_trend)}–{money(foregone)} of upgrade MRR a month — if it is due to the change") if tr else
                  "Upgrades fell around the April change",
-        measure="Decision read in Jul 2027 on the 90-day upgrade rate and early churn of the two arms (≈ 450 signups each); full "
+        measure="Provisional read in Jul 2027 on the 90-day upgrade rate and early churn of the Jan–Apr 2027 signups in each arm; full "
                 "read on 6-month revenue per new Basic signup (upgrade MRR + retained Basic MRR) in Dec 2027; guardrail: trial → "
                 "paid conversion of the test cell",
         risk="Losing the conversion / retention gain that motivated the change; backlash if existing Basic accounts lose a "
@@ -517,10 +524,25 @@ def build() -> dict[str, pd.DataFrame]:
     return {f"{TOPIC}__plays": t, f"{TOPIC}__assignments": a}
 
 
+# share of each play's population kept as the control group in its measurement design (P5 is sized only on the roll-out
+# months after its test, so no holdout applies inside the window)
+HOLDOUT_SHARE = {"P1": 0.20, "P2": 0.50, "P3": 0.50, "P4": 0.30, "P5": 0.0, "P6": 0.50, "P7": 0.50}
+
+
+def holdout_adjusted_totals(t: pd.DataFrame) -> dict:
+    """Play sizes assume full reach. While a control group runs, its share gets no effect: this gives the total if every
+    holdout is kept all year, and if each holdout reads out after two quarters and the play then reaches everyone."""
+    h = t["id"].map(HOLDOUT_SHARE).fillna(0.0)
+    return {"holdout_share": HOLDOUT_SHARE,
+            "total_nrr_pts_holdouts_all_year": float((t["nrr_pts"] * (1 - h)).sum()),
+            "total_nrr_pts_holdouts_two_quarters": float((t["nrr_pts"] * (1 - h / 2)).sum())}
+
+
 def key_numbers() -> dict:
     t = marts.load(f"{TOPIC}__plays")
     r = loss_rates()
     return {
+        **holdout_adjusted_totals(t),
         "forward_base_mrr": forward_base_mrr(),
         "csm_capacity_per_quarter": CSM_CAPACITY,
         "total_impact_mrr_base": float(t["impact_mrr"].sum()), "total_impact_mrr_low": float(t["impact_mrr_low"].sum()),

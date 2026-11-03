@@ -8,7 +8,7 @@
 1. **For the board: 12-month NRR is 103.5%** (GRR 84.6%). One customer's company-wide rollout in May props it up: without it NRR is 101.0%. Q3 on its own, annualised, is 92.9%: if Q4 and Q1 look like Q3, the 12-month figure keeps falling.
 2. **Expansion did slow, and the underlying part will not bounce back by itself.** Most of the dollar drop from Q2 is that one-off rollout, which inflated Q2. But like for like, expansion is 3.4% of starting revenue in Q3 vs 4.9% a year ago — past the 1-point line we agreed for a re-forecast — and that part is structural: Technology customers all but stopped adding seats and started cutting them, and Basic → Premium upgrades, already falling before April, fell again after the packaging change.
 3. **324 paying customers are quietly downgrading** — paying at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling: $1.07M of annual revenue still with us, $649K already gone. 60% of them are Technology companies.
-4. **CS should work a list of 120 accounts**, renewals first, because the top 120 hold more than the 60% of revenue at stake agreed for CSM-led reviews (they hold 66% in the renewal-first queue order, 69% ranked purely by ARR at stake). Seven actions across CS, Sales, Product, Marketing and Billing are worth about +1.5 NRR points next year if they work as assumed. Each comes with a control group: the retention actions read out within two quarters, the packaging test by mid-2027.
+4. **CS should work a list of 120 accounts**, renewals first, because the top 120 hold more than the 60% of revenue at stake agreed for CSM-led reviews (they hold 66% in the renewal-first queue order, 69% ranked purely by ARR at stake). Seven actions across CS, Sales, Product, Marketing and Billing are worth about +1.5 NRR points next year at full reach if they work as assumed. Each comes with a control group: the retention actions have initial reads within two quarters; the packaging test has a provisional read in Jul 2027 and a full 6-month revenue read in Dec 2027.
 
 ## 1. What to tell the board about NRR
 
@@ -46,10 +46,10 @@ Q3 expansion was **$63.7K** of new monthly revenue from existing customers, down
 
 ## 4. Where CS should focus
 
-`docs/account_health_list.csv` lists the accounts to work, each with the reason, the evidence and the action:
+`docs/account_health_list.csv` lists the accounts to work, each with the reason, the evidence and the action; days to renewal are counted from the 30 Sep 2026 data cut-off, and the queue is refreshed with October data before launch:
 
 - **CSM reviews (120 accounts):** the 120 CSM-covered accounts that matter most — annual renewals in under 45 days first, soonest first (17 of them), then renewals in 45–120 days (45 more), then the most revenue at stake. They clear the 60% threshold for CSM-led reviews (they hold 66% in the renewal-first queue order, 69% ranked purely by ARR at stake).
-- **Technology renewal desk (190 accounts, P3):** every Technology customer renewing an annual contract in the next six months that is not already in P1 — 71 flagged by the risk rules, 119 from the renewal calendar — for the seat-band offer, soonest renewals first; Sales renewal AEs lead it, with CS.
+- **Technology renewal desk (190 accounts, P3):** every Technology customer renewing an annual contract in the next six months that is not already in P1 — 71 flagged by the risk rules, 119 from the renewal calendar — for the seat-band offer: renewals in under 45 days first, soonest first, then renewals in 45–120 days and the rest by ARR at stake; Sales renewal AEs lead it, with CS.
 - **Digital program (798 accounts):** in-app and email nudges about unused seats, plus a renewal email series 60 days out.
 
 *Revenue at stake* ranks the list: each account's annual revenue × how often accounts with the same warning sign went on to shrink or leave. It is a priority weight, not a forecast of the loss; the sizes in section 5 use the measured share of revenue lost instead. About a fifth of the CSM list (23 of the 120) shows rising usage on under-used seats — weekly active users up 20% or more while fewer than half the seats are used; those are right-size conversations (confirm team size and seat count, no discount), not saves.
@@ -62,12 +62,14 @@ Q3 expansion was **$63.7K** of new monthly revenue from existing customers, down
 | P7 | Recover more failed card payments (retries, card updater) | Billing / RevOps | +0.30 pts | A/B test of the retry schedule | Low; card-updater fees |
 | P3 | Technology renewal desk: flexible seat bands for annual renewals | Sales + CS | +0.26 pts | Offer in alternate renewal months | Gives back seats some customers would have kept; one renewal cycle only |
 | P2 | Digital program for the rest of the risk list | Lifecycle Marketing | +0.16 pts | 50/50 split | Emails move behaviour only a little |
-| P5 | Test a capped Basic package before deciding to revert | Product / Pricing | +0.08 pts (≈ +0.5 pts a year once rolled out) | 50/50 on new signups | Loses the conversion gain the change was meant to buy |
-| P4 | Premium trial for the Basic accounts most likely to upgrade | Sales-assist | +0.07 pts | 30% control group | Pulls forward upgrades that would have happened anyway |
+| P5 | Test a capped Basic package before deciding to revert | Product / Pricing | +0.08 pts (≈ +0.5 pts a year once rolled out) | 50/50 test; provisional read Jul 2027, full read Dec 2027 | Loses the conversion gain the change was meant to buy |
+| P4 | Premium trial for the top 100 upgrade candidates by expected MRR | Sales-assist | +0.07 pts | 30% control group | Pulls forward upgrades that would have happened anyway |
 | P6 | Better onboarding and an annual offer for Paid Social signups | Growth Marketing | +0.04 pts (most value lands after next year) | Alternate signup weeks | Fewer signups; needs acquisition cost data |
 | | **Total** | | **≈ +1.5 pts (range +0.7 to +2.3)** | | |
 
-Each figure = addressable monthly revenue (current accounts or the revenue flow the action targets) × how much similar accounts lost (or added) in the past × the share of that we expect the action to change. The last part is an assumption — none of these has been tried here — which is why every action has a control group and a read-out date (`notebooks/05_recommendations.ipynb`). Each account counts in one action only.
+Sizes assume each play reaches its whole list; keeping every control group all year would make the total about +1.0, about +1.2 if the holdouts read out after two quarters.
+
+Each figure = addressable monthly revenue (current accounts or the revenue flow the action targets) × how much similar accounts lost (or added) in the past × the share of that we expect the action to change. The last part is an assumption — none of these has been tried here — which is why every action has a control group and a read-out date (`notebooks/05_recommendations.ipynb`). Accounts in P1–P4 and P6 are assigned to one play only; P5 and P7 act on future signups and failed charges, which can overlap them (involuntary churn is also inside the loss rates P1 and P2 are sized on), so the total is a simple sum and may count a little twice.
 
 ## 6. Decisions needed
 

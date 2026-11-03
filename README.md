@@ -22,7 +22,7 @@ The decisions agreed up front: the VP re-forecasts expansion if the like-for-lik
 
 ## Recommendations
 
-Seven plays, each with an owner, a control group and stated risks. Four work from the lists in [`docs/account_health_list.csv`](docs/account_health_list.csv) (P1–P4) and one (P6) from the Paid Social program cohort, identified by acquisition channel; two — the packaging test and payment-failure recovery — act on future signups and failed charges. Each play's size = measured addressable MRR × measured historical loss (or upgrade) rate × an **assumed** effect with a low–high range; every account counts in one play only ([`notebooks/05_recommendations.ipynb`](notebooks/05_recommendations.ipynb)).
+Seven plays, each with an owner, a control group and stated risks. Four work from the lists in [`docs/account_health_list.csv`](docs/account_health_list.csv) (P1–P4) and one (P6) from the Paid Social program cohort, identified by acquisition channel; two — the packaging test and payment-failure recovery — act on future signups and failed charges. At full reach, each play's size = measured addressable MRR × measured historical loss (or upgrade) rate × an **assumed** effect with a low–high range ([`notebooks/05_recommendations.ipynb`](notebooks/05_recommendations.ipynb)). Accounts in P1–P4 and P6 are assigned to one play only; P5 and P7 act on future signups and failed charges, which can overlap them (involuntary churn is also inside the loss rates P1 and P2 are sized on), so the total is a simple sum and may count a little twice.
 
 | # | Play | Owner | Next year's NRR | How we will know |
 |---|---|---|---|---|
@@ -30,10 +30,12 @@ Seven plays, each with an owner, a control group and stated risks. Four work fro
 | P7 | Payment-failure recovery: retries, card updater (66% of failed charges recover today) | Billing Ops / RevOps | +0.30 pts | A/B on the retry schedule |
 | P3 | Technology renewal desk: flexible seat bands for annual renewals | Sales + CS | +0.26 pts | Offer in alternate renewal months |
 | P2 | Digital re-engagement for the rest of the risk list (798 accounts) | Lifecycle Marketing | +0.16 pts | 50/50 by account |
-| P5 | Test a capped Basic package on new signups before reverting | Product / Pricing | +0.08 pts (≈ +0.5 pts a year once rolled out) | 50/50 test, decision read Jul 2027 |
-| P4 | Premium trial for the top 100 upgrade candidates each quarter | Sales-assist | +0.07 pts | 30% holdout |
+| P5 | Test a capped Basic package on new signups before reverting | Product / Pricing | +0.08 pts (≈ +0.5 pts a year once rolled out) | 50/50 test; provisional read Jul 2027, full read Dec 2027 |
+| P4 | Premium trial for the top 100 upgrade candidates by expected MRR each quarter | Sales-assist | +0.07 pts | 30% holdout |
 | P6 | Activation + annual offer for Paid Social cohorts | Growth Marketing | +0.04 pts (most value after next year) | Alternate signup weeks |
 | | **Total** | | **≈ +1.5 pts (range +0.7 to +2.3)** | |
+
+Sizes assume each play reaches its whole list; keeping every control group all year would make the total about +1.0, about +1.2 if the holdouts read out after two quarters.
 
 The CS team works from [`docs/account_health_list.csv`](docs/account_health_list.csv): 1,408 accounts (989 on the risk list, 119 Technology renewals no risk flag caught, 300 upgrade opportunities) with queue, priority, reason codes, evidence in plain words, ARR at stake and the play. The board memo is [`docs/readout.md`](docs/readout.md); the recurring monthly review is [`docs/monthly_revenue_review.md`](docs/monthly_revenue_review.md).
 

@@ -53,12 +53,12 @@ c[3].metric("Precision, top 100", pct(k["precision_at_100_all"]),
                  f"{pct(k['precision_at_100_all_lo'])}–{pct(k['precision_at_100_all_hi'])} (lift {k['lift_at_100_all']:.1f}×, "
                  f"{k['lift_at_100_all_lo']:.1f}–{k['lift_at_100_all_hi']:.1f}×); recall {pct(k['recall_at_100_all'], 0)} = the share "
                  f"of all upgrades those lists contain; base = the test-period 90-day upgrade rate.")
-c[4].metric("Paywall hits / user", f"{k['gate_hits_mean_post']:.2f}", delta_pct(k["gate_hits_drift"], 0, suffix=" after April"),
+c[4].metric("Paywall hits / user", f"{k['gate_hits_mean_post']:.2f}", delta_pct(k["gate_hits_drift"], 0, suffix=" between windows"),
             border=True,
             help=f"Premium-feature paywall hits per active user per week, mean over Basic account-months (13-week rate at "
                  f"each month-end): {k['gate_hits_mean_pre']:.2f} in Oct 2025 – Mar 2026 vs {k['gate_hits_mean_post']:.2f} in "
-                 f"Jul – Sep 2026, the months whose windows lie entirely after the change. The packaging change moved "
-                 f"advanced automations into Basic, so the paywall fires less often.")
+                 f"Jul – Sep 2026, the months whose windows lie entirely after the change. The fall between the two windows is "
+                 f"consistent with advanced automations moving into Basic in April; this before / after comparison does not isolate the packaging effect.")
 
 finding(f"<b>Upgraders are the accounts bumping into the Premium paywall and automating heavily.</b> In the 13 weeks "
         f"before an upgrade, {pct(top['median_upgraders'], 0)} of a typical upgrader's active users hit the paywall vs "
@@ -261,9 +261,10 @@ thing by quintile (the default rule is its top bin); whiskers are 95% intervals,
 small bin. Switch the period to see whether the rule still works after April. Rows with no value for the signal (no
 active users in the window) are left out of the rule, which is why its population is a few rows short of the headline.
 
-**3. The drift charts** show why absolute thresholds break: advanced automations moved into Basic on 15 April 2026 and
-paywall hits per active user fell {pct(-k['gate_hits_drift'], 0)} (Oct 2025 – Mar 2026 vs Jul – Sep 2026 month-ends, the
-same windows as the tile above). The second chart recomputes each signal's top-bin lift *within* each period; signals whose
+**3. The drift charts** show why absolute thresholds break: paywall hits per active user fell {pct(-k['gate_hits_drift'], 0)}
+between the two windows (Oct 2025 – Mar 2026 vs Jul – Sep 2026 month-ends, the same windows as the tile above), consistent
+with advanced automations moving into Basic in April; this before / after comparison does not isolate the packaging effect.
+The second chart recomputes each signal's top-bin lift *within* each period; signals whose
 interval stays above 1× after the change are still usable.
 
 **4. The model** is a logistic regression on the signals plus tenure, segment, channel and billing period (the three

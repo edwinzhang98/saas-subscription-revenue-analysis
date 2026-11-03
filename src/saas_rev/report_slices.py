@@ -123,8 +123,9 @@ def s_signals() -> dict:
     body += fig(E.fig_smd_dotplot(), "<b>Reading:</b> each dot is the standardized difference between upgraders and stayers (0 = no "
                 "difference; 0.5 = half a standard deviation); bars are bootstrap 95% intervals; gray = interval includes zero.")
     body += finding(
-        f"<b>The April packaging change moved the signal itself.</b> Paywall hits per active user fell {pct(-k['gate_hits_drift'], 0)} "
-        f"after April because the gated features moved into Basic, so a fixed threshold (e.g. \"5 paywall hits a week\") would have "
+        f"<b>Paywall use shifted around the April packaging change.</b> Paywall hits per active user fell {pct(-k['gate_hits_drift'], 0)} "
+        f"between the two windows (Oct 2025 – Mar 2026 vs Jul – Sep 2026), consistent with advanced automations moving into Basic in April; "
+        f"this before / after comparison does not isolate the packaging effect. A fixed threshold (e.g. \"5 paywall hits a week\") would have "
         f"silently stopped firing. Ranked within each month, the signal keeps its lift ({k['signal_lift_pre_post']['gate_user_share']['pre']:.1f}× "
         f"before, {k['signal_lift_pre_post']['gate_user_share']['post']:.1f}× after), which is why the model and the CS list use "
         "within-month percentiles.")
@@ -182,9 +183,9 @@ def s_silent() -> dict:
         f"utilization and WAU-trend thresholds by a rule fixed in advance (highest recall with precision ≥ 2× the base rate and no more "
         f"CSM accounts a quarter than CS can review). Back-test: {pct(rule['precision'], 1)} of flagged account-months contracted ≥ 10% or "
         f"churned within the outcome window vs a {pct(rule['base_rate'], 1)} base rate ({rule['lift']:.1f}× lift); "
-        f"{pct(rule['account_recall'], 0)} of the accounts that later contracted were flagged first, a median "
+        f"{pct(rule['account_recall'], 0)} of the accounts that later contracted or cancelled were flagged first, a median "
         f"{rule['by_billing_period']['monthly']['lead_median']:.0f} month-ends ahead for monthly-billed and "
-        f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts (the most the back-test window allows); "
+        f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts (the most the back-test window allows: annual outcome windows run to renewal, ≤ 6 months); "
         f"{pct(rule['share_lead_ge2'], 0)} of caught events "
         f"were flagged at least 2 month-ends ahead (precision 95% interval {pct(rule['precision_lo'], 1)}–{pct(rule['precision_hi'], 1)}, "
         "accounts resampled). Adding a WAU-trend condition lowered recall without raising precision. It misses most losses: "
@@ -226,9 +227,14 @@ def s_recommendations() -> dict:
             "assumption (the effect of the play, with a low–high range), a holdout that will measure that effect, and its risks. Four "
             "work from the lists in <code>docs/account_health_list.csv</code> (P1–P4) and one (P6) from the Paid Social program "
             "cohort, identified by acquisition channel; two — the packaging test and payment-failure recovery — act on future "
-            "signups and future failed charges. Every account counts in one play only. Plays "
+            "signups and future failed charges. Accounts in P1–P4 and P6 are assigned to one play only. P5 and P7 act on future "
+            "signups and failed charges, which can overlap those accounts (involuntary churn is also inside the loss rates P1 "
+            "and P2 are sized on), so the total is a simple sum and may count a little twice. Plays "
             "aimed at new signups barely move next year's NRR (new customers are not in its base) and are sized only on what reaches "
-            "existing customers within 12 months.</p>")
+            "existing customers within 12 months. Sizes assume the play reaches its whole list; if every control group is kept "
+            f"all year the total is about +{rec.get('total_nrr_pts_holdouts_all_year', float('nan')) * 100:.1f} pts, about "
+            f"+{rec.get('total_nrr_pts_holdouts_two_quarters', float('nan')) * 100:.1f} if each holdout reads out after two quarters "
+            "and the play then goes to everyone.</p>")
     body += fig(R.fig_impact(marts.load("recommendations__plays")))
     for r in t.itertuples():
         body += (f"<div class='play'><h3>{r.id} · {r.play}</h3>"
@@ -259,7 +265,11 @@ def _summary_recs(rec: dict) -> str:
     return finding(
         f"<b>What to do:</b> seven plays worth about +{rec['total_nrr_pts_base'] * 100:.1f} NRR points next year (range "
         f"+{rec['total_nrr_pts_low'] * 100:.1f} to +{rec['total_nrr_pts_high'] * 100:.1f}), led by {names}. The effect of each play is an "
-        "assumption until its holdout reads out; the lists, MRR and loss rates behind them are measured.")
+        "assumption until its holdout reads out; the lists, MRR and loss rates behind them are measured. "
+        "Sizes assume the play reaches its whole list; if every control group is kept all year the total is about "
+        f"+{rec.get('total_nrr_pts_holdouts_all_year', float('nan')) * 100:.1f} pts, about "
+        f"+{rec.get('total_nrr_pts_holdouts_two_quarters', float('nan')) * 100:.1f} if each holdout reads out after two quarters "
+        "and the play then goes to everyone.")
 
 
 report.SLICE_SECTIONS.update({"signals": s_signals, "silent": s_silent, "recommendations": s_recommendations})

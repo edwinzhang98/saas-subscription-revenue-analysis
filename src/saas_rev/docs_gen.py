@@ -71,8 +71,8 @@ def write_dq_doc() -> Path:
 - **Billing agrees with MRR:** invoices spread over their service periods match daily-MRR revenue within
   {pct(abs(rec[rec['period_type'] == 'calendar_year']['gap_pct']).max(), 2)} per calendar year and
   {pct(abs(rec[rec['period_type'] == 'ttm']['gap_pct'].iloc[0]), 2)} over the last 12 months.
-- **Two implementations agree:** an independent Python re-implementation written from `02_metric_definitions.md` alone matches the SQL
-  to the cent on every customer-month ({_cc_line(cc)}).
+- **Two implementations agree:** An independent Python re-implementation, written from the metric definitions alone without reading
+  the SQL, matches the SQL to the cent on every customer-month ({_cc_line(cc)}).
 - **Known-answer tests:** the injected data-quality issues are found with the exact injected counts, and the planted business effects are
   recovered by the metric layer (table at the end).
 
@@ -110,9 +110,9 @@ renewals whose period was invoiced in full while service stopped 14 days in (dun
                  "Max abs diff": "0" if not c["max_abs_diff"] else f"{c['max_abs_diff']:.1e}",
                  "Mismatching rows": c["n_mismatch_rows"], "Status": c["status"] + (" (info)" if c["informational"] else "")}
                 for c in cc["comparisons"]]
-        parts.append(f"""`src/saas_rev/crosscheck.py` was written by a second analyst from `02_metric_definitions.md` only (without reading `sql/`);
-money is compared in whole cents, ratios to 1e-9. The comparator itself was tested by injecting a 1-cent change, a dropped row and a
-relabelled movement (each was caught).
+        parts.append(f"""An independent Python re-implementation, written from the metric definitions alone without reading the SQL, is in
+`src/saas_rev/crosscheck.py`; money is compared in whole cents, ratios to 1e-9. The comparator itself was tested by injecting a 1-cent
+change, a dropped row and a relabelled movement (each was caught).
 
 {_md_table(pd.DataFrame(rows))}
 

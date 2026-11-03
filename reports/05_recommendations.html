@@ -7857,15 +7857,15 @@ Request: <em>"Which accounts should the CS team prioritise?"</em> plus the follo
 <span class="s2">  P6 by acquisition-channel cohort); P5 and P7 act on future signups and future failed charges. Together they are worth about</span>
 <span class="s2">  **+</span><span class="si">{</span><span class="n">t</span><span class="p">[</span><span class="s1">'nrr_pts'</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> NRR points next year** (range +</span><span class="si">{</span><span class="n">t</span><span class="p">[</span><span class="s1">'nrr_pts_low'</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> to +</span><span class="si">{</span><span class="n">t</span><span class="p">[</span><span class="s1">'nrr_pts_high'</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">),</span>
 <span class="s2">  ≈ </span><span class="si">{</span><span class="n">money</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s1">'impact_mrr'</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">12</span><span class="p">)</span><span class="si">}</span><span class="s2"> of ARR kept or added, against a 12-month NRR of </span><span class="si">{</span><span class="n">pct</span><span class="p">(</span><span class="n">k_m</span><span class="p">[</span><span class="s1">'nrr_ttm'</span><span class="p">])</span><span class="si">}</span><span class="s2"> today and a Q3 run-rate of </span><span class="si">{</span><span class="n">pct</span><span class="p">(</span><span class="n">k_m</span><span class="p">[</span><span class="s1">'nrr_runrate_q3_2026'</span><span class="p">])</span><span class="si">}</span><span class="s2">.</span>
+<span class="s2">  Sizes assume each play reaches its whole list; keeping every control group all year would make the total about +</span><span class="si">{</span><span class="n">R</span><span class="o">.</span><span class="n">holdout_adjusted_totals</span><span class="p">(</span><span class="n">marts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">'recommendations__plays'</span><span class="p">))[</span><span class="s1">'total_nrr_pts_holdouts_all_year'</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">, about +</span><span class="si">{</span><span class="n">R</span><span class="o">.</span><span class="n">holdout_adjusted_totals</span><span class="p">(</span><span class="n">marts</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">'recommendations__plays'</span><span class="p">))[</span><span class="s1">'total_nrr_pts_holdouts_two_quarters'</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> if the holdouts read out after two quarters and the plays then reach everyone. P5 is sized only on roll-out months after its test.</span>
 <span class="s2">- **Biggest levers next year:** </span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'play'</span><span class="p">]</span><span class="si">}</span><span class="s2">, +</span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'nrr_pts'</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> pts) and </span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'play'</span><span class="p">]</span><span class="si">}</span><span class="s2">,</span>
 <span class="s2">  +</span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'nrr_pts'</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> pts). Upgrade outreach (P4) is real but small: Basic → Premium upgrades are about $200 MRR each. The packaging test (P5)</span>
 <span class="s2">  is small inside the window because the test comes first, but once rolled out it is worth about </span><span class="si">{</span><span class="n">money</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'P5'</span><span class="p">,</span><span class="w"> </span><span class="s1">'run_rate_mrr_per_year'</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2"> of MRR a year</span>
 <span class="s2">  (≈ +</span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'P5'</span><span class="p">,</span><span class="w"> </span><span class="s1">'run_rate_mrr_per_year'</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">base</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> NRR pts a year).</span>
 <span class="s2">- **What is measured and what is assumed.** The target lists, their MRR and how much MRR such accounts lost historically are measured.</span>
 <span class="s2">  The effect of each play is an assumption (low / base / high) — no play has been run yet — so every play ships with a holdout that</span>
-<span class="s2">  replaces the assumption with a measured effect within one or two quarters.</span>
-<span class="s2">- **No double counting:** each account sits in exactly one play; plays aimed at new signups are sized only on what reaches existing customers</span>
-<span class="s2">  within 12 months (new customers are not in next year's NRR base).</span>
+<span class="s2">  measures the effect as its follow-up windows complete.</span>
+<span class="s2">- **Overlap:** Accounts in P1–P4 and P6 are assigned to one play only; P5 and P7 act on future signups and failed charges, which can overlap them (involuntary churn is also inside the loss rates P1 and P2 are sized on), so the total is a simple sum and may count a little twice. Plays aimed at new signups are sized only on what reaches existing customers within 12 months (new customers are not in next year's NRR base).</span>
 <span class="s2">"""</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -7883,16 +7883,16 @@ Request: <em>"Which accounts should the CS team prioritise?"</em> plus the follo
 <li><strong>Seven plays, each with an owner, a holdout and a stated risk.</strong> Five have a target list today (P1–P4 in <code>docs/account_health_list.csv</code>,
 P6 by acquisition-channel cohort); P5 and P7 act on future signups and future failed charges. Together they are worth about
 <strong>+1.5 NRR points next year</strong> (range +0.7 to +2.3),
-≈ $366K of ARR kept or added, against a 12-month NRR of 103.5% today and a Q3 run-rate of 92.9%.</li>
+≈ $366K of ARR kept or added, against a 12-month NRR of 103.5% today and a Q3 run-rate of 92.9%.
+Sizes assume each play reaches its whole list; keeping every control group all year would make the total about +1.0, about +1.2 if the holdouts read out after two quarters and the plays then reach everyone. P5 is sized only on roll-out months after its test.</li>
 <li><strong>Biggest levers next year:</strong> P1 (CSM renewal reviews for the top 120 at-risk accounts, +0.56 pts) and P7 (Payment-failure recovery (dunning),
 +0.30 pts). Upgrade outreach (P4) is real but small: Basic → Premium upgrades are about $200 MRR each. The packaging test (P5)
 is small inside the window because the test comes first, but once rolled out it is worth about $10.3K of MRR a year
 (≈ +0.5 NRR pts a year).</li>
 <li><strong>What is measured and what is assumed.</strong> The target lists, their MRR and how much MRR such accounts lost historically are measured.
 The effect of each play is an assumption (low / base / high) — no play has been run yet — so every play ships with a holdout that
-replaces the assumption with a measured effect within one or two quarters.</li>
-<li><strong>No double counting:</strong> each account sits in exactly one play; plays aimed at new signups are sized only on what reaches existing customers
-within 12 months (new customers are not in next year's NRR base).</li>
+measures the effect as its follow-up windows complete.</li>
+<li><strong>Overlap:</strong> Accounts in P1–P4 and P6 are assigned to one play only; P5 and P7 act on future signups and failed charges, which can overlap them (involuntary churn is also inside the loss rates P1 and P2 are sized on), so the total is a simple sum and may count a little twice. Plays aimed at new signups are sized only on what reaches existing customers within 12 months (new customers are not in next year's NRR base).</li>
 </ul>
 </div>
 </div>
@@ -8026,8 +8026,8 @@ assumptions, how we will know if it worked, and what could go wrong.</p>
 <p><code>impact (MRR in 12 months) = addressable × outcome × effect × reach</code>; <code>NRR points = impact ÷ NRR base</code>.</p>
 <p><strong>Measured 12-month MRR loss</strong> = 1 − GRR of a group of account-months: what share of their starting MRR was gone 12 months later
 (churn = 100% lost, expansion does not offset). History = month-ends Oct 2024 – Sep 2025, so every 12-month window is complete.</p>
-<p><strong>One play per account</strong>, in this order: P1 CSM desk → P3 Technology renewals → P2 digital → P4 upgrade list → P6 Paid Social
-cohorts. P5 (packaging) and P7 (dunning) act on flows, not lists.</p>
+<p><strong>List assignments for P1–P4 and P6</strong>, in this order: P1 CSM desk → P3 Technology renewals → P2 digital → P4 upgrade list → P6 Paid Social
+cohorts. These assignments are exclusive; P5 (packaging) and P7 (dunning) act on flows that can overlap them.</p>
 </div>
 </div>
 </div>
@@ -8086,49 +8086,49 @@ cohorts. P5 (packaging) and P7 (dunning) act on flows, not lists.</p>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_2b30b">
+<table id="T_da551">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_2b30b_level0_col0">Group (account-months)</th>
-<th class="col_heading level0 col1" id="T_2b30b_level0_col1">12-month MRR loss</th>
-<th class="col_heading level0 col2" id="T_2b30b_level0_col2">n</th>
+<th class="col_heading level0 col0" id="T_da551_level0_col0">Group (account-months)</th>
+<th class="col_heading level0 col1" id="T_da551_level0_col1">12-month MRR loss</th>
+<th class="col_heading level0 col2" id="T_da551_level0_col2">n</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_2b30b_row0_col0">All paying accounts</td>
-<td class="data row0 col1" id="T_2b30b_row0_col1">14.5%</td>
-<td class="data row0 col2" id="T_2b30b_row0_col2">21,292</td>
+<td class="data row0 col0" id="T_da551_row0_col0">All paying accounts</td>
+<td class="data row0 col1" id="T_da551_row0_col1">14.5%</td>
+<td class="data row0 col2" id="T_da551_row0_col2">21,292</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_2b30b_row1_col0">Not flagged by the utilization rule, CSM-covered</td>
-<td class="data row1 col1" id="T_2b30b_row1_col1">8.0%</td>
-<td class="data row1 col2" id="T_2b30b_row1_col2">5,150</td>
+<td class="data row1 col0" id="T_da551_row1_col0">Not flagged by the utilization rule, CSM-covered</td>
+<td class="data row1 col1" id="T_da551_row1_col1">8.0%</td>
+<td class="data row1 col2" id="T_da551_row1_col2">5,150</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_2b30b_row2_col0">Flagged by the utilization rule, CSM-covered</td>
-<td class="data row2 col1" id="T_2b30b_row2_col1">29.9%</td>
-<td class="data row2 col2" id="T_2b30b_row2_col2">544</td>
+<td class="data row2 col0" id="T_da551_row2_col0">Flagged by the utilization rule, CSM-covered</td>
+<td class="data row2 col1" id="T_da551_row2_col1">29.9%</td>
+<td class="data row2 col2" id="T_da551_row2_col2">544</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_2b30b_row3_col0">Not flagged, digital coverage</td>
-<td class="data row3 col1" id="T_2b30b_row3_col1">23.8%</td>
-<td class="data row3 col2" id="T_2b30b_row3_col2">8,433</td>
+<td class="data row3 col0" id="T_da551_row3_col0">Not flagged, digital coverage</td>
+<td class="data row3 col1" id="T_da551_row3_col1">23.8%</td>
+<td class="data row3 col2" id="T_da551_row3_col2">8,433</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_2b30b_row4_col0">Flagged, digital coverage</td>
-<td class="data row4 col1" id="T_2b30b_row4_col1">50.6%</td>
-<td class="data row4 col2" id="T_2b30b_row4_col2">1,289</td>
+<td class="data row4 col0" id="T_da551_row4_col0">Flagged, digital coverage</td>
+<td class="data row4 col1" id="T_da551_row4_col1">50.6%</td>
+<td class="data row4 col2" id="T_da551_row4_col2">1,289</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_2b30b_row5_col0">Silent contraction (already shrunk ≥ 20%)</td>
-<td class="data row5 col1" id="T_2b30b_row5_col1">27.3%</td>
-<td class="data row5 col2" id="T_2b30b_row5_col2">609</td>
+<td class="data row5 col0" id="T_da551_row5_col0">Silent contraction (already shrunk ≥ 20%)</td>
+<td class="data row5 col1" id="T_da551_row5_col1">27.3%</td>
+<td class="data row5 col2" id="T_da551_row5_col2">609</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_2b30b_row6_col0">Saved by CS (asked to cancel, kept smaller)</td>
-<td class="data row6 col1" id="T_2b30b_row6_col1">23.0%</td>
-<td class="data row6 col2" id="T_2b30b_row6_col2">89</td>
+<td class="data row6 col0" id="T_da551_row6_col0">Saved by CS (asked to cancel, kept smaller)</td>
+<td class="data row6 col1" id="T_da551_row6_col1">23.0%</td>
+<td class="data row6 col2" id="T_da551_row6_col2">89</td>
 </tr>
 </tbody>
 </table>
@@ -8139,49 +8139,49 @@ cohorts. P5 (packaging) and P7 (dunning) act on flows, not lists.</p>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_94916">
+<table id="T_008ab">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_94916_level0_col0">Annual renewals</th>
-<th class="col_heading level0 col1" id="T_94916_level0_col1">MRR lost at renewal</th>
-<th class="col_heading level0 col2" id="T_94916_level0_col2">95% low</th>
-<th class="col_heading level0 col3" id="T_94916_level0_col3">95% high</th>
-<th class="col_heading level0 col4" id="T_94916_level0_col4">Share losing ≥ 10% or churning</th>
-<th class="col_heading level0 col5" id="T_94916_level0_col5">n</th>
+<th class="col_heading level0 col0" id="T_008ab_level0_col0">Annual renewals</th>
+<th class="col_heading level0 col1" id="T_008ab_level0_col1">MRR lost at renewal</th>
+<th class="col_heading level0 col2" id="T_008ab_level0_col2">95% low</th>
+<th class="col_heading level0 col3" id="T_008ab_level0_col3">95% high</th>
+<th class="col_heading level0 col4" id="T_008ab_level0_col4">Share losing ≥ 10% or churning</th>
+<th class="col_heading level0 col5" id="T_008ab_level0_col5">n</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_94916_row0_col0">Technology, Apr–Sep 2026</td>
-<td class="data row0 col1" id="T_94916_row0_col1">18.1%</td>
-<td class="data row0 col2" id="T_94916_row0_col2">12.0%</td>
-<td class="data row0 col3" id="T_94916_row0_col3">24.4%</td>
-<td class="data row0 col4" id="T_94916_row0_col4">41.2%</td>
-<td class="data row0 col5" id="T_94916_row0_col5">136</td>
+<td class="data row0 col0" id="T_008ab_row0_col0">Technology, Apr–Sep 2026</td>
+<td class="data row0 col1" id="T_008ab_row0_col1">18.1%</td>
+<td class="data row0 col2" id="T_008ab_row0_col2">12.0%</td>
+<td class="data row0 col3" id="T_008ab_row0_col3">24.4%</td>
+<td class="data row0 col4" id="T_008ab_row0_col4">41.2%</td>
+<td class="data row0 col5" id="T_008ab_row0_col5">136</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_94916_row1_col0">Other industries, Apr–Sep 2026</td>
-<td class="data row1 col1" id="T_94916_row1_col1">12.0%</td>
-<td class="data row1 col2" id="T_94916_row1_col2">7.5%</td>
-<td class="data row1 col3" id="T_94916_row1_col3">17.3%</td>
-<td class="data row1 col4" id="T_94916_row1_col4">23.3%</td>
-<td class="data row1 col5" id="T_94916_row1_col5">420</td>
+<td class="data row1 col0" id="T_008ab_row1_col0">Other industries, Apr–Sep 2026</td>
+<td class="data row1 col1" id="T_008ab_row1_col1">12.0%</td>
+<td class="data row1 col2" id="T_008ab_row1_col2">7.5%</td>
+<td class="data row1 col3" id="T_008ab_row1_col3">17.3%</td>
+<td class="data row1 col4" id="T_008ab_row1_col4">23.3%</td>
+<td class="data row1 col5" id="T_008ab_row1_col5">420</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_94916_row2_col0">Technology, Apr–Sep 2025</td>
-<td class="data row2 col1" id="T_94916_row2_col1">12.9%</td>
-<td class="data row2 col2" id="T_94916_row2_col2">4.4%</td>
-<td class="data row2 col3" id="T_94916_row2_col3">24.7%</td>
-<td class="data row2 col4" id="T_94916_row2_col4">31.8%</td>
-<td class="data row2 col5" id="T_94916_row2_col5">66</td>
+<td class="data row2 col0" id="T_008ab_row2_col0">Technology, Apr–Sep 2025</td>
+<td class="data row2 col1" id="T_008ab_row2_col1">12.9%</td>
+<td class="data row2 col2" id="T_008ab_row2_col2">4.4%</td>
+<td class="data row2 col3" id="T_008ab_row2_col3">24.7%</td>
+<td class="data row2 col4" id="T_008ab_row2_col4">31.8%</td>
+<td class="data row2 col5" id="T_008ab_row2_col5">66</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_94916_row3_col0">Other industries, Apr–Sep 2025</td>
-<td class="data row3 col1" id="T_94916_row3_col1">11.8%</td>
-<td class="data row3 col2" id="T_94916_row3_col2">6.2%</td>
-<td class="data row3 col3" id="T_94916_row3_col3">20.0%</td>
-<td class="data row3 col4" id="T_94916_row3_col4">28.7%</td>
-<td class="data row3 col5" id="T_94916_row3_col5">164</td>
+<td class="data row3 col0" id="T_008ab_row3_col0">Other industries, Apr–Sep 2025</td>
+<td class="data row3 col1" id="T_008ab_row3_col1">11.8%</td>
+<td class="data row3 col2" id="T_008ab_row3_col2">6.2%</td>
+<td class="data row3 col3" id="T_008ab_row3_col3">20.0%</td>
+<td class="data row3 col4" id="T_008ab_row3_col4">28.7%</td>
+<td class="data row3 col5" id="T_008ab_row3_col5">164</td>
 </tr>
 </tbody>
 </table>
@@ -8242,7 +8242,7 @@ the direction CSMs report, but a gap the intervals do not separate — which is 
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="2.-The-plays">2. The plays<a class="anchor-link" href="#2.-The-plays">¶</a></h3>
+<h3 id="2.-The-plays">2. The plays<a class="anchor-link" href="#2.-The-plays">¶</a></h3><p><strong>P4 — Premium trial for top Basic accounts by expected MRR.</strong> The list is ranked by propensity × upgrade size. The propensity ranking's back-test for the top 100 accounts has 6.3% precision / 2.5× lift; it is a benchmark for the P4 list, rather than a measured result for its expected-MRR ranking.</p>
 </div>
 </div>
 </div>
@@ -8278,129 +8278,129 @@ the direction CSMs report, but a gap the intervals do not separate — which is 
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_cc66b">
+<table id="T_65de0">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_cc66b_level0_col0">Play</th>
-<th class="col_heading level0 col1" id="T_cc66b_level0_col1">What</th>
-<th class="col_heading level0 col2" id="T_cc66b_level0_col2">Owner</th>
-<th class="col_heading level0 col3" id="T_cc66b_level0_col3">Accounts</th>
-<th class="col_heading level0 col4" id="T_cc66b_level0_col4">Addressable MRR</th>
-<th class="col_heading level0 col5" id="T_cc66b_level0_col5">Measured outcome</th>
-<th class="col_heading level0 col6" id="T_cc66b_level0_col6">Effect low</th>
-<th class="col_heading level0 col7" id="T_cc66b_level0_col7">Effect base</th>
-<th class="col_heading level0 col8" id="T_cc66b_level0_col8">Effect high</th>
-<th class="col_heading level0 col9" id="T_cc66b_level0_col9">Impact (MRR, 12 m)</th>
-<th class="col_heading level0 col10" id="T_cc66b_level0_col10">NRR pts</th>
-<th class="col_heading level0 col11" id="T_cc66b_level0_col11">low</th>
-<th class="col_heading level0 col12" id="T_cc66b_level0_col12">high</th>
+<th class="col_heading level0 col0" id="T_65de0_level0_col0">Play</th>
+<th class="col_heading level0 col1" id="T_65de0_level0_col1">What</th>
+<th class="col_heading level0 col2" id="T_65de0_level0_col2">Owner</th>
+<th class="col_heading level0 col3" id="T_65de0_level0_col3">Accounts</th>
+<th class="col_heading level0 col4" id="T_65de0_level0_col4">Addressable MRR</th>
+<th class="col_heading level0 col5" id="T_65de0_level0_col5">Measured outcome</th>
+<th class="col_heading level0 col6" id="T_65de0_level0_col6">Effect low</th>
+<th class="col_heading level0 col7" id="T_65de0_level0_col7">Effect base</th>
+<th class="col_heading level0 col8" id="T_65de0_level0_col8">Effect high</th>
+<th class="col_heading level0 col9" id="T_65de0_level0_col9">Impact (MRR, 12 m)</th>
+<th class="col_heading level0 col10" id="T_65de0_level0_col10">NRR pts</th>
+<th class="col_heading level0 col11" id="T_65de0_level0_col11">low</th>
+<th class="col_heading level0 col12" id="T_65de0_level0_col12">high</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_cc66b_row0_col0">P1</td>
-<td class="data row0 col1" id="T_cc66b_row0_col1">CSM renewal reviews for the top 120 at-risk accounts</td>
-<td class="data row0 col2" id="T_cc66b_row0_col2">Head of CS (named + pooled CSMs)</td>
-<td class="data row0 col3" id="T_cc66b_row0_col3">120</td>
-<td class="data row0 col4" id="T_cc66b_row0_col4">$196,188</td>
-<td class="data row0 col5" id="T_cc66b_row0_col5">29.5%</td>
-<td class="data row0 col6" id="T_cc66b_row0_col6">10%</td>
-<td class="data row0 col7" id="T_cc66b_row0_col7">20%</td>
-<td class="data row0 col8" id="T_cc66b_row0_col8">30%</td>
-<td class="data row0 col9" id="T_cc66b_row0_col9">$11,578</td>
-<td class="data row0 col10" id="T_cc66b_row0_col10">+0.56</td>
-<td class="data row0 col11" id="T_cc66b_row0_col11">+0.28</td>
-<td class="data row0 col12" id="T_cc66b_row0_col12">+0.84</td>
+<td class="data row0 col0" id="T_65de0_row0_col0">P1</td>
+<td class="data row0 col1" id="T_65de0_row0_col1">CSM renewal reviews for the top 120 at-risk accounts</td>
+<td class="data row0 col2" id="T_65de0_row0_col2">Head of CS (named + pooled CSMs)</td>
+<td class="data row0 col3" id="T_65de0_row0_col3">120</td>
+<td class="data row0 col4" id="T_65de0_row0_col4">$196,188</td>
+<td class="data row0 col5" id="T_65de0_row0_col5">29.5%</td>
+<td class="data row0 col6" id="T_65de0_row0_col6">10%</td>
+<td class="data row0 col7" id="T_65de0_row0_col7">20%</td>
+<td class="data row0 col8" id="T_65de0_row0_col8">30%</td>
+<td class="data row0 col9" id="T_65de0_row0_col9">$11,578</td>
+<td class="data row0 col10" id="T_65de0_row0_col10">+0.56</td>
+<td class="data row0 col11" id="T_65de0_row0_col11">+0.28</td>
+<td class="data row0 col12" id="T_65de0_row0_col12">+0.84</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_cc66b_row1_col0">P2</td>
-<td class="data row1 col1" id="T_cc66b_row1_col1">Digital re-engagement for the rest of the risk list</td>
-<td class="data row1 col2" id="T_cc66b_row1_col2">Lifecycle Marketing + Product</td>
-<td class="data row1 col3" id="T_cc66b_row1_col3">798</td>
-<td class="data row1 col4" id="T_cc66b_row1_col4">$127,317</td>
-<td class="data row1 col5" id="T_cc66b_row1_col5">36.1%</td>
-<td class="data row1 col6" id="T_cc66b_row1_col6">3%</td>
-<td class="data row1 col7" id="T_cc66b_row1_col7">7%</td>
-<td class="data row1 col8" id="T_cc66b_row1_col8">12%</td>
-<td class="data row1 col9" id="T_cc66b_row1_col9">$3,219</td>
-<td class="data row1 col10" id="T_cc66b_row1_col10">+0.16</td>
-<td class="data row1 col11" id="T_cc66b_row1_col11">+0.07</td>
-<td class="data row1 col12" id="T_cc66b_row1_col12">+0.27</td>
+<td class="data row1 col0" id="T_65de0_row1_col0">P2</td>
+<td class="data row1 col1" id="T_65de0_row1_col1">Digital re-engagement for the rest of the risk list</td>
+<td class="data row1 col2" id="T_65de0_row1_col2">Lifecycle Marketing + Product</td>
+<td class="data row1 col3" id="T_65de0_row1_col3">798</td>
+<td class="data row1 col4" id="T_65de0_row1_col4">$127,317</td>
+<td class="data row1 col5" id="T_65de0_row1_col5">36.1%</td>
+<td class="data row1 col6" id="T_65de0_row1_col6">3%</td>
+<td class="data row1 col7" id="T_65de0_row1_col7">7%</td>
+<td class="data row1 col8" id="T_65de0_row1_col8">12%</td>
+<td class="data row1 col9" id="T_65de0_row1_col9">$3,219</td>
+<td class="data row1 col10" id="T_65de0_row1_col10">+0.16</td>
+<td class="data row1 col11" id="T_65de0_row1_col11">+0.07</td>
+<td class="data row1 col12" id="T_65de0_row1_col12">+0.27</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_cc66b_row2_col0">P3</td>
-<td class="data row2 col1" id="T_cc66b_row2_col1">Technology renewal desk: flexible seat bands</td>
-<td class="data row2 col2" id="T_cc66b_row2_col2">Sales (renewal AEs) + Customer Success</td>
-<td class="data row2 col3" id="T_cc66b_row2_col3">190</td>
-<td class="data row2 col4" id="T_cc66b_row2_col4">$132,871</td>
-<td class="data row2 col5" id="T_cc66b_row2_col5">20.3%</td>
-<td class="data row2 col6" id="T_cc66b_row2_col6">10%</td>
-<td class="data row2 col7" id="T_cc66b_row2_col7">20%</td>
-<td class="data row2 col8" id="T_cc66b_row2_col8">35%</td>
-<td class="data row2 col9" id="T_cc66b_row2_col9">$5,392</td>
-<td class="data row2 col10" id="T_cc66b_row2_col10">+0.26</td>
-<td class="data row2 col11" id="T_cc66b_row2_col11">+0.13</td>
-<td class="data row2 col12" id="T_cc66b_row2_col12">+0.46</td>
+<td class="data row2 col0" id="T_65de0_row2_col0">P3</td>
+<td class="data row2 col1" id="T_65de0_row2_col1">Technology renewal desk: flexible seat bands</td>
+<td class="data row2 col2" id="T_65de0_row2_col2">Sales (renewal AEs) + Customer Success</td>
+<td class="data row2 col3" id="T_65de0_row2_col3">190</td>
+<td class="data row2 col4" id="T_65de0_row2_col4">$132,871</td>
+<td class="data row2 col5" id="T_65de0_row2_col5">20.3%</td>
+<td class="data row2 col6" id="T_65de0_row2_col6">10%</td>
+<td class="data row2 col7" id="T_65de0_row2_col7">20%</td>
+<td class="data row2 col8" id="T_65de0_row2_col8">35%</td>
+<td class="data row2 col9" id="T_65de0_row2_col9">$5,392</td>
+<td class="data row2 col10" id="T_65de0_row2_col10">+0.26</td>
+<td class="data row2 col11" id="T_65de0_row2_col11">+0.13</td>
+<td class="data row2 col12" id="T_65de0_row2_col12">+0.46</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_cc66b_row3_col0">P4</td>
-<td class="data row3 col1" id="T_cc66b_row3_col1">Premium trial for the highest-propensity Basic accounts</td>
-<td class="data row3 col2" id="T_cc66b_row3_col2">Sales-assist + Product</td>
-<td class="data row3 col3" id="T_cc66b_row3_col3">100</td>
-<td class="data row3 col4" id="T_cc66b_row3_col4">$5,088</td>
-<td class="data row3 col5" id="T_cc66b_row3_col5">flow</td>
-<td class="data row3 col6" id="T_cc66b_row3_col6">15%</td>
-<td class="data row3 col7" id="T_cc66b_row3_col7">30%</td>
-<td class="data row3 col8" id="T_cc66b_row3_col8">50%</td>
-<td class="data row3 col9" id="T_cc66b_row3_col9">$1,526</td>
-<td class="data row3 col10" id="T_cc66b_row3_col10">+0.07</td>
-<td class="data row3 col11" id="T_cc66b_row3_col11">+0.04</td>
-<td class="data row3 col12" id="T_cc66b_row3_col12">+0.12</td>
+<td class="data row3 col0" id="T_65de0_row3_col0">P4</td>
+<td class="data row3 col1" id="T_65de0_row3_col1">Premium trial for top Basic accounts by expected MRR</td>
+<td class="data row3 col2" id="T_65de0_row3_col2">Sales-assist + Product</td>
+<td class="data row3 col3" id="T_65de0_row3_col3">100</td>
+<td class="data row3 col4" id="T_65de0_row3_col4">$5,088</td>
+<td class="data row3 col5" id="T_65de0_row3_col5">flow</td>
+<td class="data row3 col6" id="T_65de0_row3_col6">15%</td>
+<td class="data row3 col7" id="T_65de0_row3_col7">30%</td>
+<td class="data row3 col8" id="T_65de0_row3_col8">50%</td>
+<td class="data row3 col9" id="T_65de0_row3_col9">$1,526</td>
+<td class="data row3 col10" id="T_65de0_row3_col10">+0.07</td>
+<td class="data row3 col11" id="T_65de0_row3_col11">+0.04</td>
+<td class="data row3 col12" id="T_65de0_row3_col12">+0.12</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_cc66b_row4_col0">P5</td>
-<td class="data row4 col1" id="T_cc66b_row4_col1">Basic packaging: test a capped version before deciding</td>
-<td class="data row4 col2" id="T_cc66b_row4_col2">Product / Pricing</td>
-<td class="data row4 col3" id="T_cc66b_row4_col3">0</td>
-<td class="data row4 col4" id="T_cc66b_row4_col4">$4,286</td>
-<td class="data row4 col5" id="T_cc66b_row4_col5">flow</td>
-<td class="data row4 col6" id="T_cc66b_row4_col6">20%</td>
-<td class="data row4 col7" id="T_cc66b_row4_col7">40%</td>
-<td class="data row4 col8" id="T_cc66b_row4_col8">60%</td>
-<td class="data row4 col9" id="T_cc66b_row4_col9">$1,714</td>
-<td class="data row4 col10" id="T_cc66b_row4_col10">+0.08</td>
-<td class="data row4 col11" id="T_cc66b_row4_col11">+0.04</td>
-<td class="data row4 col12" id="T_cc66b_row4_col12">+0.12</td>
+<td class="data row4 col0" id="T_65de0_row4_col0">P5</td>
+<td class="data row4 col1" id="T_65de0_row4_col1">Basic packaging: test a capped version before deciding</td>
+<td class="data row4 col2" id="T_65de0_row4_col2">Product / Pricing</td>
+<td class="data row4 col3" id="T_65de0_row4_col3">0</td>
+<td class="data row4 col4" id="T_65de0_row4_col4">$4,286</td>
+<td class="data row4 col5" id="T_65de0_row4_col5">flow</td>
+<td class="data row4 col6" id="T_65de0_row4_col6">20%</td>
+<td class="data row4 col7" id="T_65de0_row4_col7">40%</td>
+<td class="data row4 col8" id="T_65de0_row4_col8">60%</td>
+<td class="data row4 col9" id="T_65de0_row4_col9">$1,714</td>
+<td class="data row4 col10" id="T_65de0_row4_col10">+0.08</td>
+<td class="data row4 col11" id="T_65de0_row4_col11">+0.04</td>
+<td class="data row4 col12" id="T_65de0_row4_col12">+0.12</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_cc66b_row5_col0">P6</td>
-<td class="data row5 col1" id="T_cc66b_row5_col1">Paid Social cohorts: activation and annual offer</td>
-<td class="data row5 col2" id="T_cc66b_row5_col2">Growth Marketing + Lifecycle</td>
-<td class="data row5 col3" id="T_cc66b_row5_col3">312</td>
-<td class="data row5 col4" id="T_cc66b_row5_col4">$38,231</td>
-<td class="data row5 col5" id="T_cc66b_row5_col5">6.3%</td>
-<td class="data row5 col6" id="T_cc66b_row5_col6">20%</td>
-<td class="data row5 col7" id="T_cc66b_row5_col7">35%</td>
-<td class="data row5 col8" id="T_cc66b_row5_col8">50%</td>
-<td class="data row5 col9" id="T_cc66b_row5_col9">$846</td>
-<td class="data row5 col10" id="T_cc66b_row5_col10">+0.04</td>
-<td class="data row5 col11" id="T_cc66b_row5_col11">+0.02</td>
-<td class="data row5 col12" id="T_cc66b_row5_col12">+0.06</td>
+<td class="data row5 col0" id="T_65de0_row5_col0">P6</td>
+<td class="data row5 col1" id="T_65de0_row5_col1">Paid Social cohorts: activation and annual offer</td>
+<td class="data row5 col2" id="T_65de0_row5_col2">Growth Marketing + Lifecycle</td>
+<td class="data row5 col3" id="T_65de0_row5_col3">312</td>
+<td class="data row5 col4" id="T_65de0_row5_col4">$38,231</td>
+<td class="data row5 col5" id="T_65de0_row5_col5">6.3%</td>
+<td class="data row5 col6" id="T_65de0_row5_col6">20%</td>
+<td class="data row5 col7" id="T_65de0_row5_col7">35%</td>
+<td class="data row5 col8" id="T_65de0_row5_col8">50%</td>
+<td class="data row5 col9" id="T_65de0_row5_col9">$846</td>
+<td class="data row5 col10" id="T_65de0_row5_col10">+0.04</td>
+<td class="data row5 col11" id="T_65de0_row5_col11">+0.02</td>
+<td class="data row5 col12" id="T_65de0_row5_col12">+0.06</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_cc66b_row6_col0">P7</td>
-<td class="data row6 col1" id="T_cc66b_row6_col1">Payment-failure recovery (dunning)</td>
-<td class="data row6 col2" id="T_cc66b_row6_col2">Billing Operations / RevOps</td>
-<td class="data row6 col3" id="T_cc66b_row6_col3">0</td>
-<td class="data row6 col4" id="T_cc66b_row6_col4">$20,650</td>
-<td class="data row6 col5" id="T_cc66b_row6_col5">flow</td>
-<td class="data row6 col6" id="T_cc66b_row6_col6">15%</td>
-<td class="data row6 col7" id="T_cc66b_row6_col7">30%</td>
-<td class="data row6 col8" id="T_cc66b_row6_col8">45%</td>
-<td class="data row6 col9" id="T_cc66b_row6_col9">$6,195</td>
-<td class="data row6 col10" id="T_cc66b_row6_col10">+0.30</td>
-<td class="data row6 col11" id="T_cc66b_row6_col11">+0.15</td>
-<td class="data row6 col12" id="T_cc66b_row6_col12">+0.45</td>
+<td class="data row6 col0" id="T_65de0_row6_col0">P7</td>
+<td class="data row6 col1" id="T_65de0_row6_col1">Payment-failure recovery (dunning)</td>
+<td class="data row6 col2" id="T_65de0_row6_col2">Billing Operations / RevOps</td>
+<td class="data row6 col3" id="T_65de0_row6_col3">0</td>
+<td class="data row6 col4" id="T_65de0_row6_col4">$20,650</td>
+<td class="data row6 col5" id="T_65de0_row6_col5">flow</td>
+<td class="data row6 col6" id="T_65de0_row6_col6">15%</td>
+<td class="data row6 col7" id="T_65de0_row6_col7">30%</td>
+<td class="data row6 col8" id="T_65de0_row6_col8">45%</td>
+<td class="data row6 col9" id="T_65de0_row6_col9">$6,195</td>
+<td class="data row6 col10" id="T_65de0_row6_col10">+0.30</td>
+<td class="data row6 col11" id="T_65de0_row6_col11">+0.15</td>
+<td class="data row6 col12" id="T_65de0_row6_col12">+0.45</td>
 </tr>
 </tbody>
 </table>
@@ -8440,9 +8440,9 @@ the direction CSMs report, but a gap the intervals do not separate — which is 
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <div style="height:436px; width:100%;"> <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script> <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
-<script charset="utf-8" crossorigin="anonymous" integrity="sha256-O24V1F27f8pb0glCkelh3cVHLNiHAJ5gCaVtq2aNch8=" src="https://cdn.plot.ly/plotly-4.1.1.min.js"></script> <div class="plotly-graph-div" id="3eca36bb-dca3-4484-aabc-d922cb7a6462" style="height:100%; width:100%;"></div> <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("3eca36bb-dca3-4484-aabc-d922cb7a6462")) {                    Plotly.newPlot(                        "3eca36bb-dca3-4484-aabc-d922cb7a6462",                        [{"customdata":{"dtype":"f8","bdata":"D9BBx0nSw0Dc9H0tLf6XPxJy3Xi4\u002fa0\u002fMzMzMzPj0UDeNYHTCPKiPx6vLAtkk78\u002f1zbTPbwW1EBUytRZ5kalP30vv4ZZ6r8\u002f5JpDjC\u002fd4kC2T1B2HiCxP7ZPUHYeINE\u002f30WD45WX70BV3GT59brAP5OBcHQuR90\u002fAAAAAEAm8kBKR2PUDDnDP+7qlD6T1dw\u002fw7pqYJL1AEGE3nwTWvbRP8RNOx2H8eo\u002f","shape":"7, 3"},"error_x":{"array":{"dtype":"f8","bdata":"pHce4qH+kT+B8lZvtkKpP1HK1FnmRqU\u002fgi\u002fbb92KvD99Shf2cBjJP0hHY9QMOcM\u002fgd58E1r20T8="},"arrayminus":{"dtype":"f8","bdata":"pHce4qH+kT\u002feNYHTCPKiP1TK1FnmRqU\u002fn78V833Vtj9V3GT59brAP0pHY9QMOcM\u002fhN58E1r20T8="},"color":"#52514e","symmetric":false,"thickness":1.5,"type":"data","width":4},"hovertemplate":"%{y}\u003cbr\u003e+%{x:.2f} NRR pts (range %{customdata[1]:.2f}\u2013%{customdata[2]:.2f})\u003cbr\u003e\u2248 %{customdata[0]:$,.0f} ARR\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#2a78d6"},"orientation":"h","x":{"dtype":"f8","bdata":"QDbOh2f+pD\u002feNYHTCPKyP1TK1FnmRrU\u002fqgezNM76wz9V3GT59brQP0pHY9QMOdM\u002fhN58E1r24T8="},"y":["P6 Paid Social cohorts: activation and annual offer","P4 Premium trial for the highest-propensity Basic accounts","P5 Basic packaging: test a capped version before deciding","P2 Digital re-engagement for the rest of the risk list","P3 Technology renewal desk: flexible seat bands","P7 Payment-failure recovery (dunning)","P1 CSM renewal reviews for the top 120 at-risk accounts"],"type":"bar"}],                        {"template":{"data":{"bar":[{"marker":{"line":{"width":0}},"type":"bar"}],"scatter":[{"line":{"width":2},"marker":{"line":{"color":"#fcfcfb","width":2},"size":8},"type":"scatter"}]},"layout":{"barcornerradius":4,"bargap":0.35,"colorway":["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#6250d6","#e34948"],"font":{"color":"#52514e","family":"system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif","size":13},"hoverlabel":{"bgcolor":"#ffffff","bordercolor":"#c3c2b7","font":{"color":"#0b0b0b","family":"system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif","size":12}},"hovermode":"closest","legend":{"bgcolor":"rgba(0,0,0,0)","font":{"color":"#52514e","size":12},"orientation":"h","title":{"text":""},"x":0.0,"xanchor":"left","y":1.0,"yanchor":"bottom"},"margin":{"b":48,"l":56,"r":24,"t":72},"paper_bgcolor":"#fcfcfb","plot_bgcolor":"#fcfcfb","title":{"font":{"color":"#0b0b0b","family":"system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif","size":16},"pad":{"b":0,"l":0,"t":14},"x":0.0,"xanchor":"left","xref":"paper","y":1.0,"yanchor":"top","yref":"container"},"xaxis":{"linecolor":"#c3c2b7","linewidth":1,"showgrid":false,"tickcolor":"#c3c2b7","tickfont":{"color":"#898781","size":12},"ticklen":4,"ticks":"outside","title":{"font":{"color":"#52514e","size":12}},"zeroline":false},"yaxis":{"gridcolor":"#e1e0d9","gridwidth":1,"linecolor":"#c3c2b7","showgrid":true,"showline":false,"tickfont":{"color":"#898781","size":12},"title":{"font":{"color":"#52514e","size":12}},"zeroline":false}}},"annotations":[{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.04\u003c\u002fb\u003e pts","x":0.058576359514266,"xanchor":"left","xshift":8,"y":"P6 Paid Social cohorts: activation and annual offer"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.07\u003c\u002fb\u003e pts","x":0.12334275505844203,"xanchor":"left","xshift":8,"y":"P4 Premium trial for the highest-propensity Basic accounts"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.08\u003c\u002fb\u003e pts","x":0.12466964282719846,"xanchor":"left","xshift":8,"y":"P5 Basic packaging: test a capped version before deciding"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.16\u003c\u002fb\u003e pts","x":0.2675853877456079,"xanchor":"left","xshift":8,"y":"P2 Digital re-engagement for the rest of the risk list"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.26\u003c\u002fb\u003e pts","x":0.4574695717911023,"xanchor":"left","xshift":8,"y":"P3 Technology renewal desk: flexible seat bands"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.30\u003c\u002fb\u003e pts","x":0.45053559409613697,"xanchor":"left","xshift":8,"y":"P7 Payment-failure recovery (dunning)"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.56\u003c\u002fb\u003e pts","x":0.8419833727770585,"xanchor":"left","xshift":8,"y":"P1 CSM renewal reviews for the top 120 at-risk accounts"}],"xaxis":{"title":{"text":"NRR points (next 12 months)"},"showgrid":true,"gridcolor":"#e1e0d9","range":[0,1.0272197147880113]},"yaxis":{"showgrid":false,"automargin":true},"margin":{"l":40,"r":40,"t":114},"showlegend":false,"bargap":0.45,"title":{"text":"\u003cb\u003eTogether the plays are worth about +1.5 NRR points next year (range +0.7 to +2.3);\u003cbr\u003eP1 and P7 are 58% of it\u003c\u002fb\u003e\u003cbr\u003e\u003cspan style='font-size:12px;color:#898781'\u003eExpected impact on next year's NRR per play, base case with the low\u2013high range of the effect assumption.\u003c\u002fspan\u003e\u003cbr\u003e\u003cspan style='font-size:12px;color:#898781'\u003eAddressable MRR and loss rates are measured; effects are assumptions until each holdout measures them\u003c\u002fspan\u003e"},"height":436,"paper_bgcolor":"#fcfcfb","plot_bgcolor":"#fcfcfb"},                        {"responsive": true}                    ).then(function(){
+<script charset="utf-8" crossorigin="anonymous" integrity="sha256-O24V1F27f8pb0glCkelh3cVHLNiHAJ5gCaVtq2aNch8=" src="https://cdn.plot.ly/plotly-4.1.1.min.js"></script> <div class="plotly-graph-div" id="99389234-0d66-4236-a8bb-dc3eec005f42" style="height:100%; width:100%;"></div> <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("99389234-0d66-4236-a8bb-dc3eec005f42")) {                    Plotly.newPlot(                        "99389234-0d66-4236-a8bb-dc3eec005f42",                        [{"customdata":{"dtype":"f8","bdata":"D9BBx0nSw0Dc9H0tLf6XPxJy3Xi4\u002fa0\u002fMzMzMzPj0UDeNYHTCPKiPx6vLAtkk78\u002f1zbTPbwW1EBUytRZ5kalP30vv4ZZ6r8\u002f5JpDjC\u002fd4kC2T1B2HiCxP7ZPUHYeINE\u002f30WD45WX70BV3GT59brAP5OBcHQuR90\u002fAAAAAEAm8kBKR2PUDDnDP+7qlD6T1dw\u002fw7pqYJL1AEGE3nwTWvbRP8RNOx2H8eo\u002f","shape":"7, 3"},"error_x":{"array":{"dtype":"f8","bdata":"pHce4qH+kT+B8lZvtkKpP1HK1FnmRqU\u002fgi\u002fbb92KvD99Shf2cBjJP0hHY9QMOcM\u002fgd58E1r20T8="},"arrayminus":{"dtype":"f8","bdata":"pHce4qH+kT\u002feNYHTCPKiP1TK1FnmRqU\u002fn78V833Vtj9V3GT59brAP0pHY9QMOcM\u002fhN58E1r20T8="},"color":"#52514e","symmetric":false,"thickness":1.5,"type":"data","width":4},"hovertemplate":"%{y}\u003cbr\u003e+%{x:.2f} NRR pts (range %{customdata[1]:.2f}\u2013%{customdata[2]:.2f})\u003cbr\u003e\u2248 %{customdata[0]:$,.0f} ARR\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#2a78d6"},"orientation":"h","x":{"dtype":"f8","bdata":"QDbOh2f+pD\u002feNYHTCPKyP1TK1FnmRrU\u002fqgezNM76wz9V3GT59brQP0pHY9QMOdM\u002fhN58E1r24T8="},"y":["P6 Paid Social cohorts: activation and annual offer","P4 Premium trial for top Basic accounts by expected MRR","P5 Basic packaging: test a capped version before deciding","P2 Digital re-engagement for the rest of the risk list","P3 Technology renewal desk: flexible seat bands","P7 Payment-failure recovery (dunning)","P1 CSM renewal reviews for the top 120 at-risk accounts"],"type":"bar"}],                        {"template":{"data":{"bar":[{"marker":{"line":{"width":0}},"type":"bar"}],"scatter":[{"line":{"width":2},"marker":{"line":{"color":"#fcfcfb","width":2},"size":8},"type":"scatter"}]},"layout":{"barcornerradius":4,"bargap":0.35,"colorway":["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#6250d6","#e34948"],"font":{"color":"#52514e","family":"system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif","size":13},"hoverlabel":{"bgcolor":"#ffffff","bordercolor":"#c3c2b7","font":{"color":"#0b0b0b","family":"system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif","size":12}},"hovermode":"closest","legend":{"bgcolor":"rgba(0,0,0,0)","font":{"color":"#52514e","size":12},"orientation":"h","title":{"text":""},"x":0.0,"xanchor":"left","y":1.0,"yanchor":"bottom"},"margin":{"b":48,"l":56,"r":24,"t":72},"paper_bgcolor":"#fcfcfb","plot_bgcolor":"#fcfcfb","title":{"font":{"color":"#0b0b0b","family":"system-ui, -apple-system, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif","size":16},"pad":{"b":0,"l":0,"t":14},"x":0.0,"xanchor":"left","xref":"paper","y":1.0,"yanchor":"top","yref":"container"},"xaxis":{"linecolor":"#c3c2b7","linewidth":1,"showgrid":false,"tickcolor":"#c3c2b7","tickfont":{"color":"#898781","size":12},"ticklen":4,"ticks":"outside","title":{"font":{"color":"#52514e","size":12}},"zeroline":false},"yaxis":{"gridcolor":"#e1e0d9","gridwidth":1,"linecolor":"#c3c2b7","showgrid":true,"showline":false,"tickfont":{"color":"#898781","size":12},"title":{"font":{"color":"#52514e","size":12}},"zeroline":false}}},"annotations":[{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.04\u003c\u002fb\u003e pts","x":0.058576359514266,"xanchor":"left","xshift":8,"y":"P6 Paid Social cohorts: activation and annual offer"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.07\u003c\u002fb\u003e pts","x":0.12334275505844203,"xanchor":"left","xshift":8,"y":"P4 Premium trial for top Basic accounts by expected MRR"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.08\u003c\u002fb\u003e pts","x":0.12466964282719846,"xanchor":"left","xshift":8,"y":"P5 Basic packaging: test a capped version before deciding"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.16\u003c\u002fb\u003e pts","x":0.2675853877456079,"xanchor":"left","xshift":8,"y":"P2 Digital re-engagement for the rest of the risk list"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.26\u003c\u002fb\u003e pts","x":0.4574695717911023,"xanchor":"left","xshift":8,"y":"P3 Technology renewal desk: flexible seat bands"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.30\u003c\u002fb\u003e pts","x":0.45053559409613697,"xanchor":"left","xshift":8,"y":"P7 Payment-failure recovery (dunning)"},{"font":{"color":"#0b0b0b","size":13},"showarrow":false,"text":"\u003cb\u003e+0.56\u003c\u002fb\u003e pts","x":0.8419833727770585,"xanchor":"left","xshift":8,"y":"P1 CSM renewal reviews for the top 120 at-risk accounts"}],"xaxis":{"title":{"text":"NRR points (next 12 months)"},"showgrid":true,"gridcolor":"#e1e0d9","range":[0,1.0272197147880113]},"yaxis":{"showgrid":false,"automargin":true},"margin":{"l":40,"r":40,"t":114},"showlegend":false,"bargap":0.45,"title":{"text":"\u003cb\u003eTogether the plays are worth about +1.5 NRR points next year (range +0.7 to +2.3);\u003cbr\u003eP1 and P7 are 58% of it\u003c\u002fb\u003e\u003cbr\u003e\u003cspan style='font-size:12px;color:#898781'\u003eExpected impact on next year's NRR per play, base case with the low\u2013high range of the effect assumption.\u003c\u002fspan\u003e\u003cbr\u003e\u003cspan style='font-size:12px;color:#898781'\u003eAddressable MRR and loss rates are measured; effects are assumptions until each holdout measures them\u003c\u002fspan\u003e"},"height":436,"paper_bgcolor":"#fcfcfb","plot_bgcolor":"#fcfcfb"},                        {"responsive": true}                    ).then(function(){
                             
-var gd = document.getElementById('3eca36bb-dca3-4484-aabc-d922cb7a6462');
+var gd = document.getElementById('99389234-0d66-4236-a8bb-dc3eec005f42');
 var x = new MutationObserver(function (mutations, observer) {{
         var display = window.getComputedStyle(gd).display;
         if (!display || display === 'none') {{
@@ -8535,11 +8535,11 @@ if (outputEl) {{
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-OutputArea-output" data-mime-type="text/markdown" tabindex="0">
-<h4 id="P4-%C2%B7-Premium-trial-for-the-highest-propensity-Basic-accounts">P4 · Premium trial for the highest-propensity Basic accounts<a class="anchor-link" href="#P4-%C2%B7-Premium-trial-for-the-highest-propensity-Basic-accounts">¶</a></h4><p><strong>Owner:</strong> Sales-assist + Product
+<h4 id="P4-%C2%B7-Premium-trial-for-top-Basic-accounts-by-expected-MRR">P4 · Premium trial for top Basic accounts by expected MRR<a class="anchor-link" href="#P4-%C2%B7-Premium-trial-for-top-Basic-accounts-by-expected-MRR">¶</a></h4><p><strong>Owner:</strong> Sales-assist + Product
 <strong>Who:</strong> Each quarter, the top 100 Basic accounts on the upgrade-opportunity list that are not on the risk list (today: 100 accounts, $395K ARR)
 **What:** Unlock a 14-day Premium trial in-app, with sales-assist outreach for Mid-Market; lead with the behaviour that put the account on the list (Premium paywall hits, automation use, team growth)
-**Evidence:** In the purged time-split back-test (Oct–Dec 2025 held out) the top 100 accounts upgraded at 6.3% (95% 3.7%–9.0%) within 90 days vs a 2.5% base rate (2.5× lift, 1.5–3.4×; test AUC 0.68); one list of 100 brings about $1.3K of upgrade MRR within 90 days on its own (average over the test months). Basic → Premium upgrades are small (about $200 MRR each), so this is a cheap play, not a big one
-**Expected NRR impact (next 12 months):** +0.07 pts (range +0.04 to +0.12) = upgrade MRR four quarterly lists bring without the play (back-test) $5.1K (from data) × relative lift in the upgrade rate 30% (assumption; range 15%–50%) = $1.5K MRR within 12 months.
+**Evidence:** In the purged time-split back-test of the propensity ranking (Oct–Dec 2025 held out), the top 100 accounts by propensity upgraded at 6.3% (95% 3.7%–9.0%) within 90 days vs a 2.5% base rate (2.5× lift, 1.5–3.4×; test AUC 0.68); one propensity-ranked list of 100 brought about $1.3K of upgrade MRR within 90 days on its own (average over the test months); the P4 list orders by expected upgrade MRR (propensity × upgrade size), which was not back-tested separately, so this is a benchmark for it, not a measured result. Basic → Premium upgrades are small (about $200 MRR each), so this is a cheap play, not a big one
+**Expected NRR impact (next 12 months):** +0.07 pts (range +0.04 to +0.12) = upgrade MRR four quarterly lists bring without the play (propensity-ranking back-test benchmark) $5.1K (from data) × relative lift in the upgrade rate 30% (assumption; range 15%–50%) = $1.5K MRR within 12 months. The P4 list orders by expected upgrade MRR (propensity × upgrade size), which was not back-tested separately; the propensity-ranking back-test is a benchmark for it, not a measured result.
 <strong>How we will know:</strong> Randomised: 70% of each quarter's list gets the trial + outreach, 30% holdout; KPI = 90-day voluntary upgrade rate and 6-month retention of upgraders (incremental upgrades, not raw upgrades)
 <strong>Risks:</strong> Pulling forward upgrades that would have happened anyway (only the holdout shows the increment); discount expectations if Sales leads with price</p>
 </div>
@@ -8549,10 +8549,10 @@ if (outputEl) {{
 <div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-OutputArea-output" data-mime-type="text/markdown" tabindex="0">
 <h4 id="P5-%C2%B7-Basic-packaging:-test-a-capped-version-before-deciding">P5 · Basic packaging: test a capped version before deciding<a class="anchor-link" href="#P5-%C2%B7-Basic-packaging:-test-a-capped-version-before-deciding">¶</a></h4><p><strong>Owner:</strong> Product / Pricing
 <strong>Who:</strong> New Basic signups from Jan 2027 (50/50 test for two quarters); then, if the test wins, every Basic account from Aug 2027
-<strong>What:</strong> Keep advanced automations in Basic but cap them (e.g. a monthly run limit), or move analytics dashboards behind the Premium gate; decide at the end of the test on 6-month revenue per new Basic signup
+<strong>What:</strong> Keep advanced automations in Basic but cap them (e.g. a monthly run limit), or move analytics dashboards behind the Premium gate; decide in Jul 2027 on the signups with a complete 90-day window (the Jan–Apr cohorts), confirm on 6-month revenue per new Basic signup in Dec 2027
 <strong>Evidence:</strong> Outside Paid Social the voluntary Basic → Premium rate was already drifting down before April (1.9% a month in Apr–Sep 2025, 1.4% in Oct 2025 – Mar 2026) and stepped down to 0.77% after it; 0.4–0.6 points of that coincide with the change (drift continued vs rate held at its pre-April level). Channel mix explains 4% of the fall and the retention upside is not distinguishable from zero, so the step is worth about $1.4K–$2.1K of upgrade MRR a month — if it is due to the change
 <strong>Expected NRR impact (next 12 months):</strong> +0.08 pts (range +0.04 to +0.12) = foregone upgrade MRR in the 2 roll-out months inside the window ($2.1K a month from the pre-April level; $1.4K if the drift would have continued) $4.3K (from data) × share of the foregone upgrade MRR recovered 40% (assumption; range 20%–60%) = $1.7K MRR within 12 months. Small inside next year's NRR window because the test comes first; once rolled out it is worth about $10.3K of MRR a year at the base effect.
-<strong>How we will know:</strong> Decision read in Jul 2027 on the 90-day upgrade rate and early churn of the two arms (≈ 450 signups each); full read on 6-month revenue per new Basic signup (upgrade MRR + retained Basic MRR) in Dec 2027; guardrail: trial → paid conversion of the test cell
+<strong>How we will know:</strong> Provisional read in Jul 2027 on the 90-day upgrade rate and early churn of the Jan–Apr 2027 signups in each arm; full read on 6-month revenue per new Basic signup (upgrade MRR + retained Basic MRR) in Dec 2027; guardrail: trial → paid conversion of the test cell
 <strong>Risks:</strong> Losing the conversion / retention gain that motivated the change; backlash if existing Basic accounts lose a feature — test on new signups first. New signups are not in next year's NRR base, so only the roll-out months count here</p>
 </div>
 </div>
@@ -8629,73 +8629,73 @@ the total is a planning number.</p>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_0a515">
+<table id="T_ec7e6">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_0a515_level0_col0">Play</th>
-<th class="col_heading level0 col1" id="T_0a515_level0_col1">Base</th>
-<th class="col_heading level0 col2" id="T_0a515_level0_col2">All effects low</th>
-<th class="col_heading level0 col3" id="T_0a515_level0_col3">Half reach</th>
-<th class="col_heading level0 col4" id="T_0a515_level0_col4">Rank (base)</th>
-<th class="col_heading level0 col5" id="T_0a515_level0_col5">Rank (all low)</th>
+<th class="col_heading level0 col0" id="T_ec7e6_level0_col0">Play</th>
+<th class="col_heading level0 col1" id="T_ec7e6_level0_col1">Base</th>
+<th class="col_heading level0 col2" id="T_ec7e6_level0_col2">All effects low</th>
+<th class="col_heading level0 col3" id="T_ec7e6_level0_col3">Half reach</th>
+<th class="col_heading level0 col4" id="T_ec7e6_level0_col4">Rank (base)</th>
+<th class="col_heading level0 col5" id="T_ec7e6_level0_col5">Rank (all low)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_0a515_row0_col0">P1</td>
-<td class="data row0 col1" id="T_0a515_row0_col1">+0.56</td>
-<td class="data row0 col2" id="T_0a515_row0_col2">+0.28</td>
-<td class="data row0 col3" id="T_0a515_row0_col3">+0.28</td>
-<td class="data row0 col4" id="T_0a515_row0_col4">1</td>
-<td class="data row0 col5" id="T_0a515_row0_col5">1</td>
+<td class="data row0 col0" id="T_ec7e6_row0_col0">P1</td>
+<td class="data row0 col1" id="T_ec7e6_row0_col1">+0.56</td>
+<td class="data row0 col2" id="T_ec7e6_row0_col2">+0.28</td>
+<td class="data row0 col3" id="T_ec7e6_row0_col3">+0.28</td>
+<td class="data row0 col4" id="T_ec7e6_row0_col4">1</td>
+<td class="data row0 col5" id="T_ec7e6_row0_col5">1</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_0a515_row1_col0">P7</td>
-<td class="data row1 col1" id="T_0a515_row1_col1">+0.30</td>
-<td class="data row1 col2" id="T_0a515_row1_col2">+0.15</td>
-<td class="data row1 col3" id="T_0a515_row1_col3">+0.15</td>
-<td class="data row1 col4" id="T_0a515_row1_col4">2</td>
-<td class="data row1 col5" id="T_0a515_row1_col5">2</td>
+<td class="data row1 col0" id="T_ec7e6_row1_col0">P7</td>
+<td class="data row1 col1" id="T_ec7e6_row1_col1">+0.30</td>
+<td class="data row1 col2" id="T_ec7e6_row1_col2">+0.15</td>
+<td class="data row1 col3" id="T_ec7e6_row1_col3">+0.15</td>
+<td class="data row1 col4" id="T_ec7e6_row1_col4">2</td>
+<td class="data row1 col5" id="T_ec7e6_row1_col5">2</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_0a515_row2_col0">P3</td>
-<td class="data row2 col1" id="T_0a515_row2_col1">+0.26</td>
-<td class="data row2 col2" id="T_0a515_row2_col2">+0.13</td>
-<td class="data row2 col3" id="T_0a515_row2_col3">+0.13</td>
-<td class="data row2 col4" id="T_0a515_row2_col4">3</td>
-<td class="data row2 col5" id="T_0a515_row2_col5">3</td>
+<td class="data row2 col0" id="T_ec7e6_row2_col0">P3</td>
+<td class="data row2 col1" id="T_ec7e6_row2_col1">+0.26</td>
+<td class="data row2 col2" id="T_ec7e6_row2_col2">+0.13</td>
+<td class="data row2 col3" id="T_ec7e6_row2_col3">+0.13</td>
+<td class="data row2 col4" id="T_ec7e6_row2_col4">3</td>
+<td class="data row2 col5" id="T_ec7e6_row2_col5">3</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_0a515_row3_col0">P2</td>
-<td class="data row3 col1" id="T_0a515_row3_col1">+0.16</td>
-<td class="data row3 col2" id="T_0a515_row3_col2">+0.07</td>
-<td class="data row3 col3" id="T_0a515_row3_col3">+0.08</td>
-<td class="data row3 col4" id="T_0a515_row3_col4">4</td>
-<td class="data row3 col5" id="T_0a515_row3_col5">4</td>
+<td class="data row3 col0" id="T_ec7e6_row3_col0">P2</td>
+<td class="data row3 col1" id="T_ec7e6_row3_col1">+0.16</td>
+<td class="data row3 col2" id="T_ec7e6_row3_col2">+0.07</td>
+<td class="data row3 col3" id="T_ec7e6_row3_col3">+0.08</td>
+<td class="data row3 col4" id="T_ec7e6_row3_col4">4</td>
+<td class="data row3 col5" id="T_ec7e6_row3_col5">4</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_0a515_row4_col0">P5</td>
-<td class="data row4 col1" id="T_0a515_row4_col1">+0.08</td>
-<td class="data row4 col2" id="T_0a515_row4_col2">+0.04</td>
-<td class="data row4 col3" id="T_0a515_row4_col3">+0.04</td>
-<td class="data row4 col4" id="T_0a515_row4_col4">5</td>
-<td class="data row4 col5" id="T_0a515_row4_col5">5</td>
+<td class="data row4 col0" id="T_ec7e6_row4_col0">P5</td>
+<td class="data row4 col1" id="T_ec7e6_row4_col1">+0.08</td>
+<td class="data row4 col2" id="T_ec7e6_row4_col2">+0.04</td>
+<td class="data row4 col3" id="T_ec7e6_row4_col3">+0.04</td>
+<td class="data row4 col4" id="T_ec7e6_row4_col4">5</td>
+<td class="data row4 col5" id="T_ec7e6_row4_col5">5</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_0a515_row5_col0">P4</td>
-<td class="data row5 col1" id="T_0a515_row5_col1">+0.07</td>
-<td class="data row5 col2" id="T_0a515_row5_col2">+0.04</td>
-<td class="data row5 col3" id="T_0a515_row5_col3">+0.04</td>
-<td class="data row5 col4" id="T_0a515_row5_col4">6</td>
-<td class="data row5 col5" id="T_0a515_row5_col5">6</td>
+<td class="data row5 col0" id="T_ec7e6_row5_col0">P4</td>
+<td class="data row5 col1" id="T_ec7e6_row5_col1">+0.07</td>
+<td class="data row5 col2" id="T_ec7e6_row5_col2">+0.04</td>
+<td class="data row5 col3" id="T_ec7e6_row5_col3">+0.04</td>
+<td class="data row5 col4" id="T_ec7e6_row5_col4">6</td>
+<td class="data row5 col5" id="T_ec7e6_row5_col5">6</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_0a515_row6_col0">P6</td>
-<td class="data row6 col1" id="T_0a515_row6_col1">+0.04</td>
-<td class="data row6 col2" id="T_0a515_row6_col2">+0.02</td>
-<td class="data row6 col3" id="T_0a515_row6_col3">+0.02</td>
-<td class="data row6 col4" id="T_0a515_row6_col4">7</td>
-<td class="data row6 col5" id="T_0a515_row6_col5">7</td>
+<td class="data row6 col0" id="T_ec7e6_row6_col0">P6</td>
+<td class="data row6 col1" id="T_ec7e6_row6_col1">+0.04</td>
+<td class="data row6 col2" id="T_ec7e6_row6_col2">+0.02</td>
+<td class="data row6 col3" id="T_ec7e6_row6_col3">+0.02</td>
+<td class="data row6 col4" id="T_ec7e6_row6_col4">7</td>
+<td class="data row6 col5" id="T_ec7e6_row6_col5">7</td>
 </tr>
 </tbody>
 </table>
@@ -8730,10 +8730,10 @@ the total is a planning number.</p>
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">plan</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span>
     <span class="p">(</span><span class="s2">"P1"</span><span class="p">,</span> <span class="s2">"1 in 5 eligible accounts held out each quarter (random)"</span><span class="p">,</span> <span class="s2">"6- and 12-month GRR, worked vs held out"</span><span class="p">,</span> <span class="s2">"May 2027 (6-month read)"</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"P2"</span><span class="p">,</span> <span class="s2">"50/50 by account"</span><span class="p">,</span> <span class="s2">"90-day billing-neutral contraction + churn rate"</span><span class="p">,</span> <span class="s2">"Mar 2027"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"P2"</span><span class="p">,</span> <span class="s2">"50/50 by account"</span><span class="p">,</span> <span class="s2">"90-day and 12-month billing-neutral contraction + churn rate"</span><span class="p">,</span> <span class="s2">"Mar 2027"</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">"P3"</span><span class="p">,</span> <span class="s2">"Offer in alternate renewal months"</span><span class="p">,</span> <span class="s2">"Renewal GRR, offered vs not offered; seats given back"</span><span class="p">,</span> <span class="s2">"Jun 2027"</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">"P4"</span><span class="p">,</span> <span class="s2">"30</span><span class="si">% o</span><span class="s2">f each quarter's list held out"</span><span class="p">,</span> <span class="s2">"90-day voluntary upgrade rate; 6-month retention of upgraders"</span><span class="p">,</span> <span class="s2">"Apr 2027"</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"P5"</span><span class="p">,</span> <span class="s2">"50/50 on new Basic signups, Jan–Jun 2027"</span><span class="p">,</span> <span class="s2">"90-day upgrade rate and early churn (decision); 6-month revenue per signup (full read)"</span><span class="p">,</span> <span class="s2">"Jul 2027 (decision), Dec 2027"</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"P5"</span><span class="p">,</span> <span class="s2">"50/50 on new Basic signups, Jan–Jun 2027"</span><span class="p">,</span> <span class="s2">"90-day upgrade rate and early churn of Jan–Apr signups with complete windows (provisional); 6-month revenue per signup (full read)"</span><span class="p">,</span> <span class="s2">"Jul 2027 (provisional), Dec 2027 (full read)"</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">"P6"</span><span class="p">,</span> <span class="s2">"Alternate signup weeks"</span><span class="p">,</span> <span class="s2">"6-month revenue retained per $1 of first-month MRR"</span><span class="p">,</span> <span class="s2">"Jul 2027"</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">"P7"</span><span class="p">,</span> <span class="s2">"A/B on retry schedule"</span><span class="p">,</span> <span class="s2">"Recovery rate within the dunning window"</span><span class="p">,</span> <span class="s2">"Jan 2027"</span><span class="p">),</span>
 <span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"Play"</span><span class="p">,</span> <span class="s2">"Holdout"</span><span class="p">,</span> <span class="s2">"Primary KPI"</span><span class="p">,</span> <span class="s2">"First read-out"</span><span class="p">])</span>
@@ -8752,57 +8752,57 @@ the total is a planning number.</p>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_69354">
+<table id="T_d017f">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_69354_level0_col0">Play</th>
-<th class="col_heading level0 col1" id="T_69354_level0_col1">Holdout</th>
-<th class="col_heading level0 col2" id="T_69354_level0_col2">Primary KPI</th>
-<th class="col_heading level0 col3" id="T_69354_level0_col3">First read-out</th>
+<th class="col_heading level0 col0" id="T_d017f_level0_col0">Play</th>
+<th class="col_heading level0 col1" id="T_d017f_level0_col1">Holdout</th>
+<th class="col_heading level0 col2" id="T_d017f_level0_col2">Primary KPI</th>
+<th class="col_heading level0 col3" id="T_d017f_level0_col3">First read-out</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_69354_row0_col0">P1</td>
-<td class="data row0 col1" id="T_69354_row0_col1">1 in 5 eligible accounts held out each quarter (random)</td>
-<td class="data row0 col2" id="T_69354_row0_col2">6- and 12-month GRR, worked vs held out</td>
-<td class="data row0 col3" id="T_69354_row0_col3">May 2027 (6-month read)</td>
+<td class="data row0 col0" id="T_d017f_row0_col0">P1</td>
+<td class="data row0 col1" id="T_d017f_row0_col1">1 in 5 eligible accounts held out each quarter (random)</td>
+<td class="data row0 col2" id="T_d017f_row0_col2">6- and 12-month GRR, worked vs held out</td>
+<td class="data row0 col3" id="T_d017f_row0_col3">May 2027 (6-month read)</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_69354_row1_col0">P2</td>
-<td class="data row1 col1" id="T_69354_row1_col1">50/50 by account</td>
-<td class="data row1 col2" id="T_69354_row1_col2">90-day billing-neutral contraction + churn rate</td>
-<td class="data row1 col3" id="T_69354_row1_col3">Mar 2027</td>
+<td class="data row1 col0" id="T_d017f_row1_col0">P2</td>
+<td class="data row1 col1" id="T_d017f_row1_col1">50/50 by account</td>
+<td class="data row1 col2" id="T_d017f_row1_col2">90-day and 12-month billing-neutral contraction + churn rate</td>
+<td class="data row1 col3" id="T_d017f_row1_col3">Mar 2027</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_69354_row2_col0">P3</td>
-<td class="data row2 col1" id="T_69354_row2_col1">Offer in alternate renewal months</td>
-<td class="data row2 col2" id="T_69354_row2_col2">Renewal GRR, offered vs not offered; seats given back</td>
-<td class="data row2 col3" id="T_69354_row2_col3">Jun 2027</td>
+<td class="data row2 col0" id="T_d017f_row2_col0">P3</td>
+<td class="data row2 col1" id="T_d017f_row2_col1">Offer in alternate renewal months</td>
+<td class="data row2 col2" id="T_d017f_row2_col2">Renewal GRR, offered vs not offered; seats given back</td>
+<td class="data row2 col3" id="T_d017f_row2_col3">Jun 2027</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_69354_row3_col0">P4</td>
-<td class="data row3 col1" id="T_69354_row3_col1">30% of each quarter's list held out</td>
-<td class="data row3 col2" id="T_69354_row3_col2">90-day voluntary upgrade rate; 6-month retention of upgraders</td>
-<td class="data row3 col3" id="T_69354_row3_col3">Apr 2027</td>
+<td class="data row3 col0" id="T_d017f_row3_col0">P4</td>
+<td class="data row3 col1" id="T_d017f_row3_col1">30% of each quarter's list held out</td>
+<td class="data row3 col2" id="T_d017f_row3_col2">90-day voluntary upgrade rate; 6-month retention of upgraders</td>
+<td class="data row3 col3" id="T_d017f_row3_col3">Apr 2027</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_69354_row4_col0">P5</td>
-<td class="data row4 col1" id="T_69354_row4_col1">50/50 on new Basic signups, Jan–Jun 2027</td>
-<td class="data row4 col2" id="T_69354_row4_col2">90-day upgrade rate and early churn (decision); 6-month revenue per signup (full read)</td>
-<td class="data row4 col3" id="T_69354_row4_col3">Jul 2027 (decision), Dec 2027</td>
+<td class="data row4 col0" id="T_d017f_row4_col0">P5</td>
+<td class="data row4 col1" id="T_d017f_row4_col1">50/50 on new Basic signups, Jan–Jun 2027</td>
+<td class="data row4 col2" id="T_d017f_row4_col2">90-day upgrade rate and early churn of Jan–Apr signups with complete windows (provisional); 6-month revenue per signup (full read)</td>
+<td class="data row4 col3" id="T_d017f_row4_col3">Jul 2027 (provisional), Dec 2027 (full read)</td>
 </tr>
 <tr>
-<td class="data row5 col0" id="T_69354_row5_col0">P6</td>
-<td class="data row5 col1" id="T_69354_row5_col1">Alternate signup weeks</td>
-<td class="data row5 col2" id="T_69354_row5_col2">6-month revenue retained per $1 of first-month MRR</td>
-<td class="data row5 col3" id="T_69354_row5_col3">Jul 2027</td>
+<td class="data row5 col0" id="T_d017f_row5_col0">P6</td>
+<td class="data row5 col1" id="T_d017f_row5_col1">Alternate signup weeks</td>
+<td class="data row5 col2" id="T_d017f_row5_col2">6-month revenue retained per $1 of first-month MRR</td>
+<td class="data row5 col3" id="T_d017f_row5_col3">Jul 2027</td>
 </tr>
 <tr>
-<td class="data row6 col0" id="T_69354_row6_col0">P7</td>
-<td class="data row6 col1" id="T_69354_row6_col1">A/B on retry schedule</td>
-<td class="data row6 col2" id="T_69354_row6_col2">Recovery rate within the dunning window</td>
-<td class="data row6 col3" id="T_69354_row6_col3">Jan 2027</td>
+<td class="data row6 col0" id="T_d017f_row6_col0">P7</td>
+<td class="data row6 col1" id="T_d017f_row6_col1">A/B on retry schedule</td>
+<td class="data row6 col2" id="T_d017f_row6_col2">Recovery rate within the dunning window</td>
+<td class="data row6 col3" id="T_d017f_row6_col3">Jan 2027</td>
 </tr>
 </tbody>
 </table>
@@ -8835,7 +8835,7 @@ the total is a planning number.</p>
 <span class="n">summary</span><span class="p">[</span><span class="s2">"arr"</span><span class="p">]</span> <span class="o">=</span> <span class="n">summary</span><span class="p">[</span><span class="s2">"mrr"</span><span class="p">]</span> <span class="o">*</span> <span class="mi">12</span>
 <span class="n">display</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">format</span><span class="p">({</span><span class="s2">"accounts"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{:,}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"mrr"</span><span class="p">:</span> <span class="s2">"$</span><span class="si">{:,.0f}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"arr"</span><span class="p">:</span> <span class="s2">"$</span><span class="si">{:,.0f}</span><span class="s2">"</span><span class="p">})</span><span class="o">.</span><span class="n">hide</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">"index"</span><span class="p">))</span>
 <span class="k">if</span> <span class="n">hl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">md</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`docs/account_health_list.csv`: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hl</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> accounts (</span><span class="si">{</span><span class="p">(</span><span class="n">hl</span><span class="p">[</span><span class="s1">'list_type'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'risk'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> risk, </span><span class="si">{</span><span class="p">(</span><span class="n">hl</span><span class="p">[</span><span class="s1">'list_type'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'expansion'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> expansion), "</span>
+    <span class="n">md</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`docs/account_health_list.csv`: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hl</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> accounts (</span><span class="si">{</span><span class="p">(</span><span class="n">hl</span><span class="p">[</span><span class="s1">'list_type'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'risk'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> risk, </span><span class="si">{</span><span class="p">(</span><span class="n">hl</span><span class="p">[</span><span class="s1">'list_type'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'renewal'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> Technology renewals no risk flag caught, </span><span class="si">{</span><span class="p">(</span><span class="n">hl</span><span class="p">[</span><span class="s1">'list_type'</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'expansion'</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> upgrade opportunities), "</span>
        <span class="s2">"each with reason codes, evidence in plain words, ARR at stake, priority within its owner queue and the play it belongs to."</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -8851,45 +8851,45 @@ the total is a planning number.</p>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
 <style type="text/css">
 </style>
-<table id="T_d0672">
+<table id="T_fc85b">
 <thead>
 <tr>
-<th class="col_heading level0 col0" id="T_d0672_level0_col0">play</th>
-<th class="col_heading level0 col1" id="T_d0672_level0_col1">accounts</th>
-<th class="col_heading level0 col2" id="T_d0672_level0_col2">mrr</th>
-<th class="col_heading level0 col3" id="T_d0672_level0_col3">arr</th>
+<th class="col_heading level0 col0" id="T_fc85b_level0_col0">play</th>
+<th class="col_heading level0 col1" id="T_fc85b_level0_col1">accounts</th>
+<th class="col_heading level0 col2" id="T_fc85b_level0_col2">mrr</th>
+<th class="col_heading level0 col3" id="T_fc85b_level0_col3">arr</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="data row0 col0" id="T_d0672_row0_col0">P1</td>
-<td class="data row0 col1" id="T_d0672_row0_col1">120</td>
-<td class="data row0 col2" id="T_d0672_row0_col2">$196,188</td>
-<td class="data row0 col3" id="T_d0672_row0_col3">$2,354,252</td>
+<td class="data row0 col0" id="T_fc85b_row0_col0">P1</td>
+<td class="data row0 col1" id="T_fc85b_row0_col1">120</td>
+<td class="data row0 col2" id="T_fc85b_row0_col2">$196,188</td>
+<td class="data row0 col3" id="T_fc85b_row0_col3">$2,354,252</td>
 </tr>
 <tr>
-<td class="data row1 col0" id="T_d0672_row1_col0">P2</td>
-<td class="data row1 col1" id="T_d0672_row1_col1">798</td>
-<td class="data row1 col2" id="T_d0672_row1_col2">$127,317</td>
-<td class="data row1 col3" id="T_d0672_row1_col3">$1,527,807</td>
+<td class="data row1 col0" id="T_fc85b_row1_col0">P2</td>
+<td class="data row1 col1" id="T_fc85b_row1_col1">798</td>
+<td class="data row1 col2" id="T_fc85b_row1_col2">$127,317</td>
+<td class="data row1 col3" id="T_fc85b_row1_col3">$1,527,807</td>
 </tr>
 <tr>
-<td class="data row2 col0" id="T_d0672_row2_col0">P3</td>
-<td class="data row2 col1" id="T_d0672_row2_col1">190</td>
-<td class="data row2 col2" id="T_d0672_row2_col2">$132,871</td>
-<td class="data row2 col3" id="T_d0672_row2_col3">$1,594,451</td>
+<td class="data row2 col0" id="T_fc85b_row2_col0">P3</td>
+<td class="data row2 col1" id="T_fc85b_row2_col1">190</td>
+<td class="data row2 col2" id="T_fc85b_row2_col2">$132,871</td>
+<td class="data row2 col3" id="T_fc85b_row2_col3">$1,594,451</td>
 </tr>
 <tr>
-<td class="data row3 col0" id="T_d0672_row3_col0">P4</td>
-<td class="data row3 col1" id="T_d0672_row3_col1">100</td>
-<td class="data row3 col2" id="T_d0672_row3_col2">$32,949</td>
-<td class="data row3 col3" id="T_d0672_row3_col3">$395,388</td>
+<td class="data row3 col0" id="T_fc85b_row3_col0">P4</td>
+<td class="data row3 col1" id="T_fc85b_row3_col1">100</td>
+<td class="data row3 col2" id="T_fc85b_row3_col2">$32,949</td>
+<td class="data row3 col3" id="T_fc85b_row3_col3">$395,388</td>
 </tr>
 <tr>
-<td class="data row4 col0" id="T_d0672_row4_col0">P6</td>
-<td class="data row4 col1" id="T_d0672_row4_col1">312</td>
-<td class="data row4 col2" id="T_d0672_row4_col2">$38,231</td>
-<td class="data row4 col3" id="T_d0672_row4_col3">$458,772</td>
+<td class="data row4 col0" id="T_fc85b_row4_col0">P6</td>
+<td class="data row4 col1" id="T_fc85b_row4_col1">312</td>
+<td class="data row4 col2" id="T_fc85b_row4_col2">$38,231</td>
+<td class="data row4 col3" id="T_fc85b_row4_col3">$458,772</td>
 </tr>
 </tbody>
 </table>
@@ -8898,7 +8898,7 @@ the total is a planning number.</p>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-OutputArea-output" data-mime-type="text/markdown" tabindex="0">
-<p><code>docs/account_health_list.csv</code>: 1,408 accounts (989 risk, 300 expansion), each with reason codes, evidence in plain words, ARR at stake, priority within its owner queue and the play it belongs to.</p>
+<p><code>docs/account_health_list.csv</code>: 1,408 accounts (989 risk, 119 Technology renewals no risk flag caught, 300 upgrade opportunities), each with reason codes, evidence in plain words, ARR at stake, priority within its owner queue and the play it belongs to.</p>
 </div>
 </div>
 </div>
@@ -8913,12 +8913,11 @@ the total is a planning number.</p>
 <h2 id="Limitations">Limitations<a class="anchor-link" href="#Limitations">¶</a></h2><ul>
 <li><strong>Effects are assumptions.</strong> The ranges are judgement calls, set wide on purpose. Until a holdout reads out, the total is a planning
 number, not a forecast.</li>
-<li><strong>History is a guide, not a promise.</strong> Loss rates come from Oct 2024 – Sep 2025; the current list is 60% Technology, a segment whose
+<li><strong>History is a guide, not a promise.</strong> Loss rates come from Oct 2024 – Sep 2025; the silently contracting accounts are 60% Technology, a segment whose
 behaviour changed in 2026. P3 assumes the next six months of Technology renewals look like the last six.</li>
 <li><strong>Correlation, not causation.</strong> Low utilization predicts loss; it does not prove that raising utilization prevents it. That is exactly
 what the P1 / P2 holdouts test.</li>
-<li><strong>Interactions.</strong> Plays can help or hurt each other (a seat band in P3 gives back MRR that P1 might have kept); the one-play-per-account
-rule avoids double counting, not interactions.</li>
+<li><strong>Interactions and overlap.</strong> Plays can help or hurt each other (a seat band in P3 gives back MRR that P1 might have kept). Accounts in P1–P4 and P6 are assigned to one play only; P5 and P7 act on future signups and failed charges, which can overlap them (involuntary churn is also inside the loss rates P1 and P2 are sized on), so the total is a simple sum and may count a little twice.</li>
 <li><strong>New-signup plays</strong> (P5 test cell, most of P6) pay off mostly after the 12-month NRR window; their value is in new-cohort retention.</li>
 <li><strong>Synthetic data:</strong> the method and the plays transfer, the magnitudes do not.</li>
 </ul>

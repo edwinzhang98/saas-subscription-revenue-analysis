@@ -159,7 +159,7 @@ cc[2].markdown(
     "<div class='note'>Back-test on every eligible account-month (paying, no open cancellation, no contraction in the last "
     "3 months, 13 complete weeks of usage, outcome window fully observed). Outcome = billing-neutral MRR down ≥ 10% or churn "
     "within 3 months (monthly-billed) or by the next renewal (annual-billed, within 6 months). Precision = share of flags "
-    "that contract; recall = share of contracting account-months flagged; lift = precision ÷ base rate. Intervals: 95% "
+    "that contract or cancel; recall = share of account-months with a later contraction or cancellation that were flagged; lift = precision ÷ base rate. Intervals: 95% "
     "account-level bootstrap (accounts resampled with replacement, their month-ends travelling together).</div>",
     unsafe_allow_html=True)
 
@@ -174,8 +174,8 @@ c[0].metric("Precision", pct(ev["precision"]), f"95%: {pct(bs.loc['all', 'precis
                  f"By quarter ({SC.STABILITY_QUARTERS[0]} – {SC.STABILITY_QUARTERS[-1]}): {pct(bq['precision'].min(), 0)}–{pct(bq['precision'].max(), 0)}.")
 c[1].metric("Recall", pct(ev["recall"]), f"95%: {pct(bs.loc['all', 'recall_lo'])}–{pct(bs.loc['all', 'recall_hi'])}",
             delta_color="off", delta_arrow="off", border=True,
-            help=f"Share of contracting account-months flagged. {pct(ev['event_recall'], 0)} of contraction events and "
-                 f"{pct(ev['account_recall'], 0)} of contracting accounts were flagged at least once before the outcome. "
+            help=f"Share of account-months with a later contraction or cancellation that were flagged. {pct(ev['event_recall'], 0)} of loss events (contractions or cancellations) and "
+                 f"{pct(ev['account_recall'], 0)} of accounts that later contracted or cancelled were flagged at least once before the outcome. "
                  f"By quarter: {pct(bq['recall'].min(), 0)}–{pct(bq['recall'].max(), 0)}.")
 c[2].metric("Lift", f"{ev['lift']:.2f}×", f"{pct(ev['base_rate'])} base · 2× bar", delta_color="normal" if ev["lift"] >= 2 else "inverse",
             delta_arrow="off", border=True, help="Precision ÷ base rate; the selection criterion requires at least 2×.")
@@ -183,9 +183,10 @@ c[3].metric("Flags per month", f"{ev['flags_per_month']:.0f}", f"{ev['csm_accoun
             delta_color="normal" if ev["csm_accounts_per_quarter"] <= SC.CSM_CAPACITY_PER_QUARTER else "inverse", delta_arrow="off",
             border=True, help=f"Flagged account-months per month (Jul 2025 – Jun 2026) and distinct CSM-covered accounts flagged per quarter "
                               f"(average over Q3 2025 – Q2 2026); CS capacity {SC.CSM_CAPACITY_PER_QUARTER} reviews a quarter (assumption A9).")
-c[4].metric("Median lead, monthly", f"{r['monthly']['lead_median']:.0f} month-ends", f"{r['annual']['lead_median']:.0f} for annual-billed",
+c[4].metric("Median lead, monthly", f"{r['monthly']['lead_median']:.0f} month-ends", f"annual-billed {r['annual']['lead_median']:.0f} (cap 6)",
             delta_color="off", delta_arrow="off", border=True,
-            help=f"Month-ends from the first flag of the run to the contraction month, one run per caught event. Pooled median "
+            help=f"Month-ends from the first flag of the run to the loss month (contraction or cancellation), one run per caught event. "
+                 f"Annual-billed outcome windows run to renewal (≤ 6 months), so 6 is the most the back-test window allows. Pooled median "
                  f"{ev['lead_median']:.0f} (it moves with the monthly / annual mix, so quote the by-billing medians); "
                  f"{pct(ev['share_lead_ge2'], 0)} of caught events were flagged at least 2 month-ends ahead.")
 finding((f"<b>Chosen rule (02 §9.1 v1.2): 13-week seat utilization below {pct(u0, 0)}" + ("" if w0 is None else f" and WAU trend ≤ {pct(w0, 0)}")
@@ -197,10 +198,12 @@ finding((f"<b>Chosen rule (02 §9.1 v1.2): 13-week seat utilization below {pct(u
         "removes flags without making the remaining ones more accurate, so the v1.2 rule uses utilization only; the WAU drop stays as a "
         "reason code. Annual-billed accounts flag with higher precision "
         f"({pct(r['annual']['precision'], 0)} vs {pct(r['monthly']['precision'], 0)}) and a longer lead (median {r['annual']['lead_median']:.0f} vs "
-        f"{r['monthly']['lead_median']:.0f} month-ends), because they can only contract at renewal; {pct(ev['share_lead_ge2'], 0)} of caught events "
-        f"were flagged at least 2 month-ends ahead. Selection and evaluation share the same rows, so the per-quarter check matters: precision "
+        f"{r['monthly']['lead_median']:.0f} month-ends); 6 is the most the back-test window allows for annual-billed accounts, whose outcome "
+        f"windows run to renewal (≤ 6 months). {pct(ev['share_lead_ge2'], 0)} of caught events "
+        f"were flagged at least 2 month-ends ahead. Per-quarter precision is "
         f"{pct(bq['precision'].min(), 0)}–{pct(bq['precision'].max(), 0)} and recall {pct(bq['recall'].min(), 0)}–{pct(bq['recall'].max(), 0)} in every "
-        f"quarter from {SC.STABILITY_QUARTERS[0]} to {SC.STABILITY_QUARTERS[-1]}.")
+        f"quarter from {SC.STABILITY_QUARTERS[0]} to {SC.STABILITY_QUARTERS[-1]}. The per-quarter results show the rule is stable over time; "
+        "the rule was chosen and scored on the same back-test, so some selection optimism remains — the frozen rule should be checked on Q4 2026 onward.")
 plot(SC.fig_pr_tradeoff(grid, chosen, (util_thr, trend_thr)))
 grid_cfg = {"utilization_threshold": NumCol("Utilization <", **PCT), "wau_trend_threshold": NumCol("WAU trend ≤", **PCT),
             "flagged_rows": NumCol("Flagged rows", format="localized"), "precision": NumCol("Precision", **PCT), "recall": NumCol("Recall", **PCT),
@@ -349,16 +352,17 @@ flagged and compares them with unflagged accounts of the same segment, billing p
 not much more likely to churn than their peers, so the loss is mostly already booked. The whiskers are row-level
 intervals; the unflagged comparison's rows are account-months, so its whisker is narrower than an account-level one.
 
-**Early warning (section 2).** A rule that fires *before* the contraction, tested on history exactly as it would have
+**Early warning (section 2).** A rule that fires *before* a contraction or cancellation, tested on history exactly as it would have
 been used: at each month-end, could the signals visible then have flagged the accounts that contracted or churned
-soon after? Precision is the share of flags that were right; recall is the share of contractions we would have
-caught; lift compares precision with simply guessing. The intervals on the tiles come from resampling accounts, not
+soon after? Precision is the share of flags that were right; recall is the share of account-months with a later contraction
+or cancellation that were flagged; lift compares precision with simply guessing. The intervals on the tiles come from resampling accounts, not
 rows, so they allow for the ~10 month-ends each account contributes. The trade-off chart shows every threshold pair;
-move the sliders and the metrics, the lead-time chart and the current flags recompute. The operating point was chosen
-on the same rows it is scored on, so the per-quarter table is the check that it is not a lucky grid cell. Lead time
-is how many month-ends before the contraction the flag first fired, one run per caught event; quote the monthly-billed
-and annual-billed medians rather than the pooled one, which moves with the mix. Annual-billed accounts can only shrink
-at renewal, so they flag earlier and more precisely.
+move the sliders and the metrics, the lead-time chart and the current flags recompute. The per-quarter results show the
+rule is stable over time; the rule was chosen and scored on the same back-test, so some selection optimism remains —
+the frozen rule should be checked on Q4 2026 onward. Lead time is how many month-ends before the loss (contraction or
+cancellation) the flag first fired, one run per caught event; quote the monthly-billed and annual-billed medians rather
+than the pooled one, which moves with the mix. Annual-billed outcome windows run to renewal (≤ 6 months), so a median
+lead of 6 is at the back-test window cap.
 
 **The watchlist (section 3)** combines both lists for CS, ranked within each queue in three tiers: annual renewals in
 under 45 days by date, then renewals within 120 days by ARR at stake (current ARR × the flag's historical hit rate),

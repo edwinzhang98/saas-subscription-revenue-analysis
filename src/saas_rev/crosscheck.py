@@ -33,7 +33,7 @@ Implementation notes
   difference, the rows outside tolerance and a few examples. Where SQL differs
   from a careful reading of the definitions, the difference is explained under
   ``discrepancies`` (section, both values, a minimal example); sentences that a
-  second analyst could read differently are listed under ``ambiguities``.
+  another reader could read differently are listed under ``ambiguities``.
 
 Usage::
 
@@ -1014,7 +1014,7 @@ def find_discrepancies(metrics: Metrics, warehouse: dict[str, pd.DataFrame],
 
 
 def ambiguities(metrics: Metrics) -> list[dict[str, Any]]:
-    """Sentences of the definitions document that a second analyst could read differently."""
+    """Sentences of the definitions document that another reader could read differently."""
     checks = metrics.data_checks
     not_paying = int((metrics.movements["mrr_prev"].eq(0) & metrics.movements["mrr"].eq(0)).sum())
     return [
