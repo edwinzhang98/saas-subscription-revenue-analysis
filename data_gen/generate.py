@@ -348,7 +348,7 @@ def sample_accounts(P: dict, cal: Calendar, rng: np.random.Generator) -> pd.Data
     df.loc[pick, ["industry", "initial_plan", "initial_billing", "initial_seats", "initial_discount",
                   "payment_method", "onboarding_fee", "role"]] = [
         ro["industry"], "enterprise", "annual", ro["initial_seats"], ro["discount"], "invoice", 15000.0, "rollout"]
-    df.loc[pick, "fit"] = 2.0
+    df.loc[pick, "fit"] = float(ro["fit"])
 
     # DQ: internal / test accounts
     internal = []
@@ -817,7 +817,7 @@ class AccountSim:
             self._roll_period(pe)
             return None
         new = self.terms()
-        source = "self_serve" if self.seg == "SMB" else "customer_success"
+        source = "self_serve"   # customer-initiated decreases / switches at a monthly billing date
         req = max(pe - timedelta(days=int(rng.integers(1, 21))), s["period_start"])
         if self.pending_ent is not None:
             new = self._apply_pending_enterprise(new)

@@ -5,6 +5,7 @@
 -- Outputs : stg_subscriptions (one row per subscription)
 -- Notes   : end_date is EXCLUSIVE (first day without service). Anything after the as-of
 --           date is treated as unknown: end dates after as-of are nulled (still live at as-of).
+-- Run     : duckdb <warehouse.duckdb> < sql/02_stg_subscriptions.sql
 -- =============================================================================
 CREATE OR REPLACE TABLE stg_subscriptions AS
 SELECT

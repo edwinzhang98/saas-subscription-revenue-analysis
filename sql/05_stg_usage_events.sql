@@ -5,6 +5,7 @@
 -- Outputs : stg_usage_events (one row per customer x week_start x event_name)
 -- Notes   : the product-analytics export occasionally double-loads a batch; exact duplicates
 --           are removed. is_complete_week = the whole Mon-Sun week is on or before the as-of date.
+-- Run     : duckdb <warehouse.duckdb> < sql/05_stg_usage_events.sql
 -- =============================================================================
 CREATE OR REPLACE TABLE stg_usage_events AS
 SELECT

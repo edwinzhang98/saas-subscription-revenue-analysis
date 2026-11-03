@@ -1,0 +1,1240 @@
+{
+  "meta": {
+    "generated_at": "2026-11-03T13:01:34+00:00",
+    "definitions": "docs/02_metric_definitions.md v1.1",
+    "as_of_date": "2026-09-30",
+    "raw_dir": "<data_dir>/raw (config.yaml)",
+    "warehouse": "<data_dir>/warehouse.duckdb (config.yaml)",
+    "tolerances": {
+      "money_usd": 0.01,
+      "ratio_abs": 1e-09,
+      "count": 0,
+      "label": "exact"
+    },
+    "seconds_compute": 0.38,
+    "seconds_total": 0.93
+  },
+  "summary": {
+    "checks": 19,
+    "core_checks_matching": 16,
+    "core_checks": 17,
+    "mismatching": [
+      "movement_type",
+      "cohort_values_partial"
+    ]
+  },
+  "headline": {
+    "as_of": "2026-09-30",
+    "mrr": 2062545.14,
+    "arr": 24750541.68,
+    "paying_customers": 4117,
+    "ttm_nrr": 1.0350221051420998,
+    "ttm_grr": 0.846000902976394,
+    "ttm_logo_retention": 0.8186790071518721,
+    "runrate_quarter_end": "2026-09-30",
+    "runrate_nrr_annualized": 0.9287458845577075
+  },
+  "data_checks": {
+    "internal_accounts_excluded": [
+      {
+        "customer_id": "CUS-000196",
+        "company_name": "Internal - CS Training",
+        "email_domain": "ourcompany.example"
+      },
+      {
+        "customer_id": "CUS-000585",
+        "company_name": "Test Account (do not use)",
+        "email_domain": "ourcompany.example"
+      },
+      {
+        "customer_id": "CUS-002715",
+        "company_name": "zz_test_enterprise",
+        "email_domain": "ourcompany.example"
+      },
+      {
+        "customer_id": "CUS-003304",
+        "company_name": "QA Sandbox EU",
+        "email_domain": "ourcompany.example"
+      },
+      {
+        "customer_id": "CUS-004102",
+        "company_name": "[INTERNAL] Sales Demo",
+        "email_domain": "ourcompany.example"
+      },
+      {
+        "customer_id": "CUS-004392",
+        "company_name": "TEST - Billing QA 1",
+        "email_domain": "ourcompany.example"
+      }
+    ],
+    "internal_accounts_ok": true,
+    "plan_change_rows": {
+      "total": 6729,
+      "valid": 6716,
+      "dropped": [
+        "CHG-0001134",
+        "CHG-0001580",
+        "CHG-0002951",
+        "CHG-0003489",
+        "CHG-0003702",
+        "CHG-0004085",
+        "CHG-0004683",
+        "CHG-0005897",
+        "CHG-0005983",
+        "CHG-0006207",
+        "CHG-0006379",
+        "CHG-0006463",
+        "CHG-0006723"
+      ]
+    },
+    "plan_change_customer_id_mismatches": 0,
+    "chaining_violations": 0,
+    "same_day_change_groups": 2,
+    "change_terms_off_list_price": 0,
+    "subscription_versions_with_fractional_cent_mrr": 0,
+    "component_rows_sum_to_delta_mrr": true,
+    "change_rows_outside_continuing_months": 369,
+    "waterfall_identity_max_gap_cents": 0,
+    "component_tie_out_max_gap_cents": 0,
+    "churn_without_cancel_reason_cents": 0,
+    "customers_in_panel": 5260,
+    "customer_months": 82072,
+    "month_ends": [
+      "2023-10-31",
+      "2026-09-30"
+    ]
+  },
+  "comparisons": [
+    {
+      "name": "customer_mrr",
+      "description": "\u00a73 customer MRR at every month-end of the dense panel (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 0.0,
+      "max_abs_diff_money": 0.0,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "is_paying": {
+          "kind": "label",
+          "n_mismatch": 0
+        },
+        "months_since_first_paid": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "cohort_month_end": {
+          "kind": "label",
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_type",
+      "description": "\u00a74 movement type per customer-month, labels as published",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": null,
+      "max_abs_diff_money": null,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 12453,
+      "n_mismatch_rows": 12453,
+      "status": "mismatch",
+      "columns": {
+        "movement_type": {
+          "kind": "label",
+          "n_mismatch": 12453
+        }
+      },
+      "examples": [
+        {
+          "customer_id": "CUS-000003",
+          "month_end": "2025-03-31",
+          "movement_type": {
+            "python": "unchanged",
+            "sql": "not_paying"
+          }
+        },
+        {
+          "customer_id": "CUS-000003",
+          "month_end": "2025-04-30",
+          "movement_type": {
+            "python": "unchanged",
+            "sql": "not_paying"
+          }
+        },
+        {
+          "customer_id": "CUS-000003",
+          "month_end": "2025-05-31",
+          "movement_type": {
+            "python": "unchanged",
+            "sql": "not_paying"
+          }
+        },
+        {
+          "customer_id": "CUS-000003",
+          "month_end": "2025-06-30",
+          "movement_type": {
+            "python": "unchanged",
+            "sql": "not_paying"
+          }
+        },
+        {
+          "customer_id": "CUS-000003",
+          "month_end": "2025-07-31",
+          "movement_type": {
+            "python": "unchanged",
+            "sql": "not_paying"
+          }
+        }
+      ],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_type_mapped",
+      "description": "\u00a74 movement type, reading SQL 'not_paying' (prev = cur = 0) as 'unchanged'",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": null,
+      "max_abs_diff_money": null,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "movement_type": {
+          "kind": "label",
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_prev_cur",
+      "description": "\u00a74 prev / cur MRR and net change per customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 5.684341886080801e-13,
+      "max_abs_diff_money": 5.684341886080801e-13,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "mrr_prev": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "net_change": {
+          "kind": "money",
+          "max_abs_diff": 5.684341886080801e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_new_mrr",
+      "description": "\u00a74 new_mrr per customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 0.0,
+      "max_abs_diff_money": 0.0,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "new_mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_reactivation_mrr",
+      "description": "\u00a74 reactivation_mrr per customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 0.0,
+      "max_abs_diff_money": 0.0,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "reactivation_mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_expansion_mrr",
+      "description": "\u00a74 expansion_mrr per customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 5.684341886080801e-13,
+      "max_abs_diff_money": 5.684341886080801e-13,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "expansion_mrr": {
+          "kind": "money",
+          "max_abs_diff": 5.684341886080801e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_contraction_mrr",
+      "description": "\u00a74 contraction_mrr per customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 2.2737367544323206e-13,
+      "max_abs_diff_money": 2.2737367544323206e-13,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "contraction_mrr": {
+          "kind": "money",
+          "max_abs_diff": 2.2737367544323206e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_churn_mrr",
+      "description": "\u00a74 churn_mrr per customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 82072,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 0.0,
+      "max_abs_diff_money": 0.0,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "churn_mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "waterfall_totals",
+      "description": "\u00a74 / \u00a75 monthly waterfall totals, voluntary / involuntary churn, customer counts",
+      "informational": false,
+      "keys": [
+        "month_end"
+      ],
+      "rows_compared": 36,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 1.1175870895385742e-08,
+      "max_abs_diff_money": 1.1175870895385742e-08,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "mrr_start": {
+          "kind": "money",
+          "max_abs_diff": 9.313225746154785e-10,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "new_mrr": {
+          "kind": "money",
+          "max_abs_diff": 1.4551915228366852e-11,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "reactivation_mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "expansion_mrr": {
+          "kind": "money",
+          "max_abs_diff": 7.275957614183426e-12,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "contraction_mrr": {
+          "kind": "money",
+          "max_abs_diff": 3.637978807091713e-12,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "churn_mrr": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "mrr_end": {
+          "kind": "money",
+          "max_abs_diff": 9.313225746154785e-10,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "identity_gap": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "arr_end": {
+          "kind": "money",
+          "max_abs_diff": 1.1175870895385742e-08,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "churn_mrr_voluntary": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "churn_mrr_involuntary": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "customers_start": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "customers_end": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "new_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "expanding_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "contracting_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "churned_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "reactivated_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "waterfall_rates",
+      "description": "\u00a73 ARPA and \u00a75 monthly churn and flow-retention rates",
+      "informational": false,
+      "keys": [
+        "month_end"
+      ],
+      "rows_compared": 36,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 3.410605131648481e-13,
+      "max_abs_diff_money": null,
+      "max_abs_diff_ratio": 3.410605131648481e-13,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "arpa": {
+          "kind": "ratio",
+          "max_abs_diff": 3.410605131648481e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "logo_churn_rate": {
+          "kind": "ratio",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_mrr_churn_rate": {
+          "kind": "ratio",
+          "max_abs_diff": 1.0408340855860843e-17,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "net_mrr_churn_rate": {
+          "kind": "ratio",
+          "max_abs_diff": 1.0408340855860843e-17,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "monthly_net_retention_flow": {
+          "kind": "ratio",
+          "max_abs_diff": 2.220446049250313e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "monthly_gross_retention_flow": {
+          "kind": "ratio",
+          "max_abs_diff": 1.1102230246251565e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "waterfall_components",
+      "description": "\u00a74.1 gross expansion / contraction by component per month",
+      "informational": false,
+      "keys": [
+        "month_end"
+      ],
+      "rows_compared": 36,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 7.275957614183426e-12,
+      "max_abs_diff_money": 7.275957614183426e-12,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "gross_plan_upgrade": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_plan_downgrade": {
+          "kind": "money",
+          "max_abs_diff": 9.094947017729282e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_seat_increase": {
+          "kind": "money",
+          "max_abs_diff": 7.275957614183426e-12,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_seat_decrease": {
+          "kind": "money",
+          "max_abs_diff": 9.094947017729282e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_billing_to_monthly": {
+          "kind": "money",
+          "max_abs_diff": 2.2737367544323206e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_billing_to_annual": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_discount_decrease": {
+          "kind": "money",
+          "max_abs_diff": 2.8421709430404007e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "gross_discount_increase": {
+          "kind": "money",
+          "max_abs_diff": 2.2737367544323206e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "component_other": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "nrr_grr_ttm",
+      "description": "\u00a77 / \u00a78 TTM NRR, GRR and logo retention per month-end",
+      "informational": false,
+      "keys": [
+        "month_end"
+      ],
+      "rows_compared": 24,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 3.4924596548080444e-10,
+      "max_abs_diff_money": 3.4924596548080444e-10,
+      "max_abs_diff_ratio": 6.661338147750939e-16,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "base_month_end": {
+          "kind": "label",
+          "n_mismatch": 0
+        },
+        "base_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "base_mrr": {
+          "kind": "money",
+          "max_abs_diff": 2.3283064365386963e-10,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "retained_mrr": {
+          "kind": "money",
+          "max_abs_diff": 3.4924596548080444e-10,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "retained_mrr_capped": {
+          "kind": "money",
+          "max_abs_diff": 2.3283064365386963e-10,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "nrr": {
+          "kind": "ratio",
+          "max_abs_diff": 6.661338147750939e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "grr": {
+          "kind": "ratio",
+          "max_abs_diff": 3.3306690738754696e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "logo_retention": {
+          "kind": "ratio",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "is_reportable": {
+          "kind": "label",
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "nrr_runrate_quarterly",
+      "description": "\u00a77 quarterly run-rate NRR and its annualisation (^4)",
+      "informational": false,
+      "keys": [
+        "quarter_end"
+      ],
+      "rows_compared": 11,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 9.313225746154785e-10,
+      "max_abs_diff_money": 9.313225746154785e-10,
+      "max_abs_diff_ratio": 1.9984014443252818e-15,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "base_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "base_mrr": {
+          "kind": "money",
+          "max_abs_diff": 9.313225746154785e-10,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "nrr_quarter": {
+          "kind": "ratio",
+          "max_abs_diff": 4.440892098500626e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "nrr_runrate_annualized": {
+          "kind": "ratio",
+          "max_abs_diff": 1.9984014443252818e-15,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "grr_runrate_quarterly",
+      "description": "Quarterly GRR: not defined in the document; \u00a78 capping over the \u00a77 quarterly window",
+      "informational": true,
+      "keys": [
+        "quarter_end"
+      ],
+      "rows_compared": 11,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 7.771561172376096e-16,
+      "max_abs_diff_money": null,
+      "max_abs_diff_ratio": 7.771561172376096e-16,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "grr_quarter": {
+          "kind": "ratio",
+          "max_abs_diff": 2.220446049250313e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "grr_runrate_annualized": {
+          "kind": "ratio",
+          "max_abs_diff": 7.771561172376096e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "movement_components",
+      "description": "\u00a74.1 components per continuing customer-month (cent level)",
+      "informational": false,
+      "keys": [
+        "customer_id",
+        "month_end"
+      ],
+      "rows_compared": 63006,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 5.684341886080801e-13,
+      "max_abs_diff_money": 5.684341886080801e-13,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "comp_plan": {
+          "kind": "money",
+          "max_abs_diff": 2.2737367544323206e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "comp_seats": {
+          "kind": "money",
+          "max_abs_diff": 5.684341886080801e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "comp_billing_period": {
+          "kind": "money",
+          "max_abs_diff": 2.2737367544323206e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "comp_discount": {
+          "kind": "money",
+          "max_abs_diff": 2.8421709430404007e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "comp_other": {
+          "kind": "money",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "net_change": {
+          "kind": "money",
+          "max_abs_diff": 5.684341886080801e-13,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "change_rows": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "movement_type": {
+          "kind": "label",
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "cohort_cells",
+      "description": "\u00a710 cohort cells: which cells exist, members, members observed, completeness flag",
+      "informational": false,
+      "keys": [
+        "cohort_grain",
+        "cohort",
+        "months_since_first_paid"
+      ],
+      "rows_compared": 900,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 0.0,
+      "max_abs_diff_money": null,
+      "max_abs_diff_ratio": null,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "is_complete": {
+          "kind": "label",
+          "n_mismatch": 0
+        },
+        "cohort_customers": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "customers_observed": {
+          "kind": "count",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "cohort_values_complete",
+      "description": "\u00a710 cohort NRR / GRR / logo retention on complete cells",
+      "informational": false,
+      "keys": [
+        "cohort_grain",
+        "cohort",
+        "months_since_first_paid"
+      ],
+      "rows_compared": 876,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 2.9103830456733704e-11,
+      "max_abs_diff_money": 2.9103830456733704e-11,
+      "max_abs_diff_ratio": 4.440892098500626e-16,
+      "n_over_tol_rows": 0,
+      "n_mismatch_rows": 0,
+      "status": "match",
+      "columns": {
+        "base_mrr": {
+          "kind": "money",
+          "max_abs_diff": 2.9103830456733704e-11,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "mrr_k": {
+          "kind": "money",
+          "max_abs_diff": 2.9103830456733704e-11,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "nrr": {
+          "kind": "ratio",
+          "max_abs_diff": 4.440892098500626e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "grr": {
+          "kind": "ratio",
+          "max_abs_diff": 2.220446049250313e-16,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "logo_retention": {
+          "kind": "ratio",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        }
+      },
+      "examples": [],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    },
+    {
+      "name": "cohort_values_partial",
+      "description": "Partial cells (\u00a710: blank); compared over the members observed at k, for information",
+      "informational": true,
+      "keys": [
+        "cohort_grain",
+        "cohort",
+        "months_since_first_paid"
+      ],
+      "rows_compared": 24,
+      "rows_only_python": 0,
+      "rows_only_sql": 0,
+      "max_abs_diff": 2.9103830456733704e-11,
+      "max_abs_diff_money": 2.9103830456733704e-11,
+      "max_abs_diff_ratio": 0.0,
+      "n_over_tol_rows": 24,
+      "n_mismatch_rows": 24,
+      "status": "mismatch",
+      "columns": {
+        "base_mrr": {
+          "kind": "money",
+          "max_abs_diff": 2.9103830456733704e-11,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "mrr_k": {
+          "kind": "money",
+          "max_abs_diff": 1.4551915228366852e-11,
+          "n_over_tol": 0,
+          "n_mismatch": 0
+        },
+        "nrr": {
+          "kind": "ratio",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 24,
+          "n_mismatch": 24
+        },
+        "grr": {
+          "kind": "ratio",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 24,
+          "n_mismatch": 24
+        },
+        "logo_retention": {
+          "kind": "ratio",
+          "max_abs_diff": 0.0,
+          "n_over_tol": 24,
+          "n_mismatch": 24
+        }
+      },
+      "examples": [
+        {
+          "cohort_grain": "quarter",
+          "cohort": "2023-Q4",
+          "months_since_first_paid": 34,
+          "nrr": {
+            "python": 1.3580130493266167,
+            "sql": null
+          },
+          "grr": {
+            "python": 0.7593150984579194,
+            "sql": null
+          },
+          "logo_retention": {
+            "python": 0.6946902654867256,
+            "sql": null
+          }
+        },
+        {
+          "cohort_grain": "quarter",
+          "cohort": "2023-Q4",
+          "months_since_first_paid": 35,
+          "nrr": {
+            "python": 1.368325909744525,
+            "sql": null
+          },
+          "grr": {
+            "python": 0.7774342941411266,
+            "sql": null
+          },
+          "logo_retention": {
+            "python": 0.7089552238805971,
+            "sql": null
+          }
+        },
+        {
+          "cohort_grain": "quarter",
+          "cohort": "2024-Q1",
+          "months_since_first_paid": 31,
+          "nrr": {
+            "python": 1.2726333426348666,
+            "sql": null
+          },
+          "grr": {
+            "python": 0.7807797924555484,
+            "sql": null
+          },
+          "logo_retention": {
+            "python": 0.5888324873096447,
+            "sql": null
+          }
+        },
+        {
+          "cohort_grain": "quarter",
+          "cohort": "2024-Q1",
+          "months_since_first_paid": 32,
+          "nrr": {
+            "python": 1.3232929719678395,
+            "sql": null
+          },
+          "grr": {
+            "python": 0.7515752735050558,
+            "sql": null
+          },
+          "logo_retention": {
+            "python": 0.5760869565217391,
+            "sql": null
+          }
+        },
+        {
+          "cohort_grain": "quarter",
+          "cohort": "2024-Q2",
+          "months_since_first_paid": 28,
+          "nrr": {
+            "python": 1.1465336073065766,
+            "sql": null
+          },
+          "grr": {
+            "python": 0.7163693168668869,
+            "sql": null
+          },
+          "logo_retention": {
+            "python": 0.6263157894736842,
+            "sql": null
+          }
+        }
+      ],
+      "examples_only_python": [],
+      "examples_only_sql": []
+    }
+  ],
+  "discrepancies": [
+    {
+      "id": "movement_label_not_paying",
+      "section": "\u00a74 movement table",
+      "comparison": "movement_type",
+      "severity": "label only: no amount, waterfall, NRR or GRR impact",
+      "rows": 12453,
+      "python": "unchanged: the \u00a74 condition 'Unchanged | prev = cur' holds for prev = cur = 0",
+      "sql": "not_paying: a movement type the document does not define",
+      "example": {
+        "customer_id": "CUS-000003",
+        "month_end": "2025-03-31",
+        "mrr_prev": 0.0,
+        "mrr": 0.0,
+        "python": "unchanged",
+        "sql": "not_paying"
+      },
+      "explanation": "Customer-months inside the panel where the customer is not paying (after a churn, before any reactivation) are labelled 'not_paying' in fct_mrr_movements. The \u00a74 table defines six movements and none of them is 'not paying'; read literally, prev = cur = 0 is 'Unchanged'. Amounts are 0 either way, but any count of 'unchanged' customer-months differs. Fix in the document (add the state) or in SQL (use 'unchanged')."
+    }
+  ],
+  "ambiguities": [
+    {
+      "section": "\u00a74 movement table",
+      "sentence": "Unchanged | `prev = cur` | 0 (changes inside the month netted to zero, e.g., a \"neutral\" plan change)",
+      "readings": [
+        "Literal: every customer-month with prev = cur, including prev = cur = 0 between subscriptions, is 'Unchanged' (this implementation).",
+        "Meant for paying customers; non-paying months get their own state (SQL: 'not_paying')."
+      ],
+      "also": "The document never says which customer-months form the movement panel (from the first paid month-end, or every month since GA); that choice changes the count of 'unchanged' rows.",
+      "impact_here": "Labels of 12,453 non-paying customer-months; no amounts."
+    },
+    {
+      "section": "\u00a74.1 component formulas",
+      "sentence": "(The plan step uses the list `unit_price` of the new plan on the old billing period.)",
+      "readings": [
+        "Only the plan step uses a list price; the billing-period step uses the row's to_unit_price, since MRR(to_plan, to_seats, to_billing, from_discount) shares plan and billing period with the to terms (this implementation).",
+        "Every intermediate state is priced at list for its (plan, billing period), so an off-list to_unit_price would land in the discount step instead.",
+        "When the plan is unchanged the plan step still re-prices 'the new plan' at list, which turns an off-list from_unit_price into a plan component (this implementation keeps the old unit price instead)."
+      ],
+      "also": "Enterprise has no monthly list price; the sentence needs it for monthly \u2192 Enterprise moves. Annual list \u00f7 12 ($50) is used here, as \u00a73's billing-neutral MRR does, but \u00a74.1 does not say so.",
+      "impact_here": "None: 0 change-row terms are off list, so all readings give identical components."
+    },
+    {
+      "section": "\u00a74.1 customer-month components",
+      "sentence": "sum each component over all rows with `effective_date` in [first day of *m*, last day of *m*], on any of the customer's subscriptions",
+      "readings": [
+        "Valid rows only (\u00a73 drops rows outside [start_date, end_date)) (this implementation).",
+        "Literally all plan_changes rows, including the dropped ones."
+      ],
+      "impact_here": "None: the 13 dropped rows all fall in churn, reactivation or non-paying months, which have no components."
+    },
+    {
+      "section": "\u00a71 rounding",
+      "sentence": "Subscription MRR is rounded to the cent (`ROUND(x, 2)`) before summing and before any comparison.",
+      "readings": [
+        "Half away from zero (SQL ROUND, and the half-up integer rounding used here).",
+        "Half to even (Python round(), numpy.round), which differs on exact half-cent values."
+      ],
+      "impact_here": "None: 0 subscription versions have an unrounded MRR off a whole cent (integer list prices, whole-percent discounts, annual prices divisible by 12)."
+    },
+    {
+      "section": "\u00a72 exclusions",
+      "sentence": "`company_name` matches, case-insensitively, one of the whole-token patterns `\\btest\\b`, `\\[internal\\]`, `^internal\\b`, `\\bqa\\b`, `zz_test`",
+      "readings": [
+        "Apply the regexes as written: `zz_test` and `\\[internal\\]` are substring patterns (this implementation).",
+        "'Whole-token' applies to every pattern, so `zz_test` needs boundaries (would not match 'zz_test_enterprise' if `_` counts as a separator)."
+      ],
+      "impact_here": "None: exactly the 6 expected internal accounts are excluded either way; real names such as 'Granitestack' contain 'test' and are kept."
+    },
+    {
+      "section": "\u00a710 right-censoring",
+      "sentence": "a cell is shown only if every member of the cohort has reached month *k* by the as-of date. Partial cells are blank, not zero.",
+      "readings": [
+        "The cell has no value (this implementation).",
+        "The cell is stored with a value and an is_complete flag, and blanked only on display (SQL)."
+      ],
+      "impact_here": "24 partial quarterly cells; see discrepancy cohort_partial_cells_published."
+    },
+    {
+      "section": "\u00a77 quarterly run-rate NRR",
+      "sentence": "For a quarter-end *t*: `NRR_q(t) = \u03a3_{c paying at t\u22123} MRR_c(t) \u00f7 \u03a3 MRR_c(t\u22123)`, annualised as `NRR_q\u2074`.",
+      "readings": [
+        "Only NRR has a quarterly definition. The warehouse also publishes grr_quarter and grr_runrate_annualized, and rpt_nrr_grr_ttm publishes expansion / contraction / churn contributions, none of which the document defines.",
+        "A capped quarterly GRR raised to the 4th power is not a 12-month GRR, so it should not be read next to \u00a78 GRR."
+      ],
+      "impact_here": "Informational columns only; the quarterly GRR matches the \u00a78-style analogue computed here."
+    }
+  ]
+}

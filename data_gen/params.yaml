@@ -201,7 +201,8 @@ scenario:
     signup_window: ["2024-03-01", "2024-08-31"]
     initial_seats: 350
     discount: 0.20
-    seat_mult: 2.6
+    seat_mult: 2.0
+    fit: 1.5                     # healthy, but not an outlier grower before the rollout
 
 # §7 data-quality injections ------------------------------------------------------------
 dq:

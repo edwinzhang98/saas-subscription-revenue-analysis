@@ -1,0 +1,15 @@
+{
+  "row_counts": {
+    "customers": 5282,
+    "subscriptions": 5394,
+    "plan_changes": 6729,
+    "invoices": 47337,
+    "usage_events": 1506967,
+    "plans": 3
+  },
+  "generator_checks_passed": 18,
+  "generator_checks_total": 18,
+  "dq_checks_pass": 36,
+  "dq_checks_fail": 0,
+  "dq_checks_info": 13
+}

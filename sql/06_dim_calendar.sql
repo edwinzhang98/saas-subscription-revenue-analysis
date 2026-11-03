@@ -4,6 +4,7 @@
 -- Inputs  : meta_run
 -- Outputs : dim_month (one row per calendar month: month_start, month_end, quarter ...)
 --           dim_week  (one row per Monday-starting week: week_start, week_end, is_complete_week)
+-- Run     : duckdb <warehouse.duckdb> < sql/06_dim_calendar.sql
 -- =============================================================================
 CREATE OR REPLACE TABLE dim_month AS
 SELECT

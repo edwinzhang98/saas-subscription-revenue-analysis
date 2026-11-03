@@ -5,6 +5,7 @@
 -- Outputs : stg_invoices (one row per non-void invoice line)
 -- Notes   : `uncollectible` lines stay (they were real charges; reported separately).
 --           Amounts are pre-tax and net of discount; tax is excluded from every revenue metric.
+-- Run     : duckdb <warehouse.duckdb> < sql/04_stg_invoices.sql
 -- =============================================================================
 CREATE OR REPLACE TABLE stg_invoices AS
 SELECT

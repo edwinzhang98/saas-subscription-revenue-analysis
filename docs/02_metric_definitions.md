@@ -20,7 +20,7 @@ Every number in the board pack, the monthly revenue review, the dashboard and th
 ## 2. Population and exclusions
 
 - **Customer** = an account in `customers`. **Paying customer at month-end D** = customer MRR on D > 0. Customer counts in this document always mean paying customers.
-- **Internal / test accounts are excluded everywhere:** `email_domain = 'ourcompany.example'` OR `company_name` matches, case-insensitively, one of the whole-token patterns `\btest\b`, `\[internal\]`, `^internal\b`, `\bqa\b`, `zz_test`. `sql/91_dq_checks.sql` asserts the excluded set is exactly the 6 known internal accounts and lists them.
+- **Internal / test accounts are excluded everywhere:** `email_domain = 'ourcompany.example'` OR `company_name` matches, case-insensitively, one of the patterns `\btest\b` and `\bqa\b` (whole words), `^internal\b` (leading word), `\[internal\]` or `zz_test` (literal tags). `sql/91_dq_checks.sql` asserts the excluded set is exactly the 6 known internal accounts and lists them.
 - **Duplicate CRM records** (a second `customer_id` with the same `email_domain` and no subscription) never reach revenue metrics, because only accounts with a subscription can be paying. They are counted in data-quality checks.
 - **Invoices:** `status = 'void'` lines are excluded. `uncollectible` lines stay in billed revenue (they were real charges) and are reported separately.
 - **Usage:** exact duplicate rows are removed; the partial week containing the as-of date is excluded from weekly trends.
@@ -62,7 +62,8 @@ For each customer and month *m*, compare MRR at the end of the previous month (`
 | **Expansion** | `prev > 0`, `cur > prev` | `cur − prev` |
 | **Contraction** | `prev > 0`, `0 < cur < prev` | `prev − cur` |
 | **Churn** | `prev > 0`, `cur = 0` | `prev` |
-| Unchanged | `prev = cur` | 0 (changes inside the month netted to zero, e.g., a "neutral" plan change) |
+| Unchanged | `prev = cur > 0` | 0 (changes inside the month netted to zero, e.g., a "neutral" plan change) |
+| *Not paying* (state, not a movement) | `prev = cur = 0` | 0 — a former customer inside the panel between a churn and any win-back; labelled `not_paying` in `fct_mrr_movements` |
 
 **Identity (checked every month, to the cent):** `MRR_end = MRR_start + New + Expansion + Reactivation − Contraction − Churn`.
 
@@ -84,7 +85,7 @@ Each `plan_changes` row is split into four signed components by changing one att
 | `billing_period` | MRR(to_plan, to_seats, to_billing, from_discount) − MRR(to_plan, to_seats, from_billing, from_discount) |
 | `discount` | MRR(to terms) − MRR(to_plan, to_seats, to_billing, from_discount) |
 
-(The plan step uses the list `unit_price` of the new plan on the old billing period.) The four parts sum exactly to the row's ΔMRR. For a **continuing customer** (`prev > 0` and `cur > 0`) in month *m*, sum each component over all rows with `effective_date` in [first day of *m*, last day of *m*], on any of the customer's subscriptions; `other = (cur − prev) − Σ components` (mid-month win-backs, rounding).
+The plan step prices the new plan at its list `unit_price` on the **old** billing period (Enterprise has no monthly price, so its monthly-equivalent list price, annual ÷ 12 = $50, is used); if the plan did not change, the old unit price is kept. Every intermediate MRR is rounded to the cent, so the four parts sum exactly to the row's ΔMRR. For a **continuing customer** (`prev > 0` and `cur > 0`) in month *m*, sum each component over all rows with `effective_date` in [first day of *m*, last day of *m*], on any of the customer's subscriptions; `other = (cur − prev) − Σ components` (mid-month win-backs, rounding).
 
 **Reporting.** *Gross expansion by component* = sum of positive customer-month component values (seats added, plan upgrades, discount reductions, annual → monthly switches); *gross contraction by component* = sum of negative ones. The waterfall's net movements remain the movements of record, and the component view ties to them exactly: `Σ positive components − Σ |negative components| + Σ other = Expansion − Contraction` over continuing customers.
 
@@ -128,12 +129,13 @@ For month-end *t*:
 | History | Undefined before 2024-10-31 (no base before GA). Points whose base has fewer than 1,000 customers (before 2025-09) are shown greyed: small bases with many early adopters. |
 | Segment NRR | Partition `B(t)` by the customer's segment / industry / channel / region (static attributes) or by plan / billing period **at t − 12** (state at the start, to avoid survivor bias). |
 
-**Quarterly run-rate NRR (leading diagnostic).** For a quarter-end *t*: `NRR_q(t) = Σ_{c paying at t−3} MRR_c(t) ÷ Σ MRR_c(t−3)`, annualised as `NRR_q⁴`. It reacts within one quarter, while TTM NRR takes up to four quarters to show a change; it is noisier and seasonal, so it is always shown next to the same quarter of the prior year.
+**Quarterly run-rate NRR (leading diagnostic).** For a quarter-end *t*: `NRR_q(t) = Σ_{c paying at t−3} MRR_c(t) ÷ Σ MRR_c(t−3)`, annualised as `NRR_q⁴`; the quarterly GRR uses the §8 cap per customer and is annualised the same way. It reacts within one quarter, while TTM NRR takes up to four quarters to show a change; it is noisier and seasonal, so it is always shown next to the same quarter of the prior year.
 
 ## 8. GRR — Gross Revenue Retention (trailing 12 months)
 
 `GRR(t) = Σ_{c ∈ B} min(MRR_c(t), MRR_c(t − 12)) ÷ Σ_{c ∈ B} MRR_c(t − 12)`.
 Each customer is capped at its own starting MRR, so GRR excludes expansion and cannot exceed 100%. **Logo retention (TTM)** = share of `B(t)` still paying at *t*.
+**NRR decomposition** (published with NRR): `NRR = 1 + expansion contribution + contraction contribution + churn contribution`, where expansion = Σ max(MRR_t − MRR_{t−12}, 0), contraction = −Σ (MRR_{t−12} − MRR_t) over customers still paying with lower MRR, churn = −Σ MRR_{t−12} over customers at 0 — each ÷ base MRR.
 
 ## 9. Silent contraction ("quiet downgrades")
 
@@ -186,7 +188,7 @@ Each customer is capped at its own starting MRR, so GRR excludes expansion and c
 ## 14. Reconciliation to billing
 - **Daily-MRR revenue** for day D = Σ subscription MRR on D (§3 applied to D) × 12 ÷ days in D's calendar year (365 or 366).
 - **Billed recurring revenue** = non-void `recurring` + `proration` lines, spread evenly by day over `[service_period_start, service_period_end)` clipped to the subscription's live days `[start_date, end_date)`. The clipped remainder (mostly `uncollectible` charges after a failed card renewal, where service stopped 14 days into the period) is reported separately as *billed but not serviced*.
-- **Windows:** complete calendar years 2024 and 2025, and the trailing 12 months Oct 2025 – Sep 2026, at total and segment level. **Expected |gap| < 0.3%**; the residual is day-count convention (monthly periods of 28–31 days vs a 365/366-day year) at the window edges. Monthly values are shown as a trend with the expected pattern (31-day months ≈ +2%, February ≈ −3%), not as pass/fail.
+- **Windows:** complete calendar years 2024 and 2025, and the trailing 12 months Oct 2025 – Sep 2026. **Expected |gap| < 0.3%**; the residual is day-count convention at the window edges. Monthly values are a trend, not pass/fail: a monthly-billed price is spread over its own 28–31-day period while daily MRR uses a constant 12 ÷ 365 rate, so February runs about +1% and 31-day months slightly negative (≈ −0.5%) at total level; annual contracts reconcile exactly by construction.
 
 ## 15. CS account health list (`docs/account_health_list.csv`)
 

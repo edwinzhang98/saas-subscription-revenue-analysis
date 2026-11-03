@@ -13,12 +13,12 @@ Standard outputs for this kind of request at our company: a metric definitions d
 
 ## 2. Clarified analysis questions
 
-"Last quarter" = Q3 2026 (Jul 1 – Sep 30, 2026), the last closed quarter. Comparisons are to Q2 2026 (sequential) and Q3 2025 (same season last year).
+"Last quarter" = Q3 2026 (Jul 1 – Sep 30, 2026), the last closed quarter. Comparisons are to Q2 2026 (sequential — the VP's framing) and Q3 2025 (same quarter last year — the primary view for structural drivers, because it removes seasonality and because two of the known events started in Q2 2026).
 
 | # | Question | Metric (see `02_metric_definitions.md`) | Answer format |
 |---|---|---|---|
-| Q1 | What is our NRR and GRR, and how have they trended over the last 8 quarters? | TTM NRR, TTM GRR, by segment | Board number + trend line, with definition footnote |
-| Q2 | How much did expansion MRR slow in Q3, and how much of the change is (a) one-off deals, (b) seasonality, (c) specific segments, (d) fewer plan upgrades vs fewer seat additions, (e) a change in customer mix? | Expansion MRR and expansion rate (expansion ÷ start-of-quarter MRR), split by component and segment | A bridge from Q2 to Q3 expansion, with the share explained by each driver |
+| Q1 | What is our NRR and GRR, and how have they trended over the last 6 quarters (Q2 2025 – Q3 2026)? | TTM NRR, TTM GRR, by segment | Board number + trend line, with definition footnote. TTM points whose base has fewer than 1,000 customers (every point before Sep 2025, which includes the Q2 2025 point) are shown greyed: a small base with many early adopters. |
+| Q2 | How much did expansion MRR slow in Q3, and how much of the change is (a) one-off deals, (b) seasonality, (c) specific segments, (d) fewer plan upgrades vs fewer seat additions, (e) a change in customer mix? | Expansion MRR and expansion rate (expansion ÷ start-of-quarter MRR), split by component and segment | Two sequential bridges: Q3 2026 vs Q2 2026 (the VP's framing) and Q3 2026 vs Q3 2025 (primary view for structural drivers). Each is built in a stated removal order — one-off rollout → Technology segment → Basic upgrade rate (rate effect) → Basic base mix incl. Paid Social (mix effect) → seats vs plan upgrades → residual — with the residual bar shown. Because the drivers overlap, the share attributed to each is reported as a range across orderings, not a single number. Seasonality is estimated from the 2024 and 2025 Q2 → Q3 changes and labelled n = 2. |
 | Q3 | Which paying customers are shrinking without cancelling ("silent churn"), how much ARR do they represent, and what do they look like? | Silent contraction definition (§9 of definitions) | Size in ARR and % of ARR, profile vs healthy accounts |
 | Q4 | Can we see silent churn coming early enough for CS to act? | Back-tested early-warning rule: precision, recall, lead time | Rule + performance + watchlist |
 | Q5 | Which Basic accounts are showing pre-upgrade behavior, and what are those signals? | Upgrade within 90 days; behavior in the 90 days before | Signal table + ranked opportunity list |
@@ -28,21 +28,24 @@ Standard outputs for this kind of request at our company: a metric definitions d
 
 | Decision maker | Decision | When | What would change the decision |
 |---|---|---|---|
-| VP of Revenue | What NRR number and explanation go into the Q3 board pack; whether to re-forecast Q4 expansion | Board pack 2026-11-12 | If the Q3 slowdown is mostly one-off / seasonal → present as noise, keep forecast. If structural → re-forecast and present a plan. |
-| Head of Customer Success | Which accounts get proactive CS time in Q4 (capacity ≈ 120 proactive account reviews per quarter across named and pooled CSMs) | Q4 account plan, 2026-11-15 | Risk concentrated in a few large accounts → named-CSM saves. Spread across many small accounts → digital / tech-touch play. |
-| Head of Product / Pricing | Whether to revisit the April 2026 Basic plan packaging change | Pricing council, Dec 2026 | Evidence that upgrade triggers dropped after the change, net of other drivers |
-| Growth Marketing | Paid Social budget for 2027 | 2027 planning, Dec 2026 | Cohort NRR / churn of Paid Social accounts vs other channels |
+| VP of Revenue | What NRR number and explanation go into the Q3 board pack; whether to re-forecast Q4 expansion | Board pack 2026-11-12 | If the Q3 2026 expansion rate, excluding the May rollout account, is within 0.5 pt of Q3 2025 → board message "timing, not trend" (rollout called out explicitly), Q4 expansion forecast unchanged. If it is ≥ 1.0 pt below Q3 2025 → re-forecast Q4 and FY2027 expansion, and the board pack names each structural driver with an owner and a plan. In between → forecast held with a downside case, re-checked at the October flash. |
+| Head of Customer Success | Which accounts get proactive CSM reviews in the Dec 2026 – Mar 2027 renewal window (Q1 2027 coverage plan; capacity ≈ 120 proactive account reviews per quarter across named and pooled CSMs) | 2026-11-20 | If the top 120 accounts by ARR at stake cover ≥ 60% of risk ARR (silent contraction + near-renewal risk) → CSM-led reviews; the rest go to a digital play (in-app utilization nudge + pre-renewal email sequence 60 days out). If < 60% → shift capacity toward the digital play and size it. |
+| Head of Product / Pricing | Keep, adjust (move a different feature, e.g. analytics dashboards or the API, behind the Premium gate) or revert the April 2026 Basic packaging change | Pricing council, Dec 2026 | Adjust or revert if the Basic → Premium upgrade rate, controlled for Paid Social mix and the Technology segment, is down ≥ 20% vs pre-change AND the conversion / retention gains do not offset it in 12-month revenue from Basic cohorts. Keep if the net 12-month Basic cohort revenue is flat or up. |
+| Growth Marketing | Whether to change Paid Social targeting / onboarding for 2027 (e.g. default to the annual offer, exclude the segments with the weakest 12-month revenue retention). The budget level stays with Marketing because it needs CAC, which is out of scope here. | 2027 planning, Dec 2026 | Our input: 6- and 12-month revenue retention and upgrade rate of Paid Social cohorts vs Organic / Paid Search cohorts of the same signup months — revenue retained per $1 of first-month MRR by channel cohort — which Marketing combines with CAC. |
 
-## 4. Known business events (provided by Marketing, Product, Sales)
+## 4. Known business events (inputs, provided by Product, Growth Marketing, Sales, CS and Finance)
 
 | Date | Event | Source |
 |---|---|---|
-| 2023-10-02 | General availability; private-beta design partners converted to paid | Product |
-| 2025-09-01 | Paid Social acquisition program launched (self-serve SMB, monthly plans) | Growth Marketing |
-| 2026-04-15 | Basic plan packaging update: advanced automations included in Basic (previously Premium-only) | Product / Pricing |
-| Each quarter-end | Sales-led deals cluster in the last month of the quarter | Sales Ops |
+| 2023-10-02 | General availability; 40 private-beta design partners converted to paid | Product |
+| 2025-09-01 | Paid Social acquisition program launched (self-serve SMB, mostly monthly plans) | Growth Marketing |
+| 2026-04-15 | Basic plan packaging update: advanced automations included in Basic (previously Premium-only). Stated goal: lift Basic trial → paid conversion and early retention | Product / Pricing |
+| 2026-05-12 | Company-wide rollout at a Financial Services Enterprise customer (Lakewave Payments): ≈ 2.6× seats, co-termed to the annual contract | Sales bookings |
+| 2026 (ongoing) | Public reports of Technology-sector hiring slowdowns and layoffs; CSMs report Technology customers trimming seats at renewal (anecdotal, not quantified) | Customer Success |
+| Each quarter-end | Sales-led deals (new logos and expansion) cluster in the last month of the quarter | Sales Ops |
+| 2026-10 | Board asked for an auditable NRR after the company crossed ≈ $20M ARR, ahead of the Series C data room; Finance had been quoting a spreadsheet number | Finance |
 
-Anything else (e.g., industry-specific behavior, single large deals) has to come out of the data.
+This list says what happened, not what it did to revenue. The work is to size each event's contribution to the Q3 expansion change, separate temporary from structural, and flag anything material that is not on this list.
 
 ## 5. Scope
 
@@ -55,9 +58,9 @@ Anything else (e.g., industry-specific behavior, single large deals) has to come
 | Deliverable | Answers |
 |---|---|
 | `docs/02_metric_definitions.md`, `sql/` | Q1 (and the "which number is right" question for every other one) |
-| `docs/monthly_revenue_review.md` (Sep 2026 MBR) | Q1, Q2, top movers, risk accounts, next-month focus |
+| `docs/monthly_revenue_review.md` — "Q3 2026 close revenue review (September month-end)"; the October flash follows the 7 Nov close | Q1, Q2, top movers, risk accounts, next-month focus |
 | `docs/readout.md` (one-page board revenue review) | Q1, Q2, Q6 in plain language |
-| `docs/account_health_list.csv` | Q3, Q4, Q5 — one list for CS with reason codes and suggested plays |
+| `docs/account_health_list.csv` (schema in `02_metric_definitions.md §15`: owner, renewal date, ARR at stake, reason codes, suggested play; top 120 CSM queue + digital queue) | Q3, Q4, Q5 — one list for CS with reason codes and suggested plays |
 | `notebooks/01`–`05`, `reports/report.html`, `dashboard/` | Full evidence for all questions |
 
 ## 7. Working assumptions agreed with the requester
