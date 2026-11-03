@@ -161,6 +161,7 @@ def population() -> pd.DataFrame:
     p["split"] = np.where(p["month_end"] <= TRAIN_END, "train", "test")
     p["tenure_band"] = _tenure_band(p["tenure_months"])
     p = _add_percentiles(p)
+    p = p.sort_values(["customer_id", "month_end"], kind="stable")   # row order must not depend on how the mart was written
     return p[_uniq(POP_COLS + SIGNAL_COLS + [f"{c}_pctl" for c in PCTL_SIGNALS])].reset_index(drop=True)
 
 
@@ -194,6 +195,7 @@ def comparison_groups(pop: pd.DataFrame | None = None) -> pd.DataFrame:
     upg = upg.drop(columns="pre_month_end")
     upg["group"] = "upgrader"
     cand = pop[(pop["label"] == 0) & ~pop["forced"] & ~pop["churn_in_window"] & ~pop["customer_id"].isin(upg["customer_id"])]
+    cand = cand.sort_values(["customer_id", "month_end"], kind="stable")
     cand = cand.sample(frac=1.0, random_state=get_settings().seed)   # one fixed shuffle; the draw takes the first rows
     need = upg.groupby(["month_end", "tenure_band"]).size()
     avail = cand.groupby(["month_end", "tenure_band"])["customer_id"].nunique()

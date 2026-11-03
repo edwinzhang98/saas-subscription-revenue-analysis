@@ -157,14 +157,14 @@ relabelled movement (each was caught).
 | movement_contraction_mrr | 82,072 | 0 | 2.3e-13 | 0 | match |
 | movement_churn_mrr | 82,072 | 0 | 0 | 0 | match |
 | waterfall_totals | 36 | 0 | 1.9e-08 | 0 | match |
-| waterfall_rates | 36 | 0 | 5.1e-13 | 0 | match |
-| waterfall_components | 36 | 0 | 2.2e-11 | 0 | match |
-| nrr_grr_ttm | 24 | 0 | 3.5e-10 | 0 | match |
-| nrr_runrate_quarterly | 11 | 0 | 4.7e-10 | 0 | match |
-| grr_runrate_quarterly | 11 | 0 | 1.7e-15 | 0 | match (info) |
+| waterfall_rates | 36 | 0 | 4.0e-13 | 0 | match |
+| waterfall_components | 36 | 0 | 1.5e-11 | 0 | match |
+| nrr_grr_ttm | 24 | 0 | 7.0e-10 | 0 | match |
+| nrr_runrate_quarterly | 11 | 0 | 7.0e-10 | 0 | match |
+| grr_runrate_quarterly | 11 | 0 | 1.2e-15 | 0 | match (info) |
 | movement_components | 63,006 | 0 | 5.7e-13 | 0 | match |
 | cohort_cells | 900 | 0 | 0 | 0 | match |
-| cohort_values | 900 | 0 | 5.8e-11 | 0 | match |
+| cohort_values | 900 | 0 | 8.7e-11 | 0 | match |
 | cohort_values_partial_observed | 24 | 0 | 2.2e-16 | 0 | match (info) |
 
 **Differences found and resolved.** The first comparison surfaced two documentation gaps, both fixed in definitions v1.1:

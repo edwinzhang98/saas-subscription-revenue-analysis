@@ -375,7 +375,7 @@
       "columns": {
         "mrr_start": {
           "kind": "money",
-          "max_abs_diff": 1.6298145055770874e-09,
+          "max_abs_diff": 1.3969838619232178e-09,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -393,13 +393,13 @@
         },
         "expansion_mrr": {
           "kind": "money",
-          "max_abs_diff": 2.1827872842550278e-11,
+          "max_abs_diff": 1.4551915228366852e-11,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
         "contraction_mrr": {
           "kind": "money",
-          "max_abs_diff": 3.637978807091713e-12,
+          "max_abs_diff": 4.547473508864641e-13,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -411,7 +411,7 @@
         },
         "mrr_end": {
           "kind": "money",
-          "max_abs_diff": 1.6298145055770874e-09,
+          "max_abs_diff": 1.3969838619232178e-09,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -496,16 +496,16 @@
       "rows_compared": 36,
       "rows_only_python": 0,
       "rows_only_sql": 0,
-      "max_abs_diff": 5.115907697472721e-13,
+      "max_abs_diff": 3.979039320256561e-13,
       "max_abs_diff_money": null,
-      "max_abs_diff_ratio": 5.115907697472721e-13,
+      "max_abs_diff_ratio": 3.979039320256561e-13,
       "n_over_tol_rows": 0,
       "n_mismatch_rows": 0,
       "status": "match",
       "columns": {
         "arpa": {
           "kind": "ratio",
-          "max_abs_diff": 5.115907697472721e-13,
+          "max_abs_diff": 3.979039320256561e-13,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -517,13 +517,13 @@
         },
         "gross_mrr_churn_rate": {
           "kind": "ratio",
-          "max_abs_diff": 1.214306433183765e-17,
+          "max_abs_diff": 1.3877787807814457e-17,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
         "net_mrr_churn_rate": {
           "kind": "ratio",
-          "max_abs_diff": 2.0816681711721685e-17,
+          "max_abs_diff": 1.734723475976807e-17,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -554,8 +554,8 @@
       "rows_compared": 36,
       "rows_only_python": 0,
       "rows_only_sql": 0,
-      "max_abs_diff": 2.1827872842550278e-11,
-      "max_abs_diff_money": 2.1827872842550278e-11,
+      "max_abs_diff": 1.4551915228366852e-11,
+      "max_abs_diff_money": 1.4551915228366852e-11,
       "max_abs_diff_ratio": null,
       "n_over_tol_rows": 0,
       "n_mismatch_rows": 0,
@@ -575,13 +575,13 @@
         },
         "gross_seat_increase": {
           "kind": "money",
-          "max_abs_diff": 2.1827872842550278e-11,
+          "max_abs_diff": 1.4551915228366852e-11,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
         "gross_seat_decrease": {
           "kind": "money",
-          "max_abs_diff": 4.547473508864641e-13,
+          "max_abs_diff": 3.637978807091713e-12,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -630,8 +630,8 @@
       "rows_compared": 24,
       "rows_only_python": 0,
       "rows_only_sql": 0,
-      "max_abs_diff": 3.4924596548080444e-10,
-      "max_abs_diff_money": 3.4924596548080444e-10,
+      "max_abs_diff": 6.984919309616089e-10,
+      "max_abs_diff_money": 6.984919309616089e-10,
       "max_abs_diff_ratio": 6.661338147750939e-16,
       "n_over_tol_rows": 0,
       "n_mismatch_rows": 0,
@@ -649,19 +649,19 @@
         },
         "base_mrr": {
           "kind": "money",
-          "max_abs_diff": 2.3283064365386963e-10,
+          "max_abs_diff": 6.984919309616089e-10,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
         "retained_mrr": {
           "kind": "money",
-          "max_abs_diff": 2.3283064365386963e-10,
+          "max_abs_diff": 6.984919309616089e-10,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
         "retained_mrr_capped": {
           "kind": "money",
-          "max_abs_diff": 3.4924596548080444e-10,
+          "max_abs_diff": 4.656612873077393e-10,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -673,7 +673,7 @@
         },
         "grr": {
           "kind": "ratio",
-          "max_abs_diff": 3.3306690738754696e-16,
+          "max_abs_diff": 4.440892098500626e-16,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -702,8 +702,8 @@
       "rows_compared": 11,
       "rows_only_python": 0,
       "rows_only_sql": 0,
-      "max_abs_diff": 4.656612873077393e-10,
-      "max_abs_diff_money": 4.656612873077393e-10,
+      "max_abs_diff": 6.984919309616089e-10,
+      "max_abs_diff_money": 6.984919309616089e-10,
       "max_abs_diff_ratio": 1.9984014443252818e-15,
       "n_over_tol_rows": 0,
       "n_mismatch_rows": 0,
@@ -717,7 +717,7 @@
         },
         "base_mrr": {
           "kind": "money",
-          "max_abs_diff": 4.656612873077393e-10,
+          "max_abs_diff": 6.984919309616089e-10,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
@@ -748,22 +748,22 @@
       "rows_compared": 11,
       "rows_only_python": 0,
       "rows_only_sql": 0,
-      "max_abs_diff": 1.6653345369377348e-15,
+      "max_abs_diff": 1.2212453270876722e-15,
       "max_abs_diff_money": null,
-      "max_abs_diff_ratio": 1.6653345369377348e-15,
+      "max_abs_diff_ratio": 1.2212453270876722e-15,
       "n_over_tol_rows": 0,
       "n_mismatch_rows": 0,
       "status": "match",
       "columns": {
         "grr_quarter": {
           "kind": "ratio",
-          "max_abs_diff": 4.440892098500626e-16,
+          "max_abs_diff": 3.3306690738754696e-16,
           "n_over_tol": 0,
           "n_mismatch": 0
         },
         "grr_runrate_annualized": {
           "kind": "ratio",
-          "max_abs_diff": 1.6653345369377348e-15,
+          "max_abs_diff": 1.2212453270876722e-15,
           "n_over_tol": 0,
           "n_mismatch": 0
         }
@@ -893,8 +893,8 @@
       "rows_compared": 900,
       "rows_only_python": 0,
       "rows_only_sql": 0,
-      "max_abs_diff": 5.820766091346741e-11,
-      "max_abs_diff_money": 5.820766091346741e-11,
+      "max_abs_diff": 8.731149137020111e-11,
+      "max_abs_diff_money": 8.731149137020111e-11,
       "max_abs_diff_ratio": 4.440892098500626e-16,
       "n_over_tol_rows": 0,
       "n_mismatch_rows": 0,
@@ -902,7 +902,7 @@
       "columns": {
         "mrr_k": {
           "kind": "money",
-          "max_abs_diff": 5.820766091346741e-11,
+          "max_abs_diff": 8.731149137020111e-11,
           "n_over_tol": 0,
           "n_mismatch": 0
         },

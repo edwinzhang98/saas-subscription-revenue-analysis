@@ -68,7 +68,7 @@ def export_warehouse(con: duckdb.DuckDBPyConnection | None = None) -> list[str]:
     out = []
     for t in WAREHOUSE_TABLES:
         p = path(t)
-        con.execute(f"COPY (SELECT * FROM {t}) TO '{p.as_posix()}' (FORMAT parquet)")
+        con.execute(f"COPY (SELECT * FROM {t} ORDER BY ALL) TO '{p.as_posix()}' (FORMAT parquet)")   # stable row order
         out.append(t)
     if own:
         con.close()

@@ -24,10 +24,10 @@ def build() -> dict[str, pd.DataFrame]:
         desc = con.execute(f"DESCRIBE raw.{t}").df()[["column_name", "column_type"]]
         desc.insert(0, "table", t)
         columns.append(desc)
-        order = "ORDER BY customer_id, week_start, event_name" if t == "usage_events" else ""
+        order = "ORDER BY customer_id, week_start, event_name" if t == "usage_events" else "ORDER BY ALL"
         samples[t] = con.execute(
             f"SELECT * FROM raw.{t} WHERE customer_id IN ('CUS-000849', 'CUS-001001') {order} LIMIT 8"
-            if t not in ("plans",) else f"SELECT * FROM raw.{t}").df()
+            if t not in ("plans",) else f"SELECT * FROM raw.{t} ORDER BY ALL").df()
     con.close()
     tables = {
         "datamodel__row_counts": pd.DataFrame(counts),

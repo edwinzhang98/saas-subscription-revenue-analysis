@@ -25,6 +25,9 @@ def connect(read_only: bool = False) -> duckdb.DuckDBPyConnection:
     s = get_settings()
     s.data_dir.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(s.warehouse_path), read_only=read_only)
+    # one thread: parallel float aggregation and parallel inserts change the last bits of sums and the row order
+    # between runs; single-threaded builds make every rebuild byte-identical (the build takes a few seconds anyway)
+    con.execute("SET threads TO 1")
     return con
 
 
