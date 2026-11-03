@@ -1,0 +1,210 @@
+{
+  "checks": [
+    {
+      "check": "Accounts ever paying (excl. internal)",
+      "value": 5260,
+      "min": 5000,
+      "max": 7000,
+      "pass": true
+    },
+    {
+      "check": "Paying accounts at 2026-09-30",
+      "value": 4117,
+      "min": 3000,
+      "max": 5000,
+      "pass": true
+    },
+    {
+      "check": "MRR at 2026-09-30 ($)",
+      "value": 2090345,
+      "min": 1200000,
+      "max": 2600000,
+      "pass": true
+    },
+    {
+      "check": "Signup plan mix: Basic share",
+      "value": 0.6918,
+      "min": 0.6,
+      "max": 0.72,
+      "pass": true
+    },
+    {
+      "check": "Signup plan mix: Enterprise share",
+      "value": 0.0291,
+      "min": 0.01,
+      "max": 0.06,
+      "pass": true
+    },
+    {
+      "check": "Signup annual-billing share",
+      "value": 0.3297,
+      "min": 0.25,
+      "max": 0.45,
+      "pass": true
+    },
+    {
+      "check": "Monthly logo churn, SMB",
+      "value": 0.0263,
+      "min": 0.02,
+      "max": 0.05,
+      "pass": true
+    },
+    {
+      "check": "Monthly logo churn, Mid-Market",
+      "value": 0.007,
+      "min": 0.003,
+      "max": 0.015,
+      "pass": true
+    },
+    {
+      "check": "Monthly logo churn, Enterprise",
+      "value": 0.0033,
+      "min": 0.001,
+      "max": 0.01,
+      "pass": true
+    },
+    {
+      "check": "TTM GRR at 2025-09-30",
+      "value": 0.859,
+      "min": 0.82,
+      "max": 0.92,
+      "pass": true
+    },
+    {
+      "check": "TTM NRR at 2025-09-30",
+      "value": 1.0512,
+      "min": 1.02,
+      "max": 1.18,
+      "pass": true
+    },
+    {
+      "check": "TTM NRR change, 2026-06 -> 2026-09 (pts)",
+      "value": -3.24,
+      "min": -10,
+      "max": -1.5,
+      "pass": true
+    },
+    {
+      "check": "Expansion MRR, Q3 2026 vs Q2 2026",
+      "value": -0.3698,
+      "min": -0.6,
+      "max": -0.15,
+      "pass": true
+    },
+    {
+      "check": "Expansion rate, Q3 2026 vs Q3 2025 (relative)",
+      "value": -0.2508,
+      "min": -0.6,
+      "max": -0.15,
+      "pass": true
+    },
+    {
+      "check": "Tech seat-add events per account-month, Jun-Sep 2026 vs prior 12 months",
+      "value": -0.7705,
+      "min": -0.9,
+      "max": -0.4,
+      "pass": true
+    },
+    {
+      "check": "Voluntary Basic upgrade rate, Q3 2026 vs Q3 2025 (relative)",
+      "value": -0.6357,
+      "min": -0.7,
+      "max": -0.3,
+      "pass": true
+    },
+    {
+      "check": "Basic monthly logo churn (non-Paid-Social), May-Sep 2026 vs 2025",
+      "value": -0.0734,
+      "min": -0.35,
+      "max": -0.05,
+      "pass": true
+    },
+    {
+      "check": "Silent contraction at 2026-09-30, share of MRR",
+      "value": 0.0294,
+      "min": 0.02,
+      "max": 0.12,
+      "pass": true
+    }
+  ],
+  "all_pass": true,
+  "detail": {
+    "segment_monthly_logo_churn": {
+      "SMB": 0.026259454830883402,
+      "Mid-Market": 0.006975533576262363,
+      "Enterprise": 0.0033311125916055963
+    },
+    "plan_mix_at_signup": {
+      "basic": 0.6918,
+      "premium": 0.2791,
+      "enterprise": 0.0291
+    },
+    "ttm": {
+      "nrr_2025_09": 1.0512404560771336,
+      "grr_2025_09": 0.8589814867320813,
+      "nrr_2025_12": 1.0540743966097685,
+      "nrr_2026_06": 1.0892968691284795,
+      "nrr_2026_09": 1.0569301368480277,
+      "grr_2026_09": 0.8462574933297934
+    },
+    "expansion_rate": {
+      "q3_25": 0.050181021676880586,
+      "q2_26": 0.0698776017965672,
+      "q3_26": 0.03759789072588918
+    },
+    "q2_26": {
+      "mrr": 5419203.0,
+      "new": 224757.0,
+      "expansion": 113178.0,
+      "contraction": 26525.0,
+      "churn": 36134.0,
+      "reactivation": 2166.0
+    },
+    "q3_26": {
+      "mrr": 6021459.0,
+      "new": 220625.0,
+      "expansion": 71327.0,
+      "contraction": 49062.0,
+      "churn": 51967.0,
+      "reactivation": 2322.0
+    },
+    "q3_25": {
+      "mrr": 3345769.0,
+      "new": 153701.0,
+      "expansion": 50872.0,
+      "contraction": 14117.0,
+      "churn": 29358.0,
+      "reactivation": 1480.0
+    },
+    "basic_upgrade_rate_by_quarter": {
+      "2023Q4": 0.0203,
+      "2024Q1": 0.0135,
+      "2024Q2": 0.0174,
+      "2024Q3": 0.0202,
+      "2024Q4": 0.0178,
+      "2025Q1": 0.0186,
+      "2025Q2": 0.0169,
+      "2025Q3": 0.0198,
+      "2025Q4": 0.0118,
+      "2026Q1": 0.0136,
+      "2026Q2": 0.0072,
+      "2026Q3": 0.0072
+    },
+    "silent_contraction_accounts": 265,
+    "saved_by_cs_last_6m_flagged": 61,
+    "mrr_by_quarter_end": {
+      "2023-12-31": 124993.0,
+      "2024-03-31": 256359.0,
+      "2024-06-30": 406811.0,
+      "2024-09-30": 529745.0,
+      "2024-12-31": 670888.0,
+      "2025-03-31": 833694.0,
+      "2025-06-30": 1013765.0,
+      "2025-09-30": 1176343.0,
+      "2025-12-31": 1404639.0,
+      "2026-03-31": 1619658.0,
+      "2026-06-30": 1897100.0,
+      "2026-09-30": 2090345.0
+    }
+  }
+}

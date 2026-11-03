@@ -1,0 +1,222 @@
+# Synthetic data generation parameters (generator v1.1).
+# Every value here is described in docs/data_model.md (section numbers in comments).
+# This file is the source of truth; calibration changes are logged in docs/data_model.md §9.
+# Weekly rates are per account-week; "pt" in comments = percentage point per week.
+
+calendar:
+  ga_date: "2023-10-02"        # first day customers can pay (a Monday)
+  cutoff_date: "2026-09-30"    # last day of data (Q3 2026 close)
+
+# §1 plan catalog -----------------------------------------------------------------
+plans:
+  basic:      {name: Basic,      tier: 1, monthly: 15.0, annual: 144.0, min_seats: 1,  max_seats: 50,
+               features: "Core workflows, 5 integrations, simple automations"}
+  premium:    {name: Premium,    tier: 2, monthly: 35.0, annual: 336.0, min_seats: 3,  max_seats: null,
+               features: "Advanced automations, analytics dashboards, API, unlimited integrations"}
+  enterprise: {name: Enterprise, tier: 3, monthly: null, annual: 600.0, min_seats: 50, max_seats: null,
+               features: "SSO/SCIM, audit log, sandbox, named CSM, SLA"}
+
+# §5.1 acquisition ------------------------------------------------------------------
+acquisition:
+  base_new_per_month: 88
+  monthly_growth: 0.022
+  season: {1: 1.00, 2: 1.00, 3: 1.08, 4: 0.98, 5: 1.00, 6: 1.05, 7: 0.85, 8: 0.85, 9: 1.05, 10: 1.05, 11: 1.05, 12: 0.95}
+  sales_led_channels: [Partner, Outbound Sales, Events]
+  quarter_end_mult: 1.30
+  quarter_start_mult: 0.85
+  quarter_end_last_week_share: 0.5     # share of sales-led quarter-end deals closing in the last 7 days
+  segment_share: {SMB: 0.685, Mid-Market: 0.27, Enterprise: 0.045}
+  channel_share:
+    SMB:        {Organic: 0.40, Paid Search: 0.30, Paid Social: 0.10, Partner: 0.10, Outbound Sales: 0.03, Events: 0.07}
+    Mid-Market: {Organic: 0.20, Paid Search: 0.18, Paid Social: 0.04, Partner: 0.18, Outbound Sales: 0.28, Events: 0.12}
+    Enterprise: {Organic: 0.05, Paid Search: 0.05, Paid Social: 0.00, Partner: 0.25, Outbound Sales: 0.50, Events: 0.15}
+  design_partners:                     # S1: private-beta design partners converted at GA
+    count: 40
+    segment_share: {SMB: 0.60, Mid-Market: 0.35, Enterprise: 0.05}
+    fit_adj: 0.30
+  early_adopters:                      # S1: accounts signing up in the first three GA months self-select
+    months: ["2023-10", "2023-11", "2023-12"]
+    fit_adj: 0.25
+  paid_social_program:                 # S2: extra SMB Paid Social accounts per month
+    start: "2025-09-01"
+    extra_per_month: {"2025-09": 15, "2025-10": 25, default: 35}
+  industry_share:
+    SMB:        {Technology: 0.28, Professional Services: 0.16, Financial Services: 0.10, Retail & E-commerce: 0.13,
+                 Healthcare: 0.09, Manufacturing: 0.08, Media & Marketing: 0.10, Education & Non-profit: 0.06}
+    Mid-Market: {Technology: 0.26, Professional Services: 0.15, Financial Services: 0.12, Retail & E-commerce: 0.12,
+                 Healthcare: 0.10, Manufacturing: 0.10, Media & Marketing: 0.08, Education & Non-profit: 0.07}
+    Enterprise: {Technology: 0.22, Professional Services: 0.10, Financial Services: 0.18, Retail & E-commerce: 0.10,
+                 Healthcare: 0.14, Manufacturing: 0.14, Media & Marketing: 0.05, Education & Non-profit: 0.07}
+  region_share: {North America: 0.55, EMEA: 0.30, APAC: 0.15}
+  employees:   # log-normal median, sigma, clip
+    SMB:        {median: 25,   sigma: 0.8, min: 2,    max: 100}
+    Mid-Market: {median: 300,  sigma: 0.6, min: 101,  max: 1000}
+    Enterprise: {median: 3000, sigma: 0.8, min: 1001, max: 60000}
+  trial_days: {self_serve: [3, 30], sales_led: [20, 90]}   # created_at = signup - U(a, b) days
+
+# §5.2 initial subscription -----------------------------------------------------------
+initial:
+  seats:   # log-normal median, sigma, clip — drawn first; the plan is then drawn conditional on seats
+    SMB:        {median: 6,  sigma: 0.65, min: 1,  max: 45}
+    Mid-Market: {median: 22, sigma: 0.60, min: 8,  max: 250}
+    Enterprise: {median: 75, sigma: 0.55, min: 50, max: 1000}
+  paid_social_smb_seat_median: 4
+  plan_by_seats:   # first band whose max_seats >= seats applies
+    SMB:
+      - {max_seats: 2,      mix: {basic: 1.0}}
+      - {max_seats: 45,     mix: {basic: 0.8, premium: 0.2}}
+    Mid-Market:
+      - {max_seats: 39,     mix: {basic: 0.5, premium: 0.5}}
+      - {max_seats: 45,     mix: {basic: 0.1, premium: 0.9}}
+      - {max_seats: 49,     mix: {premium: 1.0}}
+      - {max_seats: 100000, mix: {premium: 0.65, enterprise: 0.35}}
+    Enterprise:
+      - {max_seats: 100000, mix: {premium: 0.40, enterprise: 0.60}}
+  annual_share: {SMB: 0.22, Mid-Market: 0.60, Enterprise: 0.95}
+  paid_social_annual_share: 0.08
+  enterprise_discount: [0.10, 0.30]
+  sales_led_premium_discount: {prob: 0.5, range: [0.05, 0.15]}
+  onboarding_fee:
+    enterprise_plan: [5000, 20000]
+    mid_market_sales_led_premium: {prob: 0.3, range: [1500, 3000]}
+  tax_rate: {North America: 0.0725, EMEA: 0.20, APAC: 0.10}
+  tax_exempt_share_na: 0.40
+
+# §5.3 latent traits -------------------------------------------------------------------
+latent:
+  fit_mean: 1.0
+  fit_sd: 0.6
+  fit_channel_adj: {Organic: 0.0, Paid Search: -0.10, Paid Social: -0.50, Partner: 0.25, Outbound Sales: 0.0, Events: -0.05}
+  power_segment_adj: {SMB: 0.0, Mid-Market: 0.3, Enterprise: 0.4}
+  power_channel_adj: {Paid Social: -0.6}
+  growth_industry_adj: {Technology: 0.4, Media & Marketing: 0.2, Manufacturing: -0.2, Education & Non-profit: -0.3}
+
+# §5.4 weekly dynamics ------------------------------------------------------------------
+dynamics:
+  health_reversion: 0.06
+  health_noise: 0.12
+  onboarding_dip: 0.30                    # H starts 0.30 below fit; the gap closes linearly over 6 weeks
+  onboarding_weeks: 6
+  champion_loss: {prob: 0.0025, drop: [0.8, 1.6]}
+  new_team: {prob: {SMB: 0.0015, Mid-Market: 0.0030, Enterprise: 0.0030}, lift: [0.3, 0.8], burst_weeks: 8, burst_growth: 0.010}
+  initial_team_vs_seats: [0.90, 1.05]     # team size at signup = seats x U(a, b)
+  team_growth_base: {SMB: 0.0012, Mid-Market: 0.0026, Enterprise: 0.0030}
+  team_growth_trait: 0.0020
+  team_growth_health: 0.0030              # H >= 1: healthy accounts roll out to more users
+  team_growth_health_low: 0.0060          # H < 1: unhealthy accounts shed users (faster)
+  team_growth_noise: 0.005
+  team_cut: {prob: 0.0025, size: [0.15, 0.40]}   # weekly prob of a discrete team cut (reorg / budget)
+  engagement_intercept: 0.3
+  engagement_slope: 0.9
+  seat_overage_tolerance: 0.10            # users up to 10% over seats are tolerated, never billed
+  seat_add_trigger: 1.03                  # wants more seats when team size > seats x 1.03
+  seat_add_prob: {SMB: 0.35, Mid-Market: 0.25, Enterprise: 0.25}   # per week, x sigmoid(H), x quarter factor (non-SMB)
+  seat_add_buffer: [1.00, 1.08]           # buys team size x U(a, b)
+  seat_surplus_trigger: {monthly: 1.15, renewal: 1.10}   # reduce if seats > team size x trigger
+  seat_reduce_prob: {monthly: 0.30, renewal: 0.65}
+  seat_reduce_target: [1.00, 1.10]        # new seats = team size x U(a, b); team size is then capped at seats
+  random_small_reduction_prob: 0.01       # per monthly billing date (someone leaves)
+  random_small_reduction_size: 0.05       # max(1 seat, 5% of seats)
+  sales_quarter_factor: {end: 1.30, start: 0.85}   # sales-sourced seat adds and Premium->Enterprise
+  upgrade_basic: {base: 0.0025, power: 0.9, health: 0.4, team_growth_threshold: 0.10, team_growth_mult: 2.5}
+  upgrade_enterprise: {base: 0.0040, power: 0.5, min_seats: 60, min_health: 0.5, annual_window_days: 84}
+  enterprise_upgrade_discount: [0.10, 0.25]
+  downgrade_premium: {monthly_base: 0.006, renewal_mult: 6.0, health: 0.8, power: 0.5}
+  downgrade_enterprise_renewal: {base: 0.06, health: 0.8, low_usage_prob: 0.5}
+  save_retention_discount: [0.15, 0.25]   # save offer when the account is too big for the lower tier
+  billing_switch: {to_annual: {SMB: 0.015, other: 0.02, min_tenure_months: 3, min_health: 0.8}, to_monthly_at_renewal: {prob: 0.20, max_health: 0.3}}
+  renewal_price: {concession: {max_health: 0.5, prob: 0.4, pts: [0.03, 0.10]}, uplift: {min_health: 1.5, prob: 0.2, pts: [0.02, 0.05]}}
+  churn_monthly_base: {SMB: 0.018, Mid-Market: 0.009, Enterprise: 0.005}
+  churn_annual_base: {SMB: 0.14, Mid-Market: 0.10, Enterprise: 0.07}
+  churn_health_slope_monthly: 1.0
+  churn_health_slope_annual: 1.1
+  churn_cap_monthly: 0.60
+  churn_cap_annual: 0.80
+  churn_channel_mult: {Organic: 1.0, Paid Search: 1.1, Paid Social: 1.25, Partner: 0.8, Outbound Sales: 0.95, Events: 1.0}
+  churn_industry_mult: {Financial Services: 0.85, Healthcare: 0.80, Retail & E-commerce: 1.15, Manufacturing: 0.90,
+                        Media & Marketing: 1.20, Education & Non-profit: 0.90}
+  churn_tenure_mult: {first_3_months: 1.25, months_4_12: 1.0, after_12: 0.9}
+  churn_season_mult: {12: 1.15, 1: 1.15}
+  save_by_downgrade_prob: {digital: 0.10, pooled_csm: 0.35, named_csm: 0.35}
+  payment_failure: {SMB: 0.025, Mid-Market: 0.012, Enterprise: 0.0, recovery_prob: 0.65, dunning_days: 14}
+  winback:
+    voluntary: {weekly_prob: 0.0012, fit_slope: 0.3, start_week: 4, end_week: 104}
+    payment_failed: {weekly_prob_early: 0.06, early_weeks: 8, weekly_prob_late: 0.0015, end_week: 104}
+    same_plan_prob: 0.65
+    seat_share: [0.6, 1.0]
+    monthly_prob: 0.80
+    restart_health_gap: 0.30
+  integrations_start: {SMB: 0.8, Mid-Market: 2.3, Enterprise: 3.8}
+  integrations_add_prob: 0.02             # per week x sigmoid(H)
+  integrations_drop_prob: 0.005           # per week when H < 0.5
+  integrations_drop_health: 0.5
+  basic_integration_cap: 5
+  integration_cap: 20
+
+# §5.5 seasonality ------------------------------------------------------------------
+seasonality:
+  holiday_usage: 0.70            # weeks touching 24 Dec - 1 Jan
+  summer_usage: 0.93             # July-August
+  education_summer_usage: 0.65   # 15 Jun - 31 Aug
+  retail_q4_usage: 1.05          # Nov-Dec
+  hiring_adj_by_month: {1: 0.0008, 2: 0.0008, 3: 0.0008, 7: -0.0010, 8: -0.0010, 9: 0.0006, 12: -0.0008}
+  retail_hiring: {10: 0.006, 11: 0.006, 1: -0.006, 2: -0.006}
+  education_hiring: {8: 0.005, 9: 0.005, 6: -0.004, 7: -0.004}
+
+# §5.6 usage events ------------------------------------------------------------------
+usage:
+  sessions_per_wau: 4.0
+  core_actions_per_wau: 15.0
+  automation_per_wau: {basic: 0.6, basic_after_packaging: 1.8, premium: 2.4, enterprise: 2.4}
+  report_views_per_wau: {basic: 0.8, premium: 1.6, enterprise: 2.0}
+  syncs_per_integration: 40
+  invites_per_new_member: 1.1
+  invites_per_seat: 0.015
+  invites_per_waiting_user: 0.5
+  gate_hits_per_wau: 0.20
+  gate_power: 0.6
+  gate_health: 0.3
+  grace_weeks_usage: [0.5, 0.2]  # usage in the two weeks after a cancellation, as a share of normal
+
+# §6 planted effects (answer key) ------------------------------------------------------------
+scenario:
+  packaging_change:              # S3: advanced automations moved into Basic
+    date: "2026-04-15"
+    gate_mult: 0.40              # Premium-feature paywall hits for Basic users
+    upgrade_mult: 0.50           # Basic -> Premium upgrade hazard
+    basic_churn_mult: 0.85       # upside: Basic monthly voluntary churn
+    power_user_fit_lift: 0.10    # upside: Basic accounts with above-median power-user propensity
+    new_logo_uplift: {from_month: "2026-05", segments: [SMB], channels: [Organic, Paid Search, Paid Social], mult: 1.10}
+  tech_freeze:                   # S4: Technology hiring freeze, then a layoff wave
+    start: "2026-04-06"
+    phase_in_weeks: 8
+    industry: Technology
+    team_growth_shift: -0.0035
+    fit_shift: -0.40
+    seat_reduce_mult: 1.5
+    layoff_wave: {start: "2026-06-01", end: "2026-07-31", prob: 0.65, team_mult: [0.65, 0.90]}
+  rollout:                       # S5: one-off company-wide rollout
+    date: "2026-05-12"
+    industry: Financial Services
+    signup_window: ["2024-03-01", "2024-08-31"]
+    initial_seats: 350
+    discount: 0.20
+    seat_mult: 2.6
+
+# §7 data-quality injections ------------------------------------------------------------
+dq:
+  internal_accounts:
+    - {name: "TEST - Billing QA 1",       plan: premium,    seats: 5,   discount: 1.0}
+    - {name: "[INTERNAL] Sales Demo",     plan: enterprise, seats: 60,  discount: 1.0}
+    - {name: "Test Account (do not use)", plan: basic,      seats: 3,   discount: 1.0}
+    - {name: "QA Sandbox EU",             plan: premium,    seats: 10,  discount: 1.0}
+    - {name: "Internal - CS Training",    plan: premium,    seats: 25,  discount: 0.0}
+    - {name: "zz_test_enterprise",        plan: enterprise, seats: 200, discount: 0.0}
+  internal_domain: ourcompany.example
+  usage_duplicate_share: 0.004
+  invoice_void_duplicate_share: 0.005
+  missing_industry_share_smb_self_serve: 0.02
+  missing_employee_count_share: 0.03
+  segment_employee_mismatch_share: 0.03
+  duplicate_customer_share: 0.003
+  orphan_change_share: 0.002

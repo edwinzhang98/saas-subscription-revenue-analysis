@@ -1,7 +1,7 @@
 # 02 — Metric definitions (single source of truth)
 
-**Owner:** Revenue Analytics (RevOps) · **Reviewed with:** Finance (board pack), Customer Success Ops · **Version:** 1.0 (2026-11-03)
-Every number in the board pack, the monthly revenue review, the dashboard and the CS lists is computed from these definitions. The SQL implementation is in `sql/` (file per metric, listed in §15); an independent Python implementation (`src/saas_rev/crosscheck.py`) must reproduce MRR, movements, NRR and GRR exactly (results in `03_data_quality_checks.md`).
+**Owner:** Revenue Analytics (RevOps) · **Reviewed with:** Finance (board pack), Customer Success Ops · **Version:** 1.1 (2026-11-03, change log at the end)
+Every number in the board pack, the monthly revenue review, the dashboard and the CS lists comes from these definitions. The SQL implementation is in `sql/` (one file per model, §16). An independent Python implementation (`src/saas_rev/crosscheck.py`, written from this document alone) must match MRR, movements, NRR and GRR **to the cent per customer-month**; results are in `03_data_quality_checks.md`.
 
 ---
 
@@ -13,34 +13,40 @@ Every number in the board pack, the monthly revenue review, the dashboard and th
 | Calendar | Calendar months and quarters; fiscal year = calendar year. Dates are UTC. |
 | Snapshot time | **Month-end snapshot** = the state at the end of the last day of the month, after every change effective on or before that day. |
 | As-of date | 2026-09-30 (last closed month). Nothing after it is used. |
-| Rounding | Stored unrounded; shown as $K / $M with one decimal, rates with one decimal. |
-| Level | All revenue metrics are computed **per customer (account)**, then summed. |
+| Units | `discount_pct` is a fraction in [0, 1] (0.15 = 15%) in every table. `unit_price` is per seat **per billing period** (per month for monthly, per year for annual). |
+| Rounding | Subscription MRR is rounded to the cent (`ROUND(x, 2)`) before summing and before any comparison. Shown as $K / $M with one decimal; rates with one decimal. |
+| Level | Revenue metrics are computed **per customer (account)**, then summed. |
 
 ## 2. Population and exclusions
 
-- **Customer** = an account in `customers`. **Paying customer at month-end D** = customer MRR on D > 0.
-- **Excluded everywhere:** internal / test accounts — `email_domain = 'ourcompany.example'` or company name matching `test`, `[internal]`, `qa sandbox`, `zz_test` (case-insensitive). See `sql/01_stg_customers.sql`.
-- **Invoices:** lines with `status = 'void'` are excluded. `uncollectible` lines stay in billed revenue (they were real charges) and are reported separately.
+- **Customer** = an account in `customers`. **Paying customer at month-end D** = customer MRR on D > 0. Customer counts in this document always mean paying customers.
+- **Internal / test accounts are excluded everywhere:** `email_domain = 'ourcompany.example'` OR `company_name` matches, case-insensitively, one of the whole-token patterns `\btest\b`, `\[internal\]`, `^internal\b`, `\bqa\b`, `zz_test`. `sql/91_dq_checks.sql` asserts the excluded set is exactly the 6 known internal accounts and lists them.
+- **Duplicate CRM records** (a second `customer_id` with the same `email_domain` and no subscription) never reach revenue metrics, because only accounts with a subscription can be paying. They are counted in data-quality checks.
+- **Invoices:** `status = 'void'` lines are excluded. `uncollectible` lines stay in billed revenue (they were real charges) and are reported separately.
 - **Usage:** exact duplicate rows are removed; the partial week containing the as-of date is excluded from weekly trends.
 
 ## 3. MRR (Monthly Recurring Revenue)
 
-**Subscription terms on day D.** Start from the subscription's `initial_*` terms; apply every `plan_changes` row with `effective_date ≤ D` in order of `effective_date`, then `change_id`. The last row's `to_*` values are the terms on D.
+**Subscription terms on day D.** Start from the subscription's `initial_*` terms and apply its `plan_changes` rows with `effective_date ≤ D`, ordered by `effective_date`, then `requested_date`, then `change_id`. The terms on D are the `to_*` values of the last applied row.
+**Chaining invariant** (checked in `sql/91_dq_checks.sql`, must have 0 violations): in that order, the first row's `from_*` equals `initial_*` and each row's `from_*` equals the previous row's `to_*`.
+**Valid rows:** `start_date ≤ effective_date < end_date` (or `end_date` null). Rows outside that range (e.g., a change keyed in after a cancellation) are dropped in `stg_plan_changes` and counted.
 
 **Live on day D.** `start_date ≤ D` and (`end_date` is null or `end_date > D`). `end_date` is exclusive (the first day without service).
 
-**Subscription MRR on D** = `seats × monthly-equivalent unit price × (1 − discount_pct)`, where the monthly-equivalent unit price is `unit_price` for monthly billing and **`unit_price ÷ 12` for annual billing** (annual prepaid contracts are spread evenly over 12 months; they are **not** counted in the month they are invoiced).
+**Subscription MRR on D** = `ROUND(seats × monthly-equivalent unit price × (1 − discount_pct), 2)`, where the monthly-equivalent unit price is `unit_price` for monthly billing and **`unit_price ÷ 12` for annual billing** (annual prepaid contracts are spread evenly over 12 months; they are **not** counted in the month they are invoiced).
 
-**Customer MRR at month-end** = sum of subscription MRR over subscriptions live on the last day of the month. **Total MRR** = sum over paying customers.
+**Customer MRR at month-end** = sum of subscription MRR over the customer's subscriptions live on the last day of the month. **Total MRR** = sum over customers.
 
-| Included | Excluded |
+**Billing-neutral MRR (`mrr_norm`).** `seats × list price per seat-month of the plan on monthly billing × (1 − discount_pct)`, with Basic $15, Premium $35, Enterprise $50 (annual list ÷ 12, since Enterprise is annual-only). It removes the 20% annual-billing discount so that a monthly → annual switch does not look like a 20% cut. Used only where a *drop in what the customer buys* is the question (silent contraction §9, early-warning outcome §9.1). Never reported as revenue.
+
+| Included in MRR | Excluded from MRR |
 |---|---|
 | Per-seat subscription fees for the plan | One-time fees (onboarding, implementation) |
 | Recurring negotiated discounts (MRR is net of them) | Proration lines (billing timing of a change already reflected in MRR) |
 | Customers in dunning (card retry in progress) until the subscription is canceled | Tax / VAT |
 | | Void invoices, refunds and credits |
 | | Internal / test accounts; subscriptions with 100% discount (MRR = 0, not "paying") |
-| | Seat overage above purchased seats (not billed in this business) |
+| | Seat overage above purchased seats (tolerated, never billed) |
 
 **ARR** = MRR × 12 (run-rate of live subscriptions at the snapshot; not GAAP revenue, not contracted-but-not-started revenue).
 **ARPA** = MRR ÷ paying customers.
@@ -56,34 +62,53 @@ For each customer and month *m*, compare MRR at the end of the previous month (`
 | **Expansion** | `prev > 0`, `cur > prev` | `cur − prev` |
 | **Contraction** | `prev > 0`, `0 < cur < prev` | `prev − cur` |
 | **Churn** | `prev > 0`, `cur = 0` | `prev` |
-| Unchanged | `prev = cur` | 0 (any changes inside the month netted to zero, e.g., a "neutral" plan change) |
+| Unchanged | `prev = cur` | 0 (changes inside the month netted to zero, e.g., a "neutral" plan change) |
 
-**Identity (checked every month):** `MRR_end = MRR_start + New + Expansion + Reactivation − Contraction − Churn`.
+**Identity (checked every month, to the cent):** `MRR_end = MRR_start + New + Expansion + Reactivation − Contraction − Churn`.
 
-**Known blind spots of month-end snapshots (accepted, quantified in data-quality checks):**
-- A customer who starts and cancels inside the same calendar month never appears ("subscribed and churned" in ChartMogul's terms).
-- Several changes inside one month are netted (e.g., +10 seats then −4 seats = expansion of 6 seats).
-- A customer who cancels and wins back inside the same month shows only the net difference.
+**New vs Reactivation** is decided from month-end MRR history only, never from the number of subscriptions. A win-back whose first subscription never spanned a month-end is therefore New.
+
+**Known blind spots of month-end snapshots (accepted, counted in `03_data_quality_checks.md`):**
+- A customer who starts and cancels inside the same calendar month never appears ("subscribed and churned").
+- Several changes inside one month are netted (e.g., +10 seats then −4 seats = Expansion of 6 seats).
+- A cancellation and win-back inside the same month show only the net difference.
 
 ### 4.1 Expansion and contraction by component
-Each `plan_changes` row has `ΔMRR = MRR(to terms) − MRR(from terms)`, labeled by its `change_type`: **plan upgrade / downgrade** (tier changed — includes any seats changed in the same row), **seat increase / decrease**, **billing period change**, **discount change**.
-For a customer-month classified as Expansion with net amount *E*, component *k* receives `E × (sum of positive ΔMRR of type k) ÷ (sum of all positive ΔMRR)` among rows effective inside the month. Contraction is allocated the same way using negative ΔMRR. If there are no change rows (e.g., a same-month win-back on different terms), the amount goes to `other`. By construction the components sum exactly to Expansion and Contraction.
 
-**Monthly → annual switches are contraction** (annual is cheaper per seat, so the run-rate falls). This is a deliberate retention trade, so it is always reported as its own component (`billing_period_change`) and never mixed into "customers unhappy" narratives.
+Each `plan_changes` row is split into four signed components by changing one attribute at a time, in the fixed order **plan → seats → billing period → discount**:
 
-## 5. Churn and movement rates
+| Component | Formula (MRR() = §3 formula) |
+|---|---|
+| `plan` | MRR(to_plan, from_seats, from_billing, from_discount) − MRR(from terms) |
+| `seats` | MRR(to_plan, to_seats, from_billing, from_discount) − MRR(to_plan, from_seats, from_billing, from_discount) |
+| `billing_period` | MRR(to_plan, to_seats, to_billing, from_discount) − MRR(to_plan, to_seats, from_billing, from_discount) |
+| `discount` | MRR(to terms) − MRR(to_plan, to_seats, to_billing, from_discount) |
+
+(The plan step uses the list `unit_price` of the new plan on the old billing period.) The four parts sum exactly to the row's ΔMRR. For a **continuing customer** (`prev > 0` and `cur > 0`) in month *m*, sum each component over all rows with `effective_date` in [first day of *m*, last day of *m*], on any of the customer's subscriptions; `other = (cur − prev) − Σ components` (mid-month win-backs, rounding).
+
+**Reporting.** *Gross expansion by component* = sum of positive customer-month component values (seats added, plan upgrades, discount reductions, annual → monthly switches); *gross contraction by component* = sum of negative ones. The waterfall's net movements remain the movements of record, and the component view ties to them exactly: `Σ positive components − Σ |negative components| + Σ other = Expansion − Contraction` over continuing customers.
+
+**Billing switches are their own component in both directions.** Monthly → annual lowers MRR (annual is 20% cheaper per seat) — a deliberate retention trade, never part of an "unhappy customer" narrative. Annual → monthly raises MRR but is a *risk* signal (the customer stopped committing for a year); it is shown separately and excluded from "expansion" talking points.
+
+## 5. Churn, retention-flow and movement rates
 
 | Metric | Formula (month *m*) |
 |---|---|
 | Logo churn rate | customers with a Churn movement in *m* ÷ paying customers at end of *m − 1* |
 | Gross MRR churn rate | (Churn + Contraction) ÷ MRR at end of *m − 1* |
 | Net MRR churn rate | (Churn + Contraction − Expansion) ÷ MRR at end of *m − 1* (reactivation excluded) |
+| Monthly net retention (flow) | (MRR_{m−1} + Expansion − Contraction − Churn) ÷ MRR_{m−1} |
+| Monthly gross retention (flow) | (MRR_{m−1} − Contraction − Churn) ÷ MRR_{m−1} |
 | Voluntary / involuntary split | by `subscriptions.cancel_reason` of the subscription that ended |
 
-**Quarterly movement rates** (used for "expansion slowed last quarter"): expansion rate = sum of the quarter's three monthly Expansion amounts ÷ MRR at the end of the month before the quarter. Contraction, churn and new rates use the same denominator. Year-over-year comparisons use the same quarter of the prior year to remove seasonality.
+Monthly flow retention is a **diagnostic only, never annualised or compared with NRR §7**: it nets month by month within customers, includes movements of customers who became New after *t − 12*, and leaves out win-backs.
 
-## 6. Upgrade and downgrade counts
-An **upgrade** is a `plan_changes` row whose `to_plan` tier is higher than `from_plan`; a **downgrade** is lower. **Monthly upgrade rate (Basic → higher)** = Basic customers with an upgrade effective in month *m* ÷ customers on Basic at the end of *m − 1*.
+**Quarterly movement rates** (used for "expansion slowed last quarter"): expansion rate = the quarter's three monthly Expansion amounts ÷ MRR at the end of the month before the quarter. Contraction, churn, new and reactivation rates use the same denominator. Numerators include movements of customers who became New or Reactivated earlier in the same quarter (consistent with the waterfall). Year-over-year comparisons use the same quarter of the prior year to remove seasonality.
+
+## 6. Upgrades and downgrades
+
+An **upgrade** is a `plan_changes` row whose `to_plan` tier is higher than `from_plan`; a **downgrade** is lower. A **voluntary upgrade** has `change_source ≠ 'system'`; **forced (seat-cap) upgrades** (`change_source = 'system'`: a Basic account asked for more than 50 seats) are reported separately.
+**Monthly upgrade rate (Basic → higher)** = customers on Basic at the end of *m − 1* with a voluntary upgrade effective in *m* ÷ customers on Basic at the end of *m − 1*. Customers who start on Basic inside month *m* are in neither numerator nor denominator.
 
 ## 7. NRR — Net Revenue Retention (headline, trailing 12 months)
 
@@ -98,25 +123,40 @@ For month-end *t*:
 | New customers since *t − 12*? | Excluded (not in the base). |
 | Base customer churned and came back within the year? | Included at today's MRR (same customer). |
 | Customer who churned before *t − 12* and came back? | Excluded (not in the base). |
-| Point-to-point or compounded? | **Point-to-point.** A customer who contracts in March and recovers in June shows no loss. The flow-based view is §5. |
-| Board quote | NRR at the quarter-end month, e.g., "NRR (TTM) at 30 Sep 2026". |
-| Segment NRR | Partition `B(t)` by the customer's segment / industry / channel (static attributes) or by plan / billing period **at t − 12** (state at the start, to avoid survivor bias). |
+| Point-to-point or compounded? | **Point-to-point.** A customer who contracts in March and recovers in June shows no loss. The month-by-month flow view is §5. |
+| Board label | "12-month NRR at 30 Sep 2026 (base: customers paying at 30 Sep 2025)". |
+| History | Undefined before 2024-10-31 (no base before GA). Points whose base has fewer than 1,000 customers (before 2025-09) are shown greyed: small bases with many early adopters. |
+| Segment NRR | Partition `B(t)` by the customer's segment / industry / channel / region (static attributes) or by plan / billing period **at t − 12** (state at the start, to avoid survivor bias). |
+
+**Quarterly run-rate NRR (leading diagnostic).** For a quarter-end *t*: `NRR_q(t) = Σ_{c paying at t−3} MRR_c(t) ÷ Σ MRR_c(t−3)`, annualised as `NRR_q⁴`. It reacts within one quarter, while TTM NRR takes up to four quarters to show a change; it is noisier and seasonal, so it is always shown next to the same quarter of the prior year.
 
 ## 8. GRR — Gross Revenue Retention (trailing 12 months)
 
 `GRR(t) = Σ_{c ∈ B} min(MRR_c(t), MRR_c(t − 12)) ÷ Σ_{c ∈ B} MRR_c(t − 12)`.
-Each customer is capped at its own starting MRR, so GRR excludes expansion, cannot exceed 100%, and one customer's growth cannot hide another's shrinkage. **Logo retention (TTM)** = share of `B(t)` still paying at *t*.
+Each customer is capped at its own starting MRR, so GRR excludes expansion and cannot exceed 100%. **Logo retention (TTM)** = share of `B(t)` still paying at *t*.
 
-## 9. Silent contraction ("silent churn")
+## 9. Silent contraction ("quiet downgrades")
 
-An account is **silently contracting** at month-end *t* if all hold:
-1. it is paying at *t* and has no cancellation requested;
-2. `MRR_t ≤ 80% × max(MRR at month-ends t−6 … t−1)` — spend down at least 20% from its recent peak;
-3. it had at least one Contraction movement in months *t−5 … t*.
+**Material contraction without cancellation, last 6 months.** An account is flagged at month-end *t* if all hold:
+1. it is paying at *t* and has no cancellation requested on or before *t* (`cancel_requested_date` null or > *t*);
+2. `mrr_norm_t ≤ 0.80 × max(mrr_norm at month-ends t−6 … t−1)` — billing-neutral spend is down at least 20% from its recent peak (ties flag);
+3. at least one Contraction movement in months *t−5 … t* whose components (§4.1) include a negative `plan`, `seats` or `discount` part (a monthly → annual switch alone never qualifies).
 
-Reported as: number of accounts, **current ARR** (`12 × MRR_t`, the revenue still at risk) and its share of total ARR, and **lost ARR** (`12 × (peak − MRR_t)`). The 20% threshold and 6-month window are defaults; the dashboard lets you change them.
+**Classes.** `silent` — the contraction came from the customer (self-serve seat removals, renewal right-sizing, plan downgrades). `saved — re-risk` — the contraction was a CS save offer (`change_source = 'customer_success'`): the account asked to cancel and was kept on a smaller plan; it is reported separately, not as "silent".
+**Output fields:** current ARR (`12 × MRR_t`, the revenue still at risk), lost ARR (`12 × (peak MRR − MRR_t)`), decline % (billing-neutral), contraction steps (months with Contraction in *t−5 … t*), months since last contraction, contraction source, plan / seats now vs peak.
+**Parameters:** 20% threshold and 6-month window are the defaults; the dashboard lets you change them (sensitivity, not a different definition).
 
-**Early-warning rule (leading indicators).** Defined and back-tested in `notebooks/04_silent_churn.ipynb`: at month-end *t* flag accounts with low seat utilization and falling weekly active users that have **not yet** contracted in the last 3 months. **Outcome:** contraction ≥ 10% of MRR or churn within the next 3 month-ends. **Precision** = flagged with outcome ÷ flagged; **recall** = flagged with outcome ÷ all accounts with outcome; **lift** = precision ÷ base rate; **lead time** = months from first flag to outcome.
+### 9.1 Early-warning rule (leading indicators)
+
+| Item | Definition |
+|---|---|
+| Eligible (account, *t*) | Paying at *t*; no cancellation requested on or before *t*; no Contraction movement in *t−2 … t* (so the flag is early); outcome window fully observed (*t* ≤ 2026-06-30 for monthly-billed; renewal month-end ≤ 2026-09-30 for annual-billed). |
+| Outcome window | Monthly-billed at *t*: month-ends *t+1 … t+3*. Annual-billed at *t*: month-ends *t+1* … the first renewal month-end after *t*, and only if that renewal is within *t+6* (otherwise the row is not eligible — annual customers cannot shrink before renewal). |
+| Outcome = 1 | `min(mrr_norm over the window) ≤ 0.90 × mrr_norm_t` (churn, MRR = 0, qualifies). |
+| Flag (v1.1) | Seat utilization over the 13 complete weeks ending at *t* **< 60%** AND average WAU in the last 4 complete weeks vs the 9 weeks before them **≤ −15%**. Thresholds chosen in `notebooks/04_silent_churn.ipynb`; the dashboard shows the trade-off for other values. |
+| Metrics | Precision, recall and lift (precision ÷ base rate) at the (account, *t*) grain; account-level recall (share of accounts with an outcome flagged at least once before it) also reported. |
+| Lead time | Month-ends from the first flag of the uninterrupted flag run that ends at the outcome month, to the outcome month; reported as a distribution. |
+| Watchlist | The rule scored at *t* = 2026-09-30 (no outcome yet), plus the §9 flags. |
 
 ## 10. Cohorts
 
@@ -132,46 +172,76 @@ Reported as: number of accounts, **current ARR** (`12 × MRR_t`, the revenue sti
 - **WAU** (weekly active users) = `unique_users` of `session` events for the account-week, after de-duplication.
 - **Seats in a week** = seats on the subscription terms at the end of that week (Sunday).
 - **Seat utilization** over a window = Σ WAU ÷ Σ seats over the complete weeks in the window (can exceed 100% — tolerated overage).
+- **WAU trend** = average WAU in the last 4 complete weeks ÷ average WAU in the 9 complete weeks before them − 1.
 - **Feature intensity** = events per WAU per week (e.g., premium-feature gate hits per active user).
 - Windows use complete weeks only; a "90-day window" = the 13 complete weeks ending on or before the index date.
 
-## 13. Upgrade-signal analysis (leakage rules)
-- **Population:** month-ends *t* at which the customer is paying on Basic with ≥ 3 months tenure.
-- **Label:** an upgrade (Basic → Premium / Enterprise) effective in `(t, t + 90 days]`.
-- **Features:** only data observable at *t* — usage in the 13 complete weeks ending at *t*, seats and terms at *t* and *t − 3 months*, static attributes. Nothing after *t*.
-- **Upgraders vs non-upgraders:** upgraders are measured at the last month-end before their upgrade; non-upgraders at month-ends with label 0, matched on tenure band.
-- **Model validation:** time-based split (train on earlier index months, test on later), never a random row split.
+## 13. Upgrade-signal analysis (leakage and bias rules)
+- **Population:** month-ends *t* at which the customer is paying on Basic with ≥ 3 months since its first paid month-end.
+- **Label:** a **voluntary** upgrade (Basic → Premium / Enterprise, `change_source ≠ 'system'`) effective in `(t, t + 90 days]`. Forced seat-cap upgrades are excluded from the signal table and reported separately. Churn within the window (MRR = 0 at any of *t+1 … t+3*) is a separate competing outcome.
+- **Features:** only data observable at *t* — usage in the 13 complete weeks ending at *t*, seats and terms at *t* and *t − 3 months*, static attributes, `prior_higher_tier` (ever on Premium / Enterprise before *t*). Nothing after *t*.
+- **Comparison table (upgraders vs stayers):** upgraders — the last month-end before the upgrade (one row per upgrade); stayers — one eligible month-end per account that did not upgrade or churn in the window, drawn from the same calendar-month × tenure-band stratum as the upgraders (tenure bands 3–6, 7–12, 13–24, 25+ months).
+- **Ranking model:** all eligible rows, weighted 1 ÷ (rows per account); time-based split — train on *t* ≤ 2025-12-31, test on 2026-01-31 … 2026-06-30, test metrics reported before and after the 2026-04-15 packaging change. Rows with *t* + 90 days > 2026-09-30 are never used for training or evaluation; they are only scored for the opportunity list at *t* = 2026-09-30.
 
 ## 14. Reconciliation to billing
-**Billed recurring revenue** for a period = non-void `recurring` + `proration` invoice lines, spread **by day** over their service period. **Daily-MRR revenue** = Σ over days of `MRR_day × 12 ÷ 365`. Over a full year the two should agree within 1%; the gap is explained by day-count conventions (monthly periods of 28–31 days) and is reported in `03_data_quality_checks.md`. One-time fees and tax are excluded from both.
+- **Daily-MRR revenue** for day D = Σ subscription MRR on D (§3 applied to D) × 12 ÷ days in D's calendar year (365 or 366).
+- **Billed recurring revenue** = non-void `recurring` + `proration` lines, spread evenly by day over `[service_period_start, service_period_end)` clipped to the subscription's live days `[start_date, end_date)`. The clipped remainder (mostly `uncollectible` charges after a failed card renewal, where service stopped 14 days into the period) is reported separately as *billed but not serviced*.
+- **Windows:** complete calendar years 2024 and 2025, and the trailing 12 months Oct 2025 – Sep 2026, at total and segment level. **Expected |gap| < 0.3%**; the residual is day-count convention (monthly periods of 28–31 days vs a 365/366-day year) at the window edges. Monthly values are shown as a trend with the expected pattern (31-day months ≈ +2%, February ≈ −3%), not as pass/fail.
 
-## 15. Where each metric is implemented
+## 15. CS account health list (`docs/account_health_list.csv`)
+
+| Field | Definition |
+|---|---|
+| `customer_id`, `company_name`, `segment`, `cs_coverage`, `csm_owner` | From `stg_customers` |
+| `plan`, `billing_period`, `seats`, `current_arr` | Terms and ARR at 2026-09-30 |
+| `list_type` | `risk` (silent contraction §9, CS saves, or early-warning flag §9.1) or `expansion` (upgrade propensity §13) |
+| `next_renewal_date`, `days_to_renewal` | Annual: end of the current annual term. Monthly: next billing date. |
+| `arr_at_stake` | Risk: current ARR × historical precision of the flag that fired (expected ARR at risk). Expansion: seats × (Premium − Basic price per seat-month on the account's billing period) × 12 × upgrade propensity. |
+| `priority_rank` | Within each owner tier: renewals within 120 days first, then by `arr_at_stake` |
+| `reason_code_1..3` | e.g. `UTIL_BELOW_60`, `WAU_DOWN_15PCT`, `SEATS_CUT_20PCT_6M`, `DOWNGRADED_6M`, `SAVED_BY_CS_6M`, `GATE_HITS_TOP_DECILE`, `TEAM_GROWTH_10PCT_13W`, `AT_BASIC_INTEGRATION_CAP` |
+| `evidence` | The numbers behind the reasons, in plain words |
+| `suggested_play` | From the recommendations (`notebooks/05_recommendations.ipynb`) |
+
+The top 120 accounts with a named or pooled CSM form the CSM queue (CS capacity, assumption A9); everything else is the digital (tech-touch) queue.
+
+## 16. Where each metric is implemented
 
 | Metric | SQL file | Output table |
 |---|---|---|
+| Raw load, as-of date, MRR macros | `sql/00_load_raw.sql` | `raw.*`, `meta_run`, `mrr_of()`, `mrr_norm_of()` |
 | Clean sources & exclusions | `sql/01`–`05_stg_*.sql` | `stg_*` |
+| Calendars | `sql/06_dim_calendar.sql` | `dim_month`, `dim_week` |
 | Subscription terms over time | `sql/10_int_subscription_versions.sql` | `int_subscription_versions` |
 | Customer MRR at month-end | `sql/20_fct_customer_mrr_monthly.sql` | `fct_customer_mrr_monthly` |
 | MRR movements | `sql/21_fct_mrr_movements.sql` | `fct_mrr_movements` |
-| Movement components | `sql/22_fct_mrr_movement_components.sql` | `fct_mrr_movement_components` |
+| Movement components | `sql/22_fct_mrr_movement_components.sql` | `fct_change_components`, `fct_mrr_movement_components` |
 | Monthly waterfall & rates | `sql/23_rpt_mrr_waterfall.sql` | `rpt_mrr_waterfall_monthly` |
-| Quarterly movement rates | `sql/24_rpt_mrr_quarterly.sql` | `rpt_mrr_quarterly` |
-| NRR / GRR / logo retention (TTM) | `sql/25_rpt_nrr_grr_ttm.sql` | `rpt_nrr_grr_ttm` |
+| Quarterly movement rates, upgrade rates | `sql/24_rpt_mrr_quarterly.sql` | `rpt_mrr_quarterly` |
+| NRR / GRR / logo retention (TTM), run-rate NRR | `sql/25_rpt_nrr_grr_ttm.sql` | `rpt_nrr_grr_ttm`, `rpt_nrr_quarterly_runrate` |
 | Segment NRR / GRR | `sql/26_rpt_segment_retention.sql` | `rpt_segment_retention_ttm` |
 | Cohort retention | `sql/27_rpt_cohort_retention.sql` | `rpt_cohort_retention` |
-| Plan transitions | `sql/30_rpt_plan_transitions.sql` | `rpt_plan_transition_matrix` |
+| Plan transitions | `sql/30_rpt_plan_transitions.sql` | `rpt_plan_transition_matrix`, `rpt_plan_change_flows` |
 | Weekly usage & utilization | `sql/40_fct_account_usage_weekly.sql` | `fct_account_usage_weekly` |
-| Account-month features | `sql/41_fct_account_month_features.sql` | `fct_account_month_features` |
+| Account-month features & labels | `sql/41_fct_account_month_features.sql` | `fct_account_month_features` |
 | Silent contraction | `sql/50_rpt_silent_contraction.sql` | `rpt_silent_contraction` |
 | Billing reconciliation | `sql/90_dq_revenue_reconciliation.sql` | `dq_revenue_reconciliation` |
 | Data-quality checks | `sql/91_dq_checks.sql` | `dq_check_results` |
 
-## 16. Questions people ask (and our answers)
+## 17. Questions people ask (and our answers)
 
-- **"Why not just sum invoices for MRR?"** Annual contracts are invoiced once a year; invoice totals spike in renewal months. MRR spreads them evenly. §14 shows billing and MRR agree.
+- **"Why not just sum invoices for MRR?"** Annual contracts are invoiced once a year, so invoice totals spike in renewal months. MRR spreads them evenly. §14 shows billing and MRR agree.
 - **"Why month-end and not average MRR?"** Movements need two clean snapshots to classify a customer. Daily MRR is used only for the billing reconciliation.
-- **"Does reactivation count in NRR?"** Only for customers who were paying 12 months ago (they are in the base). Win-backs of customers who left earlier are reported as Reactivation in the waterfall, not in NRR.
-- **"Is a downgrade-to-save a win?"** It avoids churn but is still Contraction. Saved accounts are tracked in the silent-contraction list.
+- **"A customer moved from monthly to annual and MRR fell 20% — is that churn risk?"** No. It is contraction in the waterfall (run-rate fell) but a good outcome; it is its own component and is neutralised by `mrr_norm` in the silent-contraction and early-warning logic.
+- **"Does reactivation count in NRR?"** Only for customers who were paying 12 months ago (they are in the base). Win-backs of customers who left earlier are Reactivation in the waterfall, not in NRR.
+- **"Is a downgrade-to-save a win?"** It avoids churn but is still Contraction. Saved accounts are tracked as `saved — re-risk`.
 - **"Do failed payments count as churn immediately?"** No — only when the subscription is canceled after the 14-day dunning window.
 - **"Segment changed during the year?"** Segments are static in this data. Plan and billing period are taken at the start of the measurement window.
-- **"Why is GRR capped per customer instead of (start − churn − contraction) ÷ start?"** The capped point-to-point version is what investors compare across companies and cannot be flattered by temporary contraction-then-recovery. The flow-based rate is in §5.
+- **"Why is GRR capped per customer instead of (start − churn − contraction) ÷ start?"** The capped point-to-point version is what investors compare across companies: one customer's expansion cannot offset another's loss. It does ignore a contraction fully recovered by *t* (NRR makes the same choice); the monthly flow rates in §5 capture those.
+- **"Why is TTM NRR still above 105% if expansion slowed?"** TTM NRR averages four quarters; one weak quarter moves it by roughly a quarter of the change. The run-rate NRR in §7 shows the Q3 change directly.
+
+## 18. Change log
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0 | 2026-11-03 | First version. |
+| 1.1 | 2026-11-03 | After independent review: billing-neutral MRR for silent contraction and early-warning outcomes (annual list is exactly 80% of monthly, so v1.0 flagged every monthly → annual switch); sequential per-attribute component decomposition (v1.0 proportional allocation could divide by zero and hide opposite-sign changes); renewal-aware outcome windows for the early-warning back-test; voluntary vs forced upgrades and calendar-matched comparison for upgrade signals; term-chaining invariant and tie-break; cent rounding; whole-token internal-account rule; monthly flow retention and quarterly run-rate NRR defined; corrected GRR rationale and reconciliation explanation; CS list schema. |
