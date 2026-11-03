@@ -51,7 +51,8 @@ def _rank_in_queue(out: pd.DataFrame) -> pd.DataFrame:
 
 def _urgent(df: pd.DataFrame) -> pd.DataFrame:
     """Risk and renewal rows whose annual term ends in fewer than 45 days get an 'Urgent' prefix (not upgrade rows)."""
-    urgent = df["billing_period"].eq("annual") & (df["days_to_renewal"] < 45) & df["list_type"].ne("expansion")
+    urgent = (df["billing_period"].eq("annual") & (df["days_to_renewal"] < 45) & df["list_type"].ne("expansion")
+              & ~df["suggested_play"].fillna("").str.startswith("Urgent"))     # the watchlist already prefixes its own rows
     df.loc[urgent, "suggested_play"] = ("Urgent — renews in " + df.loc[urgent, "days_to_renewal"].astype(int).astype(str) + " days: "
                                         + df.loc[urgent, "suggested_play"].str.replace(" 60 days out", " now", regex=False)
                                         .str.replace(" 90 days out", " now", regex=False))
@@ -361,7 +362,7 @@ def _default_next_month(k: dict) -> str:
 1. **Board pack (VP Revenue, by 12 Nov):** report 12-month NRR {pct(k['nrr_ttm'])} with the definition footnote, NRR excluding the one-off
    ({pct(k['nrr_ttm_ex_one_off'])}) and the Q3 run-rate ({pct(k['nrr_runrate_q3_2026'])}) as the leading indicator.
 2. **Re-forecast Q4 expansion** at the Q3 like-for-like rate ({pct(k['expansion_rate_q3_2026'])} of starting MRR), not the Q2 rate.
-3. **CS (P1):** start the renewal desk on the `csm` queue of the account list in priority order, with a 1-in-5 holdout.
+3. **CS (P1):** start the CSM renewal reviews on the `csm` queue of the account list in priority order, with a 1-in-5 holdout.
 4. **Sales + Finance (P3):** approve the seat-band offer for Technology renewals in the next 6 months.
 5. **Product (P5):** bring the packaging test design to the December pricing council instead of a straight revert.
 6. **October flash** after the 7 Nov close: watch whether Technology contraction continues at renewals and whether the expansion rate stays near Q3.

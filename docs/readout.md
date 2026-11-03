@@ -7,16 +7,16 @@
 
 1. **For the board: 12-month NRR is 103.5%** (GRR 84.6%). One customer's company-wide rollout in May props it up: without it NRR is 101.0%. Q3 on its own, annualised, is 92.9%: if Q4 and Q1 look like Q3, the 12-month figure keeps falling.
 2. **Expansion did slow, and the underlying part will not bounce back by itself.** Most of the dollar drop from Q2 is that one-off rollout, which inflated Q2. But like for like, expansion is 3.4% of starting revenue in Q3 vs 4.9% a year ago — past the 1-point line we agreed for a re-forecast — and that part is structural: Technology customers all but stopped adding seats and started cutting them, and Basic → Premium upgrades, already falling before April, fell again after the packaging change.
-3. **324 paying customers are quietly paying less** — $1.07M of annual revenue still with us, $649K already gone. 60% of them are Technology companies.
-4. **CS should work a list of 120 accounts** that holds 66% of the revenue at stake (above the 60% we agreed for CSM-led reviews), renewals first. Seven actions across CS, Sales, Product, Marketing and Billing are worth about +1.5 NRR points next year if they work as assumed. Each comes with a control group: the retention actions read out within two quarters, the packaging test by mid-2027.
+3. **324 paying customers are quietly downgrading** — paying at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling: $1.07M of annual revenue still with us, $649K already gone. 60% of them are Technology companies.
+4. **CS should work a list of 120 accounts**, renewals first, because the top 120 hold more than the 60% of revenue at stake agreed for CSM-led reviews (they hold 66% in the renewal-first queue order, 69% ranked purely by ARR at stake). Seven actions across CS, Sales, Product, Marketing and Billing are worth about +1.5 NRR points next year if they work as assumed. Each comes with a control group: the retention actions read out within two quarters, the packaging test by mid-2027.
 
 ## 1. What to tell the board about NRR
 
 | | Sep 2026 | Jun 2026 | Sep 2025 |
 |---|---|---|---|
 | 12-month NRR | **103.5%** | 107.0% | 104.8% |
-| 12-month NRR without the one-off rollout | 101.0% | 104.1% | — |
-| 12-month GRR | 84.6% | — | 85.9% |
+| 12-month NRR without the one-off rollout | 101.0% | 104.1% | n/a (before the rollout) |
+| 12-month GRR | 84.6% | 85.8% | 85.9% |
 | Last quarter, annualised (early warning) | 92.9% (Q3) | 108.4% (Q2) | 103.6% (Q3 2025) |
 
 Suggested footnote: *NRR = today's recurring revenue from customers who were paying 12 months ago, divided by what they paid then. It includes their upgrades, extra seats, downgrades and cancellations, and excludes new customers. GRR is the same but gives no credit for growth.* Definitions are in `docs/02_metric_definitions.md`.
@@ -34,22 +34,22 @@ Q3 expansion was **$63.7K** of new monthly revenue from existing customers, down
 | Other | +$0.3K |
 
 - **Technology:** measured on their own revenue, their expansion fell from 6.2% to 1.2% a quarter and their contraction (seat cuts and downgrades) rose from 0.9% to 5.7%; their 12-month NRR is now 95.5% (109.5% a year ago). This matches what CSMs hear about hiring freezes and layoffs, though the data shows the seat cuts, not their cause.
-- **Basic upgrades:** the monthly share of Basic customers upgrading fell in two steps — from about 2% in Q3 2025 to 1.5% in January–March 2026, before anything changed, and to 0.8% after the April packaging change. It fell in every channel and customer size. The second drop lines up with the month the change shipped, but because upgrades were already drifting down, 0.4 to 0.8 points of the fall coincide with the change, depending on how much of the earlier drift would have continued — a range, not a measured effect. The lower churn the change was meant to buy is too small to see yet.
-- **Not the cause:** the growing share of Paid Social signups explains only about 4% of the upgrade drop. A summer slowdown cannot be confirmed or ruled out with two years of history.
+- **Basic upgrades:** Outside Paid Social, the monthly Basic upgrade rate fell in two steps — from 1.9% in Apr–Sep 2025 to 1.4% in Oct 2025 – Mar 2026, before anything changed, and to 0.8% in May–Sep 2026 after the April packaging change (0.69% across all Basic accounts); the shift toward Paid Social signups explains only 4% of the fall. Rates fell in every acquisition channel and in SMB and Mid-Market. The part of the fall that lines up with the packaging change is 0.4 to 0.6 points of the monthly upgrade rate — 0.4 if the earlier drift had continued, 0.6 if the rate had held at its pre-April level; the 0.83-point fall against the 12-month pre-window average includes that drift and is not a measure of the change. The lower churn the change was meant to buy is not separable from zero yet.
+- **Seasonality:** a summer slowdown cannot be confirmed or ruled out with two years of history.
 
 ## 3. Who is quietly downgrading
 
-- **324 accounts** (307 cutting on their own, 17 kept by CS on a smaller plan after asking to cancel) pay at least 20% less than they did at their peak in the last six months, without cancelling. Up from 162 in June and 89 a year ago.
+- **324 accounts** (307 cutting on their own, 17 kept by CS on a smaller plan after asking to cancel) are paying at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling. Up from 162 in June and 89 a year ago.
 - **How:** mostly seat cuts at monthly billing dates (240 of the 324, typically a quarter of their seats).
 - **Who:** Technology companies are 60% of them, against 23% of other paying customers.
-- **What happens next:** they are no more likely to leave than similar customers (12% vs 12% within six months) — the damage is mostly done. The useful early signal is **low seat use**: accounts using less than half their seats over a quarter go on to shrink or leave about 2.3 times as often as the average account, typically three months ahead for monthly-billed customers and six for annual ones (83% of the contractions the rule caught were flagged at least two month-ends in advance).
+- **What happens next:** they are no more likely to leave than similar customers (12% vs 12% within six months) — the damage is mostly done. The useful early signal is **low seat use**: accounts using less than half their seats over a quarter go on to shrink or leave about 2.3 times as often as the average account, typically 3 months ahead for monthly-billed accounts, and for annual-billed accounts usually the full 6 months the back-test can measure. 83% of the shrinking or cancelling accounts the rule caught were flagged at least two month-ends in advance.
 
 ## 4. Where CS should focus
 
 `docs/account_health_list.csv` lists the accounts to work, each with the reason, the evidence and the action:
 
-- **CSM reviews (120 accounts):** the 120 CSM-covered accounts that matter most — renewals in under 45 days first, soonest first (17 of them), then renewals in the next 120 days (45 more), then the most revenue at stake. They hold **66% of the revenue at stake** on the whole list, above the 60% threshold, so the plan is CSM-led reviews for them.
-- **Renewal desk (190 accounts):** every Technology customer renewing an annual contract in the next six months that is not already with a CSM — 71 flagged by the risk rules, 119 from the renewal calendar — for the seat-band offer, soonest renewals first.
+- **CSM reviews (120 accounts):** the 120 CSM-covered accounts that matter most — annual renewals in under 45 days first, soonest first (17 of them), then renewals in 45–120 days (45 more), then the most revenue at stake. They clear the 60% threshold for CSM-led reviews (they hold 66% in the renewal-first queue order, 69% ranked purely by ARR at stake).
+- **Technology renewal desk (190 accounts, P3):** every Technology customer renewing an annual contract in the next six months that is not already in P1 — 71 flagged by the risk rules, 119 from the renewal calendar — for the seat-band offer, soonest renewals first; Sales renewal AEs lead it, with CS.
 - **Digital program (798 accounts):** in-app and email nudges about unused seats, plus a renewal email series 60 days out.
 
 *Revenue at stake* ranks the list: each account's annual revenue × how often accounts with the same warning sign went on to shrink or leave. It is a priority weight, not a forecast of the loss; the sizes in section 5 use the measured share of revenue lost instead. About a fifth of the CSM list (23 of the 120) shows rising usage on under-used seats — weekly active users up 20% or more while fewer than half the seats are used; those are right-size conversations (confirm team size and seat count, no discount), not saves.
@@ -58,16 +58,16 @@ Q3 expansion was **$63.7K** of new monthly revenue from existing customers, down
 
 | # | Action | Owner | Next year's NRR | How we will know | Main risk |
 |---|---|---|---|---|---|
-| P1 | CSM renewal reviews for the top 120 at-risk accounts | Head of CS | +0.56 pts | 1 in 5 accounts left as a control group | CSM time; right-sizing lowers revenue now to keep the customer |
+| P1 | CSM renewal reviews for the top 120 at-risk accounts (renewals first) | Head of CS | +0.56 pts | 1 in 5 accounts left as a control group | CSM time; right-sizing lowers revenue now to keep the customer |
 | P7 | Recover more failed card payments (retries, card updater) | Billing / RevOps | +0.30 pts | A/B test of the retry schedule | Low; card-updater fees |
-| P3 | Flexible seat bands for Technology renewals | Sales + CS | +0.26 pts | Offer in alternate renewal months | Gives back seats some customers would have kept; one renewal cycle only |
+| P3 | Technology renewal desk: flexible seat bands for annual renewals | Sales + CS | +0.26 pts | Offer in alternate renewal months | Gives back seats some customers would have kept; one renewal cycle only |
 | P2 | Digital program for the rest of the risk list | Lifecycle Marketing | +0.16 pts | 50/50 split | Emails move behaviour only a little |
-| P5 | Test a capped Basic package before deciding to revert | Product / Pricing | +0.12 pts (about +0.7 pts a year once rolled out) | 50/50 on new signups | Loses the conversion gain the change was meant to buy |
+| P5 | Test a capped Basic package before deciding to revert | Product / Pricing | +0.08 pts (≈ +0.5 pts a year once rolled out) | 50/50 on new signups | Loses the conversion gain the change was meant to buy |
 | P4 | Premium trial for the Basic accounts most likely to upgrade | Sales-assist | +0.07 pts | 30% control group | Pulls forward upgrades that would have happened anyway |
 | P6 | Better onboarding and an annual offer for Paid Social signups | Growth Marketing | +0.04 pts (most value lands after next year) | Alternate signup weeks | Fewer signups; needs acquisition cost data |
-| | **Total** | | **≈ +1.5 pts (range +0.7 to +2.4)** | | |
+| | **Total** | | **≈ +1.5 pts (range +0.7 to +2.3)** | | |
 
-Each figure = revenue on the target list today × how much similar accounts lost (or added) in the past × the share of that we expect the action to change. The last part is an assumption — none of these has been tried here — which is why every action has a control group and a read-out date (`notebooks/05_recommendations.ipynb`). Each account counts in one action only.
+Each figure = addressable monthly revenue (current accounts or the revenue flow the action targets) × how much similar accounts lost (or added) in the past × the share of that we expect the action to change. The last part is an assumption — none of these has been tried here — which is why every action has a control group and a read-out date (`notebooks/05_recommendations.ipynb`). Each account counts in one action only.
 
 ## 6. Decisions needed
 

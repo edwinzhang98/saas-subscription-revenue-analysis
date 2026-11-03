@@ -49,9 +49,12 @@ c[0].metric("Expected NRR impact", f"+{total * 100:.1f} pts", f"range +{lo * 100
             delta_arrow="off", border=True, help="Next year's NRR base = MRR of today's paying customers")
 c[1].metric("ARR protected or added", money(t["impact_mrr"].sum() * 12), "12-month run-rate", delta_color="off",
             delta_arrow="off", border=True)
-c[2].metric("Plays", f"{len(t)}", "each with an owner and a holdout", delta_color="off", delta_arrow="off", border=True)
-c[3].metric("NRR base", money(base_mrr * 12), "ARR of customers paying on 30 Sep 2026", delta_color="off",
-            delta_arrow="off", border=True)
+c[2].metric("Plays", f"{len(t)}", "all with holdouts", delta_color="off", delta_arrow="off", border=True,
+            help="Each play has an owner, a control group and stated risks; five work from account lists that exist today "
+                 "(four in docs/account_health_list.csv, P6 by acquisition-channel cohort), two act on future signups and "
+                 "failed charges.")
+c[3].metric("NRR base", money(base_mrr * 12), "ARR at 30 Sep 2026", delta_color="off",
+            delta_arrow="off", border=True, help="ARR of the customers paying on 30 Sep 2026 — the base of next year's NRR.")
 
 plot(R.fig_impact(t))
 
@@ -70,8 +73,9 @@ data_table(t[["id", "play", "owner", "accounts", "addressable_mrr", "outcome_rat
               "nrr_pts", "nrr_pts_low", "nrr_pts_high"]], "Show the sizing table")
 
 how_to_read("""
-**What the numbers mean.** Each play has a target list that exists today (e.g. the CSM queue of the account health
-list), an action, and an expected effect on next year's NRR. The expected effect is built from three parts:
+**What the numbers mean.** Five plays have a target list that exists today (four in the account health list, P6 by
+acquisition-channel cohort); P5 and P7 act on future signups and failed charges. Each play has an action and an expected
+effect on next year's NRR. The expected effect is built from three parts:
 1. **Addressable MRR** and **what usually happens to it** — both measured in our data (for example, the MRR of at-risk
    accounts and the share of it that similar accounts lost historically).
 2. **The effect of the play** — an assumption (low / base / high), because these plays have not been run here yet. The

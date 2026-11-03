@@ -682,6 +682,11 @@ def build_watchlist(threshold: float = DECLINE_THRESHOLD, lookback: int = LOOKBA
 
     w["evidence"] = w.apply(evidence, axis=1)
     w["suggested_play"] = w.apply(_play, axis=1)
+    # annual renewals in fewer than 45 days: say so in the play itself (the dashboard, the watchlist mart and the CS list
+    # all show the same text)
+    urgent = (w["billing_period"] == "annual") & (w["days_to_renewal"] < URGENT_RENEWAL_DAYS)
+    w.loc[urgent, "suggested_play"] = ("Urgent — renews in " + w.loc[urgent, "days_to_renewal"].astype(int).astype(str) + " days: "
+                                       + w.loc[urgent, "suggested_play"].str.replace(" 60 days out", " now", regex=False))
     w["list_type"] = "risk"
     w["plan"] = w["plan_id"]
     # --- priority: tier 1 = annual renewals in under 45 days, soonest first (a CSM working top-down must reach them before
@@ -768,7 +773,7 @@ def key_numbers() -> dict:
     mix_acc = mix.groupby("kind", observed=True)["accounts"].sum()
     csm_q = wl[wl["queue"] == "csm"].sort_values("priority_rank")
     top120 = csm_q.head(CSM_CAPACITY_PER_QUARTER)
-    rising = wl["suggested_play"].str.startswith("Usage is growing into the seats")   # the WAU_UP_20PCT play (early warning + WAU up, not a CS save)
+    rising = wl["suggested_play"].str.contains("Usage is growing into the seats", regex=False)   # the WAU_UP_20PCT play (early warning + WAU up, not a CS save)
     bp_rows = lambda rule: {bp: {m: (None if pd.isna(v) else float(v)) for m, v in bb[(bb["rule"] == rule) & (bb["billing_period"] == bp)].iloc[0]
                                  [["base_rate", "precision", "recall", "lift", "flags_per_month", "csm_flags_per_month", "event_recall", "lead_median",
                                    "lead_p25", "lead_p75", "share_lead_ge2"]].items()} for bp in ("monthly", "annual")}
@@ -857,7 +862,7 @@ def key_numbers() -> dict:
             "top120_csm_share_of_arr_at_stake": float(top120["arr_at_stake"].sum() / wl["arr_at_stake"].sum()),
             "top120_csm_share_of_csm_arr_at_stake": float(top120["arr_at_stake"].sum() / max(csm_q["arr_at_stake"].sum(), 1e-9)),
             "rising_usage": int(rising.sum()), "csm_rising_usage": int((rising & (wl["queue"] == "csm")).sum()),
-            "top120_csm_rising_usage": int(top120["suggested_play"].str.startswith("Usage is growing into the seats").sum()),
+            "top120_csm_rising_usage": int(top120["suggested_play"].str.contains("Usage is growing into the seats", regex=False).sum()),
             "rising_usage_note": f"early-warning accounts (not CS saves) whose WAU rose {WAU_UP_CODE:.0%}+ (last 4 weeks vs the 9 before): "
                                  "seat-count conversation, not an idle-seat save (reason code WAU_UP_20PCT)",
             "bucket_precision": {kk: float(v) for kk, v in build_watchlist().attrs["bucket_precision"].items()},
@@ -923,7 +928,11 @@ def fig_overrepresentation(prof: pd.DataFrame, dimension: str = "industry") -> g
         s = s.sort_values("o", ascending=False)
     else:
         s = s.sort_values("index")
-    colors = [theme.ACCENT if v >= 1 else theme.DEEMPH for v in s["index"]]
+    s = s[~((s["value"] == "Unknown") & (s["flagged"] == 0))]          # an empty "Unknown" row carries no information
+    if dimension == "industry":     # Technology keeps its colour across the page; every other industry is "the rest"
+        colors = [theme.TECH if v == "Technology" else theme.DEEMPH for v in s["value"]]
+    else:                           # other dimensions: neutral emphasis (dark gray above 1×), never blue / orange
+        colors = [theme.INK_2 if v >= 1 else theme.DEEMPH for v in s["index"]]
     fig = go.Figure(go.Bar(y=s["value"], x=s["index"], orientation="h", marker=dict(color=colors),
                            text=[f"{v:.1f}×  ({int(n):,})" for v, n in zip(s["index"], s["flagged"])], textposition="outside",
                            textfont=dict(color=theme.INK, size=11), cliponaxis=False,
@@ -971,10 +980,14 @@ def fig_followup(fu: pd.DataFrame) -> go.Figure:
         fig.add_trace(go.Bar(x=s["label"], y=s[col], name=name, marker=dict(color=color),
                              error_y=dict(type="data", symmetric=False, array=s[f"{col}_hi"] - s[col], arrayminus=s[col] - s[f"{col}_lo"],
                                           color=theme.INK_2, thickness=1.5, width=6),
-                             text=[pct(v, 0) for v in s[col]], textposition="outside", textfont=dict(color=theme.INK), cliponaxis=False,
-                             customdata=s["n"], hovertemplate="%{x}<br>" + name + ": %{y:.1%} (n = %{customdata:,})<extra></extra>"))
-    fig.update_layout(barmode="group", bargap=0.35)
-    fig.update_yaxes(tickformat=".0%", rangemode="tozero")
+                             offsetgroup=col, customdata=s["n"],
+                             hovertemplate="%{x}<br>" + name + ": %{y:.1%} (n = %{customdata:,})<extra></extra>"))
+        # value labels sit just above the whisker, so the interval never strikes through them
+        fig.add_trace(go.Scatter(x=s["label"], y=s[f"{col}_hi"], mode="text", text=[pct(v, 0) for v in s[col]],
+                                 textposition="top center", textfont=dict(color=theme.INK, size=12), offsetgroup=col,
+                                 showlegend=False, hoverinfo="skip", cliponaxis=False))
+    fig.update_layout(barmode="group", bargap=0.35, scattermode="group")
+    fig.update_yaxes(tickformat=".0%", rangemode="tozero", range=[0, float(s[["churn_6m_hi", "loss_6m_hi"]].max().max()) * 1.18])
     fig.update_xaxes(automargin=True)
     si, um = fu.set_index("group").loc["silent"], fu.set_index("group").loc["unflagged_matched"]
     return theme.apply(fig, f"Newly flagged silent accounts churned at {pct(si['churn_6m'], 1)} within 6 months vs {pct(um['churn_6m'], 1)} for comparable "

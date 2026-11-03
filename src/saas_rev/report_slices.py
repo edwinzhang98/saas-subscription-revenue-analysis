@@ -39,8 +39,8 @@ def s_transitions() -> dict:
          f"95%: {pts(k['upgrade_rate_non_ps_change_lo'], 2)} to {pts(k['upgrade_rate_non_ps_change_hi'], 2)}"),
         ("Share of the fall from channel mix", pct(k["mix_share_of_change"], 0), "Paid Social share of Basic base "
          f"{pct(k['paid_social_share_basic_base_pre'], 0)} → {pct(k['paid_social_share_basic_base_post'], 0)}"),
-        ("Net MRR effect of the change", f"{money(k['net_mrr_per_month'])} / month",
-         f"range {money(k['net_mrr_lo'])} to {money(k['net_mrr_hi'])}"),
+        ("Upgrade MRR lost a month, if due to the change", f"{money(-k['foregone_upgrade_mrr_trend_adjusted'])}–"
+         f"{money(-k['foregone_upgrade_mrr_from_pre_april_level'])}", "drift continued → rate held at its pre-April level"),
     ])
     body += finding(
         f"<b>Basic → Premium upgrades fell {pct(-k['upgrade_rate_rel_change'], 0)} around the April packaging change, and the shift toward "
@@ -48,9 +48,10 @@ def s_transitions() -> dict:
         f"{pct(k['upgrade_rate_pre'], 2)} to {pct(k['upgrade_rate_post'], 2)} of Basic accounts a month ({k['voluntary_upgrades_pre']} "
         f"upgrades in the 12 months before, {k['voluntary_upgrades_post']} in the 5 months after), in every channel, segment and tenure "
         f"band. The fall lines up in time with the packaging change, but the rate was already drifting down before April "
-        f"({pts(k['non_ps_pre_trend_slope_pts_per_month'], 3)} a month): {abs(k['non_ps_step_net_of_trend_pts']) * 100:.2f} of the "
-        f"{abs(k['upgrade_rate_non_ps_change_pts']) * 100:.2f}-point fall is beyond that drift, so the part that coincides with the change "
-        f"is {abs(k['non_ps_step_net_of_trend_pts']) * 100:.1f} to {abs(k['upgrade_rate_non_ps_change_pts']) * 100:.1f} points a month — "
+        f"({pts(k['non_ps_pre_trend_slope_pts_per_month'], 3)} a month): measured from the pre-April level ({pct(k['non_ps_pre_trend_level_end_of_march'], 2)}) "
+        f"the step is {abs(k['non_ps_step_from_pre_april_level_pts']) * 100:.2f} points, and {abs(k['non_ps_step_net_of_trend_pts']) * 100:.2f} if the "
+        f"drift would have continued, so the part that coincides with the change is {abs(k['non_ps_step_net_of_trend_pts']) * 100:.1f} to "
+        f"{abs(k['non_ps_step_from_pre_april_level_pts']) * 100:.1f} points a month — "
         "a range, not a measured effect. This is a before / after comparison, not an experiment.")
     body += fig(T.fig_upgrade_rate_monthly(), "<b>Reading:</b> each point is the share of Basic accounts (Paid Social excluded) that upgraded "
                 "that month, with its 95% band; the two flat lines are the pooled before and after rates, and the dotted line "
@@ -63,15 +64,18 @@ def s_transitions() -> dict:
         f"<b>The retention upside the change was meant to buy is too small to see.</b> Basic logo churn outside Paid Social went from "
         f"{pct(k['basic_churn_non_ps_may_sep_2025'], 2)} to {pct(k['basic_churn_non_ps_may_sep_2026'], 2)} a month (May–Sep, year over year; "
         f"95% interval of the change {pts(k['basic_churn_non_ps_change_lo'], 2)} to {pts(k['basic_churn_non_ps_change_hi'], 2)}, i.e. "
-        f"possibly zero). Sized as if the before / after differences were all due to the change: about "
-        f"{money(-k['foregone_upgrade_mrr_per_month'])} a month of upgrade MRR foregone against {money(k['retained_basic_mrr_per_month'])} kept by lower churn — <b>{money(k['net_mrr_per_month'])} a month</b> "
-        f"({money(k['net_mrr_per_month_trend_adjusted'])} if the earlier drift would have continued anyway). The trial-to-paid "
-        "conversion goal cannot be measured from billing data.")
+        f"possibly zero). Sized as if the April step were due to the change: about "
+        f"{money(-k['foregone_upgrade_mrr_from_pre_april_level'])} a month of upgrade MRR foregone (from the pre-April level; "
+        f"{money(-k['foregone_upgrade_mrr_trend_adjusted'])} if the drift would have continued) against "
+        f"{money(k['retained_basic_mrr_per_month'])} kept by lower churn — net "
+        f"<b>{money(k['foregone_upgrade_mrr_from_pre_april_level'] + k['retained_basic_mrr_per_month'])} to "
+        f"{money(k['net_mrr_per_month_trend_adjusted'])} a month</b>. The trial-to-paid conversion goal cannot be measured from billing data.")
     body += fig(T.fig_basic_churn_monthly())
     s12 = k["basic_signups_state_12m"]
     body += fig(T.fig_sankey(12), f"<b>Where customers go:</b> of Basic signups, {pct(s12.get('basic', 0), 0)} are still on Basic 12 months "
                 f"later, {pct(s12.get('premium', 0) + s12.get('enterprise', 0), 0)} are on a higher plan and {pct(s12.get('churned', 0), 0)} "
-                f"have churned ({k['signups_observed_12m']:,} customers followed from their first paid month). Counted over every Basic "
+                f"have churned ({k.get('basic_signups_observed_12m', 0):,} Basic signups, among the {k['signups_observed_12m']:,} customers of all "
+                f"plans followed from their first paid month). Counted over every Basic "
                 f"account-month, which includes accounts past their first year, {pct(t12['churned'], 0)} are churned 12 months on.")
     body += finding(
         f"<b>Downgrades are rare, and CS saves hold at six months.</b> {k['downgrades_last_12m']} plan downgrades in the last 12 months "
@@ -180,7 +184,8 @@ def s_silent() -> dict:
         f"churned within the outcome window vs a {pct(rule['base_rate'], 1)} base rate ({rule['lift']:.1f}× lift); "
         f"{pct(rule['account_recall'], 0)} of the accounts that later contracted were flagged first, a median "
         f"{rule['by_billing_period']['monthly']['lead_median']:.0f} month-ends ahead for monthly-billed and "
-        f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts; {pct(rule['share_lead_ge2'], 0)} of caught events "
+        f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts (the most the back-test window allows); "
+        f"{pct(rule['share_lead_ge2'], 0)} of caught events "
         f"were flagged at least 2 month-ends ahead (precision 95% interval {pct(rule['precision_lo'], 1)}–{pct(rule['precision_hi'], 1)}, "
         "accounts resampled). Adding a WAU-trend condition lowered recall without raising precision. It misses most losses: "
         "use it to rank the CSM queue, not to forecast churn.")
@@ -188,12 +193,26 @@ def s_silent() -> dict:
     body += fig(SC.fig_lead_time(marts.load("silent_churn__lead_times"), chosen))
     if trig:
         body += finding(
-            f"<b>The CS list.</b> {wl['accounts']:,} accounts are on the risk list today ({wl['csm_queue']} with a CSM, {wl['digital_queue']} "
-            f"digital). The first 120 CSM-covered accounts — annual renewals in under 45 days first by date, then renewals within 120 days and the rest by ARR at stake — hold "
+            f"<b>The CS list.</b> {wl['accounts']:,} accounts are on the risk list today ({wl['csm_queue']} CSM-covered, {wl['digital_queue']} "
+            f"digital). {_queue_sentence()} The first 120 CSM-covered accounts — annual renewals in under 45 days first by date, then renewals in 45–120 days and the rest by ARR at stake — hold "
             f"{pct(trig['share_by_priority'], 0)} of the list's ARR at stake ({pct(trig['share_by_arr_at_stake'], 0)} if ranked purely by ARR at "
             "stake), above the Head of CS's 60% threshold, so the plan is CSM-led reviews for those 120 and a digital play for the rest "
             "(<code>docs/account_health_list.csv</code>).")
     return section("silent", "Silent churn: who is quietly downgrading", body)
+
+
+def _queue_sentence() -> str:
+    """Work queues of docs/account_health_list.csv (written by the docs step), so the report matches the CSV."""
+    try:
+        hl = marts.load("docs__account_health_list")
+    except Exception:
+        return ""
+    n = hl["queue"].value_counts()
+    return (f"The account health list adds the renewal calendar and the upgrade list: {len(hl):,} accounts in five queues — "
+            f"{n.get('csm', 0)} CSM reviews (P1), {n.get('renewal_desk', 0)} on the Technology renewal desk (P3, including "
+            f"{int(((hl['queue'] == 'renewal_desk') & (hl['list_type'] == 'renewal')).sum())} renewals no risk flag caught), "
+            f"{n.get('digital', 0)} in the digital program (P2), {n.get('sales_assist', 0)} for sales-assist upgrades (P4) and "
+            f"{n.get('in_app', 0)} for in-app upgrade prompts (not sized as a play).")
 
 
 # =============================================================================== recommendations
@@ -204,9 +223,10 @@ def s_recommendations() -> dict:
         return section("recommendations", "Recommendations", "<p>Not built.</p>")
     t = marts.load("recommendations__plays").sort_values("nrr_pts", ascending=False)
     body = ("<p>Seven plays. Each has an owner, an expected effect on next year's NRR built from measured numbers plus one stated "
-            "assumption (the effect of the play, with a low–high range), a holdout that will measure that effect, and its risks. Five "
-            "work from account lists that exist today (<code>docs/account_health_list.csv</code>); two — the packaging test and "
-            "payment-failure recovery — act on future signups and future failed charges. Every account counts in one play only. Plays "
+            "assumption (the effect of the play, with a low–high range), a holdout that will measure that effect, and its risks. Four "
+            "work from the lists in <code>docs/account_health_list.csv</code> (P1–P4) and one (P6) from the Paid Social program "
+            "cohort, identified by acquisition channel; two — the packaging test and payment-failure recovery — act on future "
+            "signups and future failed charges. Every account counts in one play only. Plays "
             "aimed at new signups barely move next year's NRR (new customers are not in its base) and are sized only on what reaches "
             "existing customers within 12 months.</p>")
     body += fig(R.fig_impact(marts.load("recommendations__plays")))
@@ -228,7 +248,8 @@ def _summary_silent(sc: dict) -> str:
         f"year ago; {pct(sc['profile']['technology_share_flagged'], 0)} are Technology accounts. Their past contraction does not predict "
         f"further loss, but low seat utilization does: accounts under {pct(rule.get('utilization_threshold'), 0)} contracted or churned "
         f"{rule.get('lift', 0):.1f}× as often, typically {rule['by_billing_period']['monthly']['lead_median']:.0f} months ahead for monthly-billed "
-        f"accounts and {rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed — that is how the CS list is ranked.")
+        f"accounts (annual-billed: usually the full {rule['by_billing_period']['annual']['lead_median']:.0f} months the back-test window allows) — "
+        "that is how the CS list is ranked.")
 
 
 def _summary_recs(rec: dict) -> str:

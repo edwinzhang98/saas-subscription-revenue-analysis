@@ -83,8 +83,13 @@ def recovered() -> dict:
     def np_rate(a: str, b: str) -> float:
         x = up[(up["month_end"] >= a) & (up["month_end"] <= b) & (up["acquisition_channel"] != "Paid Social")]
         return float(x["voluntary_upgrade"].mean())
-    out["s3_timing"] = {"non_ps_q3_2025": np_rate("2025-07-31", "2025-09-30"), "non_ps_jan_mar_2026": np_rate("2026-01-31", "2026-03-31"),
-                        "non_ps_may_jul_2026": np_rate("2026-05-31", "2026-07-31")}
+    # half-year windows (a single peak quarter would overstate the first step)
+    out["s3_timing"] = {"non_ps_apr_sep_2025": np_rate("2025-04-30", "2025-09-30"),
+                        "non_ps_oct_2025_mar_2026": np_rate("2025-10-31", "2026-03-31"),
+                        "non_ps_may_sep_2026": np_rate("2026-05-31", "2026-09-30")}
+    trk = marts.read_key_numbers("transitions")
+    out["s3_churn_interval"] = {"change_pts": trk.get("basic_churn_non_ps_change_pts"), "lo": trk.get("basic_churn_non_ps_change_lo"),
+                                "hi": trk.get("basic_churn_non_ps_change_hi")}
     out["s3"] = {"upgrade_rate_pre": float(pre["voluntary_upgrade"].mean()), "upgrade_rate_post": float(post["voluntary_upgrade"].mean()),
                  "upgrade_rate_pre_non_paid_social": float(pre_np["voluntary_upgrade"].mean()),
                  "upgrade_rate_post_non_paid_social": float(post_np["voluntary_upgrade"].mean()),
@@ -148,12 +153,17 @@ def answer_key_rows(rec: dict) -> list[dict]:
          "planted": f"upgrade hazard × {pk['upgrade_mult']}, paywall hits × {pk['gate_mult']}; upside: Basic churn × {pk['basic_churn_mult']}",
          "recovered": f"voluntary Basic upgrade rate {pct(s3['upgrade_rate_pre'], 2)} → {pct(s3['upgrade_rate_post'], 2)} per month "
                       f"(non-Paid-Social {pct(s3['upgrade_rate_pre_non_paid_social'], 2)} → {pct(s3['upgrade_rate_post_non_paid_social'], 2)}; "
-                      f"in two steps: {pct(rec['s3_timing']['non_ps_q3_2025'], 2)} in Q3 2025 → {pct(rec['s3_timing']['non_ps_jan_mar_2026'], 2)} "
-                      f"in Jan–Mar 2026, before the change, → {pct(rec['s3_timing']['non_ps_may_jul_2026'], 2)} in May–Jul 2026); "
-                      f"paywall hits per active user × {s3['gate_hits_per_wau_ratio_post_pre']:.2f}; automation runs × "
-                      f"{s3['automation_per_wau_ratio_post_pre']:.2f}; Basic monthly churn {pct(s3['basic_churn_2025'], 2)} → {pct(s3['basic_churn_2026'], 2)}",
+                      f"in two steps: {pct(rec['s3_timing']['non_ps_apr_sep_2025'], 2)} in Apr–Sep 2025 → "
+                      f"{pct(rec['s3_timing']['non_ps_oct_2025_mar_2026'], 2)} in Oct 2025 – Mar 2026, before the change (no change was "
+                      f"planted before April, so this drift is composition or noise) → {pct(rec['s3_timing']['non_ps_may_sep_2026'], 2)} in "
+                      f"May–Sep 2026); paywall hits per active user × {s3['gate_hits_per_wau_ratio_post_pre']:.2f}; automation runs × "
+                      f"{s3['automation_per_wau_ratio_post_pre']:.2f}; Basic monthly churn {pct(s3['basic_churn_2025'], 2)} → "
+                      f"{pct(s3['basic_churn_2026'], 2)} (×{s3['basic_churn_2026'] / s3['basic_churn_2025']:.2f}, 95% change "
+                      f"{pts(rec['s3_churn_interval']['lo'], 2)} to {pts(rec['s3_churn_interval']['hi'], 2)}: the planted upside is inside the "
+                      f"interval but not separable from zero)",
          "naive_cut": "a before/after on the pooled Basic upgrade rate also picks up the Paid Social mix shift",
-         "verdict": "recovered" if s3["upgrade_rate_post_non_paid_social"] < 0.75 * s3["upgrade_rate_pre_non_paid_social"] else "check"},
+         "verdict": ("recovered (upgrade step); retention upside not separable"
+                     if s3["upgrade_rate_post_non_paid_social"] < 0.75 * s3["upgrade_rate_pre_non_paid_social"] else "check")},
         {"event": "S2 Paid Social program (from 2025-09)",
          "planted": "extra SMB self-serve accounts with lower product fit and fewer power users",
          "recovered": f"Paid Social share of new logos {pct(s2['paid_social_share_new_logos_2025Q2'], 0)} (Q2 2025) → "
@@ -198,7 +208,7 @@ def run() -> dict:
     rec = recovered()
     out = {"rows": answer_key_rows(rec), "dq_known_answers": dq_known_answers(), "recovered_values": rec}
     v = [r["verdict"] for r in out["rows"]]
-    out["summary"] = {"events": len(v), "recovered": sum(x == "recovered" for x in v),
+    out["summary"] = {"events": len(v), "recovered": sum(x.startswith("recovered") for x in v),
                       "weak": sum(x.startswith("weak") for x in v), "not_separable": sum(x.startswith("not separable") for x in v),
                       "not_recovered": sum(x == "not recovered" or x == "check" for x in v)}
     marts.write_key_numbers("answer_key", out)

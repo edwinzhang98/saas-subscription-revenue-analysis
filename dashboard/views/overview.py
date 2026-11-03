@@ -60,17 +60,16 @@ finding(f"<b>Most of the drop from Q2 is a one-off, but the underlying rate is d
 
 by = k["bridge_yoy"]
 plan_when = ""
-if k.get("plan_upgrade_fall_main_quarter") and k.get("plan_upgrade_fall_main_share", 0) >= 0.5:
-    plan_q = k["plan_upgrade_fall_main_quarter"]
-    plan_when = f"; most of that fall came in {qname(plan_q)}"
-    pkg = tr.get("packaging_change_date")
-    if pkg and pd.Period(plan_q.replace("-", ""), freq="Q").end_time < pd.Timestamp(pkg):
-        plan_when += f", before the {pd.Timestamp(pkg):%B} packaging change"
+if tr.get("non_ps_rate_apr_sep_2025") is not None:
+    plan_when = (f"; outside Paid Social the monthly Basic upgrade rate fell in two steps, "
+                 f"{pct(tr['non_ps_rate_apr_sep_2025'], 1)} (Apr–Sep 2025) → {pct(tr['non_ps_rate_oct_2025_mar_2026'], 1)} "
+                 f"(Oct 2025 – Mar 2026) before anything changed, then → {pct(tr['upgrade_rate_non_ps_post'], 1)} after the April "
+                 f"packaging change")
 seats = by["Non-Tech seat expansion"]
-finding(f"<b>Two structural drivers (vs Q3 2025):</b> Technology accounts all but stopped adding seats (seat additions "
-        f"{pct(k['tech_base_seat_add_rate_q3_2025'])} → {pct(k['tech_base_seat_add_rate_q3_2026'])} of their MRR in the quarter) "
-        f"and started cutting them (seat cuts {pct(k['tech_base_seat_cut_rate_q3_2025'])} → "
-        f"{pct(k['tech_base_seat_cut_rate_q3_2026'])}): {money(abs(by['Technology (all)']))} less expansion than their "
+finding(f"<b>Two structural drivers (vs Q3 2025):</b> Technology accounts all but stopped expanding (expansion "
+        f"{pct(k['tech_base_expansion_rate_q3_2025'])} → {pct(k['tech_base_expansion_rate_q3_2026'])} of their own MRR in the quarter) "
+        f"and started cutting (contraction {pct(k['tech_base_contraction_rate_q3_2025'])} → "
+        f"{pct(k['tech_base_contraction_rate_q3_2026'])}): {money(abs(by['Technology (all)']))} less expansion than their "
         f"Q3 2025 rate implies. Non-Tech plan upgrades added {money(abs(by['Non-Tech plan upgrades']))} less{plan_when}. "
         f"Non-Tech seat expansion {'grew' if seats >= 0 else 'fell'} ({money(abs(seats))} {'more' if seats >= 0 else 'less'}).")
 
@@ -83,7 +82,8 @@ if sc:
             f"of them are Technology accounts, vs {pct(prof.get('technology_share_other'), 0)} of other paying accounts. In the "
             f"back-test, low seat utilization flagged {pct(rule.get('account_recall'), 0)} of the accounts that later contracted "
             f"or churned, a median {rule.get('by_billing_period', {}).get('monthly', {}).get('lead_median', 0):.0f} months ahead for "
-            f"monthly-billed accounts ({rule.get('by_billing_period', {}).get('annual', {}).get('lead_median', 0):.0f} for annual-billed) — "
+            f"monthly-billed accounts (annual-billed: usually the full {rule.get('by_billing_period', {}).get('annual', {}).get('lead_median', 0):.0f} "
+            f"months the back-test window allows) — "
             f"enough to rank the CSM queue, not to predict "
             "every loss.")
 else:

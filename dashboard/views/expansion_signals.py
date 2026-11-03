@@ -33,24 +33,26 @@ NUM3 = dict(format="%.3f")
 # KPI tiles: labels <= ~22 characters and deltas <= ~28 so nothing truncates at 1440 px; detail lives in help=.
 top = k["top_signals"][0]
 c = st.columns(5)
-c[0].metric("Upgraders vs stayers", f"{k['n_upgraders']} vs {k['n_stayers']}", f"{k['n_strata']} month × tenure strata",
-            delta_color="off", border=True,
+c[0].metric("Upgraders vs stayers", f"{k['n_upgraders']} vs {k['n_stayers']}", f"{k['n_strata']} matched strata",
+            delta_color="off", delta_arrow="off", border=True,
             help="One row per voluntary Basic → Premium upgrade (the last month-end before it) against one eligible "
                  "month-end of a non-upgrading, non-churning account from the same calendar month and tenure band.")
 c[1].metric("Strongest signal", E.SIGNALS[top["signal"]]["tile"], f"SMD {top['smd']:.2f} · lift {top['top_quintile_lift']:.1f}×",
-            delta_color="off", border=True,
+            delta_color="off", delta_arrow="off", border=True,
             help=f"{top['name']}. SMD = standardized mean difference between upgraders and stayers "
                  f"({top['smd']:.2f}, bootstrap 95% {top['smd_lo']:.2f}–{top['smd_hi']:.2f}); lift = 90-day upgrade rate of the "
                  f"top quintile ÷ base rate on all eligible account-months ({top['top_quintile_lift']:.1f}×, account-level "
                  f"bootstrap 95% {top['top_quintile_lift_lo']:.1f}–{top['top_quintile_lift_hi']:.1f}×).")
 c[2].metric("Model AUC (test)", f"{k['auc_test']:.2f}", f"95%: {k['auc_test_lo']:.2f}–{k['auc_test_hi']:.2f}",
-            delta_color="off", border=True,
+            delta_color="off", delta_arrow="off", border=True,
             help=f"Logistic regression {E.SPLIT_NOTE}. {E.auc_change_sentence(k)}. Intervals: account-level bootstrap.")
 c[3].metric("Precision, top 100", pct(k["precision_at_100_all"]),
-            f"recall {pct(k['recall_at_100_all'], 0)} · base {pct(k['base_rate_test'])}", delta_color="off", border=True,
-            help="Share of the 100 highest-scored Basic accounts each month that upgraded within 90 days, averaged over "
-                 "the six test months (Jan – Jun 2026); recall = the share of all upgrades those lists contain; base = the "
-                 "test-period 90-day upgrade rate.")
+            f"vs base {pct(k['base_rate_test'])}", delta_color="off", delta_arrow="off", border=True,
+            help=f"Share of the 100 highest-scored Basic accounts each month that upgraded within 90 days, averaged over "
+                 f"the six test months (Jan – Jun 2026): {pct(k['precision_at_100_all'])}, account-level bootstrap 95% "
+                 f"{pct(k['precision_at_100_all_lo'])}–{pct(k['precision_at_100_all_hi'])} (lift {k['lift_at_100_all']:.1f}×, "
+                 f"{k['lift_at_100_all_lo']:.1f}–{k['lift_at_100_all_hi']:.1f}×); recall {pct(k['recall_at_100_all'], 0)} = the share "
+                 f"of all upgrades those lists contain; base = the test-period 90-day upgrade rate.")
 c[4].metric("Paywall hits / user", f"{k['gate_hits_mean_post']:.2f}", delta_pct(k["gate_hits_drift"], 0, suffix=" after April"),
             border=True,
             help=f"Premium-feature paywall hits per active user per week, mean over Basic account-months (13-week rate at "
@@ -62,7 +64,7 @@ finding(f"<b>Upgraders are the accounts bumping into the Premium paywall and aut
         f"before an upgrade, {pct(top['median_upgraders'], 0)} of a typical upgrader's active users hit the paywall vs "
         f"{pct(top['median_stayers'], 0)} for a matched stayer (SMD {top['smd']:.2f}, 95% interval {top['smd_lo']:.2f}–"
         f"{top['smd_hi']:.2f}). Seat growth, utilization and invitations separate the groups far less. After April the "
-        f"paywall fires {pct(-k['gate_hits_drift'], 0)} less often, so thresholds must be relative (top decile this month), "
+        f"paywall fires {pct(-k['gate_hits_drift'], 0)} less often, so thresholds must be relative (a top-percentile cut each month, e.g. the top 20% used below), "
         f"not absolute.")
 
 # ------------------------------------------------------------------ 1. upgraders vs stayers
@@ -100,18 +102,18 @@ if period != "all":
 threshold = E.rule_threshold(sub[signal], share / 100)
 r = E.threshold_rule(pop, signal, threshold, period)
 t = st.columns(5)
-t[0].metric("Rule threshold", f"≥ {E.fmt_value(signal, threshold)}", f"{pct(r['share_above'], 0)} of {r['n']:,} account-months",
-            delta_color="off", border=True, help=f"{E.SIGNALS[signal]['name']}: {r['n_above']:,} account-months at or above the "
+t[0].metric("Rule threshold", f"≥ {E.fmt_value(signal, threshold)}", f"{pct(r['share_above'], 0)} of rows",
+            delta_color="off", delta_arrow="off", border=True, help=f"{E.SIGNALS[signal]['name']}: {r['n_above']:,} account-months at or above the "
                                                  f"threshold ({pct(r['share_above'])}).")
 t[1].metric("Upgrade rate above", pct(r["rate_above"]), f"95% {pct(r['rate_above_lo'])} – {pct(r['rate_above_hi'])}",
-            delta_color="off", border=True, help="90-day voluntary upgrade rate of the rows at or above the threshold; "
+            delta_color="off", delta_arrow="off", border=True, help="90-day voluntary upgrade rate of the rows at or above the threshold; "
                                                  "interval = account-level bootstrap.")
-t[2].metric("Upgrade rate below", pct(r["rate_below"]), f"base rate {pct(r['base_rate'])}", delta_color="off", border=True)
+t[2].metric("Upgrade rate below", pct(r["rate_below"]), f"base rate {pct(r['base_rate'])}", delta_color="off", delta_arrow="off", border=True)
 t[3].metric("Lift vs base rate", f"{r['lift']:.2f}×" if pd.notna(r["lift"]) else "–",
-            f"95% {r['lift_lo']:.1f}–{r['lift_hi']:.1f}×" if pd.notna(r["lift"]) else "", delta_color="off", border=True,
+            f"95% {r['lift_lo']:.1f}–{r['lift_hi']:.1f}×" if pd.notna(r["lift"]) else "", delta_color="off", delta_arrow="off", border=True,
             help="Upgrade rate above the threshold ÷ base rate of the same rows; interval = account-level bootstrap.")
 t[4].metric("Upgrades captured", pct(r["recall"], 0), f"{r['upgrades_above']} of {r['upgrades_total']} upgrades",
-            delta_color="off", border=True)
+            delta_color="off", delta_arrow="off", border=True)
 pop_note = (f"; the page's headline population is {k['population_rows']:,} rows at a {pct(k['base_rate_all'])} base rate"
             if period == "all" else "")
 st.markdown(f"<div class='note'>Population of this rule: {r['n']:,} account-months ({PERIOD_SHORT[period]}, {r['n_accounts']:,} accounts) "
@@ -166,21 +168,21 @@ cap = st.slider("CS capacity: Basic accounts worked per month", min_value=25, ma
 pre, post = E.capacity_metrics(ts, cap, "pre"), E.capacity_metrics(ts, cap, "post")
 m = st.columns(5)
 m[0].metric("Precision, pre / post", f"{pct(pre['precision'], 1)} / {pct(post['precision'], 1)}",
-            f"base rate {pct(pre['base_rate'])} / {pct(post['base_rate'])}", delta_color="off", border=True,
+            f"base {pct(pre['base_rate'])} / {pct(post['base_rate'])}", delta_color="off", delta_arrow="off", border=True,
             help="Share of the worked accounts that upgraded within 90 days, averaged over the test months before "
                  "(Jan – Mar 2026) and after (Apr – Jun 2026) the packaging change.")
 m[1].metric("Recall, pre / post", f"{pct(pre['recall'], 0)} / {pct(post['recall'], 0)}",
-            f"lift {pre['lift']:.1f}× / {post['lift']:.1f}×", delta_color="off", border=True,
+            f"lift {pre['lift']:.1f}× / {post['lift']:.1f}×", delta_color="off", delta_arrow="off", border=True,
             help="Share of all upgrades in the month that the worked list contained; lift = precision ÷ base rate.")
 m[2].metric("Upgrades found / month", f"{pre['upgrades_per_month']:.1f} / {post['upgrades_per_month']:.1f}",
-            f"of {pre['upgrades_total_per_month']:.0f} / {post['upgrades_total_per_month']:.0f} a month", delta_color="off",
+            f"of {pre['upgrades_total_per_month']:.0f} / {post['upgrades_total_per_month']:.0f} a month", delta_color="off", delta_arrow="off",
             border=True)
 m[3].metric("MRR found / month", f"{money(pre['mrr_covered_per_month'], 1)} / {money(post['mrr_covered_per_month'], 1)}".replace("$", "\\$"),
-            "at the list-price gap", delta_color="off", border=True,
+            "list-price gap", delta_color="off", delta_arrow="off", border=True,
             help="Seats × (Premium − Basic) list price per seat-month, summed over the upgrades the list contained.")
 m[4].metric("AUC, pre / post", f"{k['auc_test_pre']:.2f} / {k['auc_test_post']:.2f}",
-            f"95%: {k['auc_test_pre_lo']:.2f}–{k['auc_test_pre_hi']:.2f} / {k['auc_test_post_lo']:.2f}–{k['auc_test_post_hi']:.2f}",
-            delta_color="off", border=True, help=E.auc_change_sentence(k) + ".")
+            f"{k['auc_test_pre_lo']:.2f}–{k['auc_test_pre_hi']:.2f} / {k['auc_test_post_lo']:.2f}–{k['auc_test_post_hi']:.2f}",
+            delta_color="off", delta_arrow="off", border=True, help="95% account-level bootstrap intervals. " + E.auc_change_sentence(k) + ".")
 st.markdown(f"<div class='note'>Model {E.SPLIT_NOTE}: {k['train_rows']:,} training rows ({k['train_accounts']:,} accounts), "
             f"{k['embargo_rows']:,} held-out rows, {k['test_rows']:,} test rows with {k['test_upgrades']} upgrades. "
             f"{E.auc_change_sentence(k)}.</div>", unsafe_allow_html=True)
@@ -208,18 +210,18 @@ cov = st.multiselect("CS coverage", sorted(opp_all["cs_coverage"].dropna().uniqu
 opp = opp_all if not cov else opp_all[opp_all["cs_coverage"].isin(cov)]
 s = E.opportunity_summary(opp, cap)
 o = st.columns(5)
-o[0].metric("Basic accounts scored", f"{s['n_scored']:,}", f"mean propensity {pct(opp['propensity'].mean())}",
-            delta_color="off", border=True, help="Every Basic account paying at 30 Sep 2026 with 3+ months of tenure "
+o[0].metric("Basic accounts scored", f"{s['n_scored']:,}", f"mean {pct(opp['propensity'].mean())}",
+            delta_color="off", delta_arrow="off", border=True, help="Every Basic account paying at 30 Sep 2026 with 3+ months of tenure "
                                                  "(and in the selected coverage tiers), scored with the deployment model.")
-o[1].metric("Expected upgrades", f"{s['expected_upgrades']:.1f}", f"top {s['worked']} · {s['total_expected_upgrades']:.0f} in full list",
-            delta_color="off", border=True, help="Sum of the 90-day propensities of the listed accounts; the full list "
+o[1].metric("Expected upgrades", f"{s['expected_upgrades']:.1f}", f"of {s['total_expected_upgrades']:.0f} in full list",
+            delta_color="off", delta_arrow="off", border=True, help="Sum of the 90-day propensities of the listed accounts; the full list "
                                                  "is every scored account.")
-o[2].metric("Expected MRR, top list", money(s["expected_mrr"], 1), f"{pct(s['share_of_expected_mrr'], 0)} of list expected MRR",
-            delta_color="off", border=True, help="Propensity × seats × (Premium − Basic) list price per seat-month, summed.")
-o[3].metric("Ceiling MRR, top list", money(s["incremental_mrr_if_all"], 1), f"if all {s['worked']} upgraded", delta_color="off",
+o[2].metric("Expected MRR, top list", money(s["expected_mrr"], 1), f"{pct(s['share_of_expected_mrr'], 0)} of the list",
+            delta_color="off", delta_arrow="off", border=True, help="Propensity × seats × (Premium − Basic) list price per seat-month, summed.")
+o[3].metric("Ceiling MRR, top list", money(s["incremental_mrr_if_all"], 1), f"if all {s['worked']} upgraded", delta_color="off", delta_arrow="off",
             border=True, help="The MRR if every listed account upgraded: a ceiling, not a forecast.")
-o[4].metric("Lowest propensity", pct(s["min_propensity"]), f"base rate after April {pct(k['deploy_post_base_rate'])}",
-            delta_color="off", border=True, help="The smallest 90-day propensity on the list, against the observed "
+o[4].metric("Lowest propensity", pct(s["min_propensity"]), f"post-April base {pct(k['deploy_post_base_rate'])}",
+            delta_color="off", delta_arrow="off", border=True, help="The smallest 90-day propensity on the list, against the observed "
                                                  "upgrade rate of the Apr – Jun 2026 month-ends the scores are centred on.")
 # Expected MRR and propensity sit right after the company, since the list is ranked by expected MRR.
 show = opp.head(cap).copy()

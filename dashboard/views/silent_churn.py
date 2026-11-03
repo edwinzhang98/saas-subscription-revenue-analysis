@@ -93,7 +93,7 @@ c[1].metric("Since June 2026", delta_pct(n_flagged / june_total - 1, 0) if june_
             f"{june_total:,} → {n_flagged:,} flagged" if june_total else "", delta_color="inverse", border=True,
             help=f"All flagged accounts, 30 Jun 2026 → 30 Sep 2026, same definition and sliders. Silent only: {june_silent:,} → {n_silent:,} "
                  f"({delta_pct(n_silent / june_silent - 1, 0) if june_silent else '–'}); saved by CS: {june_saved:,} → {n_saved:,}.")
-c[2].metric("ARR still at risk", money(arr_risk, 2), f"{pct(arr_risk / total_arr)} of ARR", delta_color="off", delta_arrow="off", border=True,
+c[2].metric("ARR still at risk", money(arr_risk, 2) if arr_risk >= 1e6 else money(arr_risk), f"{pct(arr_risk / total_arr)} of ARR", delta_color="off", delta_arrow="off", border=True,
             help="What the flagged accounts pay today (12 × current MRR), as a share of total ARR at 30 Sep 2026.")
 c[3].metric("ARR already lost", money(lost), "gap to 6-month peak", delta_color="off", delta_arrow="off", border=True,
             help=f"12 × (peak MRR over the previous {lookback} month-ends − current MRR), summed over the flagged accounts.")
@@ -102,7 +102,7 @@ c[4].metric("Technology share", pct(tech["share_flagged"], 0), delta_pts(tech["s
             help=f"Share of flagged accounts in Technology vs the Technology share of the other paying accounts "
                  f"({pct(tech['share_other'], 0)}); over-representation index {tech['index']:.1f}×.")
 
-finding(f"<b>{n_flagged:,} accounts ({money(arr_risk, 2)} ARR, {pct(arr_risk / total_arr)} of the base) are paying "
+finding(f"<b>{n_flagged:,} accounts ({money(arr_risk, 2) if arr_risk >= 1e6 else money(arr_risk)} ARR, {pct(arr_risk / total_arr)} of the base) are paying "
         f"{pct(cur['decline_pct_norm'].median(), 0)} less than their recent peak at the median, and {money(lost)} of ARR is already gone.</b> "
         f"Technology accounts are {tech['index']:.1f}× over-represented ({int(tech['flagged'])} of {len(cur)}): their flag rate went from "
         f"{pct(rate.get((JUNE, 'Technology'), float('nan')), 1)} in June to {pct(tech['flag_rate'], 1)} in September 2026, while every other "
@@ -245,13 +245,14 @@ bp_rates = wl.attrs.get("bucket_precision", {})
 csm_q = wl[wl["queue"] == "csm"]
 top = csm_q.head(SC.CSM_CAPACITY_PER_QUARTER)
 n_urgent = int((wl["priority_tier"] == 1).sum())
-rising = wl["suggested_play"].str.startswith("Usage is growing into the seats")   # early warning + WAU up, not a CS save
+rising = wl["suggested_play"].str.contains("Usage is growing into the seats", regex=False)   # early warning + WAU up, not a CS save
 top_share = top["arr_at_stake"].sum() / max(wl["arr_at_stake"].sum(), 1e-9)
 c = st.columns(5)
-c[0].metric("Accounts on the list", f"{len(wl):,}", f"{len(csm_q):,} CSM · {int((wl['queue'] == 'digital').sum()):,} digital",
+c[0].metric("Accounts flagged", f"{len(wl):,}", f"{len(csm_q):,} CSM-covered · {int((wl['queue'] == 'digital').sum()):,} digital",
             delta_color="off", delta_arrow="off", border=True,
-            help="Union of the §9 flags (silent / saved) and the early-warning flags at 30 Sep 2026. CSM = named or pooled CSM coverage; "
-                 "digital = tech-touch accounts.")
+            help="Union of the §9 flags (silent / saved) and the early-warning flags at 30 Sep 2026, split by CS coverage "
+                 "(named or pooled CSM vs tech-touch). This quarter's work queues — which cut the CSM-covered accounts at the "
+                 "120 reviews CS can run — are in the CS account list below.")
 c[1].metric("ARR on the list", money(wl["current_arr"].sum()), f"{pct(wl['current_arr'].sum() / total_arr)} of ARR", delta_color="off",
             delta_arrow="off", border=True, help="Current ARR (12 × MRR at 30 Sep 2026) of every account on the list.")
 c[2].metric("ARR at stake", money(wl["arr_at_stake"].sum()), "ARR × flag hit rate", delta_color="off", delta_arrow="off", border=True,
@@ -274,9 +275,27 @@ st.markdown(
     f"have WAU up {pct(SC.WAU_UP_CODE, 0)} or more on under-used seats: their play is a seat-count conversation before renewal, not an idle-seat "
     "save (reason code WAU_UP_20PCT). Monthly-billed accounts can leave at any billing date, so they carry no renewal flag.</div>",
     unsafe_allow_html=True)
+hl = load("docs__account_health_list")
+qorder = ["csm", "renewal_desk", "digital", "sales_assist", "in_app"]
+qlab = {"csm": "CSM reviews (P1)", "renewal_desk": "Technology renewal desk (P3)", "digital": "Digital program (P2)",
+        "sales_assist": "Sales-assist upgrades (P4)", "in_app": "In-app upgrade prompt"}
+qs = (hl.groupby("queue").agg(accounts=("customer_id", "size"), arr=("current_arr", "sum"), at_stake=("arr_at_stake", "sum"))
+      .reindex([q for q in qorder if q in set(hl["queue"])]).reset_index())
+qs["queue"] = qs["queue"].map(qlab)
+st.markdown("**This quarter's work queues** — `docs/account_health_list.csv`, built at the default settings (20% / 6 months, "
+            f"utilization < {pct(u0, 0)}): the risk list cut at the {SC.CSM_CAPACITY_PER_QUARTER} reviews CS can run, plus the "
+            "Technology renewals no risk flag caught and the top upgrade opportunities.")
+qc = st.columns([3, 1])
+qc[0].dataframe(qs, hide_index=True, width="stretch",
+                column_config={"queue": TextCol("Queue"), "accounts": NumCol("Accounts", format="localized"),
+                               "arr": NumCol("ARR", format="dollar"), "at_stake": NumCol("ARR at stake", format="dollar")})
+qc[1].download_button("Download the CS account list (CSV)", hl.to_csv(index=False).encode("utf-8"),
+                      file_name="account_health_list.csv", mime="text/csv",
+                      help="The same file as docs/account_health_list.csv: queue, priority, play, reason codes, evidence.")
+st.markdown("**The watchlist at the settings above** (risk accounts only; filter by CS coverage)")
 cc = st.columns([1, 1, 2])
-queue = cc[0].multiselect("Queue", ["csm", "digital"], default=[], placeholder="All",
-                          format_func={"csm": "CSM (named + pooled)", "digital": "Digital (tech-touch)"}.get)
+queue = cc[0].multiselect("CS coverage", ["csm", "digital"], default=[], placeholder="All",
+                          format_func={"csm": "CSM-covered (named + pooled)", "digital": "Digital (tech-touch)"}.get)
 src = cc[1].multiselect("Flag source", sorted(wl["flag_source"].unique()), default=[], placeholder="All")
 show = wl.copy()
 show["csm_owner"] = show["csm_owner"].fillna("—")
@@ -292,7 +311,7 @@ st.dataframe(
     column_config={"priority_rank": NumCol("Rank", width="small"),
                    "priority_tier": NumCol("Tier", width="small", help=f"1 = annual renewal in under {SC.URGENT_RENEWAL_DAYS} days (by date); "
                                                                        "2 = renewal in 45–120 days (by ARR at stake); 3 = the rest (by ARR at stake)"),
-                   "queue": TextCol("Queue", width="small"), "customer_id": TextCol("Customer"), "company_name": TextCol("Company"),
+                   "queue": TextCol("Coverage", width="small"), "customer_id": TextCol("Customer"), "company_name": TextCol("Company"),
                    "segment": TextCol("Segment"), "industry": TextCol("Industry"), "cs_coverage": TextCol("CS coverage"),
                    "csm_owner": TextCol("CSM owner"), "plan": TextCol("Plan"), "billing_period": TextCol("Billing"),
                    "seats": NumCol("Seats", format="localized"),
@@ -305,7 +324,7 @@ st.dataframe(
                    "reason_code_3": TextCol("Reason 3"),
                    "evidence": TextCol("Evidence", width="large"),
                    "suggested_play": TextCol("Suggested play", width="large")})
-st.download_button("Download the watchlist (CSV)", wl.to_csv(index=False).encode("utf-8"),
+st.download_button("Download this watchlist (current settings, CSV)", wl.to_csv(index=False).encode("utf-8"),
                    file_name=f"silent_churn_watchlist_{SC.AS_OF:%Y%m%d}.csv", mime="text/csv")
 with st.expander("Reason codes", expanded=False, icon=":material/info:"):
     st.markdown("\n".join(f"- `{c}` — {t}" for c, t in SC.REASON_CODES.items()

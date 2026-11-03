@@ -141,6 +141,7 @@ SUMMARY_EXTRA: dict = {}   # filled by the slice sections below when their resul
 
 
 def s_request() -> dict:
+    rec_trigger = (_k("recommendations") or {}).get("head_of_cs_trigger") or {}
     body = """
 <p><b>The request (VP of Revenue, 13 Oct 2026):</b> <i>"The board wants to see NRR. Expansion clearly slowed last quarter — why?
 Which customers are quietly downgrading? Which accounts should the CS team prioritize?"</i></p>
@@ -155,7 +156,10 @@ Which customers are quietly downgrading? Which accounts should the CS team prior
     ], columns=["#", "Question", "Section"])) + """
 <p><b>Decision rules agreed up front.</b> VP: if the Q3 2026 expansion rate excluding the one-off rollout is within 0.5 pt of Q3 2025, the
 board message is "timing, not trend"; if it is 1.0 pt or more below, re-forecast Q4 / FY2027 expansion and name each structural driver
-with an owner. Head of CS: the top 120 accounts by ARR at stake go to CSMs (team capacity), everything else to a digital play.</p>
+with an owner. Head of CS: if the top 120 accounts by ARR at stake (team capacity) hold at least 60% of the risk list's ARR at stake, they get
+CSM-led reviews and the rest a digital play; below 60%, capacity shifts toward the digital play.""" + (
+        f""" Result: {pct(rec_trigger.get('share_by_arr_at_stake'), 0)} ranked purely by ARR at stake,
+{pct(rec_trigger.get('share_by_priority'), 0)} in the renewal-first order the CSM queue uses, both above 60%.""" if rec_trigger else "") + """</p>
 """
     return section("request", "The request and how it was scoped", body)
 
@@ -312,7 +316,7 @@ pricing change.</p>"""
 def s_appendix() -> dict:
     nbs = sorted((REPO_ROOT / "reports").glob("0*_*.html"))
     links = "".join(f"<li><a href='{p.name}'>{p.stem.replace('_', ' ')}</a></li>" for p in nbs) or "<li>notebook exports in reports/</li>"
-    body = f"""<p><b>Reproduce</b> (3 commands, ~2 minutes): <code>uv sync</code> → <code>make all</code> (or <code>uv run python run.py</code>) →
+    body = f"""<p><b>Reproduce</b> (3 commands, ~2.5 minutes): <code>uv sync</code> → <code>make all</code> (or <code>uv run python run.py</code>) →
 <code>uv run streamlit run dashboard/app.py</code>. Data goes to the folder set in <code>config.yaml</code> (override with
 <code>SAAS_DATA_DIR</code>); nothing generated is committed except reports and documents.</p>
 <p><b>Notebooks</b> (exported HTML, same folder as this report):</p><ul>{links}</ul>

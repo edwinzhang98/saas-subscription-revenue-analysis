@@ -184,18 +184,19 @@ plot(T.fig_basic_churn_monthly())
 net = T.net_mrr_effect(pre, post)
 ch = T.basic_churn_compare()
 finding(
-    f"<b>Sizing the trade-off, if the before / after differences are put down to the packaging change</b> (non-Paid-Social Basic "
-    f"base, about {net['basic_base_non_ps_per_month']:,.0f} accounts at the start of a month). Fewer upgrades: "
-    f"{pts(net['upgrade_rate_change_pts'], 2)} a month × {net['basic_base_non_ps_per_month']:,.0f} accounts × "
-    f"{money(net['mrr_per_upgrade'])} per upgrade = <b>{money(net['foregone_upgrade_mrr_per_month'])} of new MRR a month</b> "
-    f"(95%: {money(net['foregone_upgrade_mrr_lo'])} to {money(net['foregone_upgrade_mrr_hi'])}; "
-    f"{money(net['foregone_upgrade_mrr_trend_adjusted'])} if the pre-window drift is assumed to have continued). "
+    f"<b>Sizing the trade-off, if the step at April is put down to the packaging change</b> (non-Paid-Social Basic "
+    f"base, about {net['basic_base_non_ps_per_month']:,.0f} accounts at the start of a month). Fewer upgrades: the step from the "
+    f"pre-April level × {net['basic_base_non_ps_per_month']:,.0f} accounts × {money(net['mrr_per_upgrade'])} per upgrade = "
+    f"<b>{money(net['foregone_upgrade_mrr_from_pre_april_level'])} of new MRR a month</b> "
+    f"({money(net['foregone_upgrade_mrr_trend_adjusted'])} if the earlier drift would have continued; "
+    f"{money(net['foregone_upgrade_mrr_per_month'])} against the 12-month pre-window average, which includes the drift and overstates it). "
     f"Lower churn: Basic logo churn {pct(ch['churn_a'], 2)} → {pct(ch['churn_b'], 2)} ({pts(ch['change_pts'], 2)}, "
     f"95%: {pts(ch['change_lo'], 2)} to {pts(ch['change_hi'], 2)}) × {money(net['mrr_per_basic_account'])} per account = "
     f"<b>{money(net['retained_basic_mrr_per_month'])} of MRR a month</b> kept (95%: {money(net['retained_basic_mrr_lo'])} to "
-    f"{money(net['retained_basic_mrr_hi'])}). Net: <b>{money(net['net_mrr_per_month'])} a month</b> "
-    f"(range {money(net['net_mrr_lo'])} to {money(net['net_mrr_hi'])}; {money(net['net_mrr_per_month_trend_adjusted'])} trend-adjusted), "
-    f"about {money(net['net_mrr_12m_run_rate'])} of run-rate after 12 months if nothing changes. The churn change points the hoped-for "
+    f"{money(net['retained_basic_mrr_hi'])}). Net: <b>{money(net['foregone_upgrade_mrr_from_pre_april_level'] + net['retained_basic_mrr_per_month'])} a month</b> "
+    f"from the pre-April level ({money(net['net_mrr_per_month_trend_adjusted'])} if the drift would have continued), about "
+    f"{money(12 * (net['foregone_upgrade_mrr_from_pre_april_level'] + net['retained_basic_mrr_per_month']))} of run-rate after 12 months if "
+    "nothing changes. The churn change points the hoped-for "
     "way but its interval includes zero; trial → paid conversion is outside the billing data, so this understates the upside if "
     "conversion rose.")
 data_table(T.basic_churn_monthly(True).query("month_end >= '2025-01-31'"), "Show Basic monthly churn (non-Paid-Social)",
@@ -205,8 +206,10 @@ data_table(T.basic_churn_monthly(True).query("month_end >= '2025-01-31'"), "Show
 # ------------------------------------------------------------------------------- 4. downgrades
 st.subheader("4. Who downgrades, and what happens after a CS save")
 ds = T.downgrade_summary()
-st.caption("Plan downgrades effective Oct 2025 – Sep 2026, by flow and by who initiated them; the last two columns cover the "
-           "downgrades with six months of follow-up.")
+st.caption("Plan downgrades effective Oct 2025 – Sep 2026, by flow and by who initiated them; the last two columns cover only "
+           "the downgrades in this window with six months of follow-up. The survival chart below uses every downgrade since 2024 "
+           f"with six months of follow-up ({k.get('cs_save_downgrades_observed_6m', 0)} CS saves, "
+           f"{pct(k.get('cs_save_paying_6m_share'), 0)} still paying), so its CS-save share differs from the table's.")
 # a share with no downgrade followed for six months yet is undefined: shown as "—" (text), not as Streamlit's "None"
 ds = ds.assign(paying_6m_share=ds["paying_6m_share"].map(lambda v: "—" if pd.isna(v) else f"{v * 100:.2f}".rstrip("0").rstrip(".") + "%"))
 st.dataframe(ds[["flow", "source_label", "downgrades", "customers", "mrr_before", "mrr_delta", "mrr_retained_share", "seats_cut_share",
@@ -284,8 +287,10 @@ channels (*mix*, the Paid Social program) or because every channel upgrades less
 hold rates or weights fixed first, so both orderings are shown and the headline is their midpoint (Shapley). Move the windows to
 test how sensitive the split is. The dotted trend on the monthly chart shows that part of the decline predates April 2026: the part
 of the fall that lines up with the change is a range, from the step net of trend ({pts(k['non_ps_step_net_of_trend_pts'], 2)},
-{pct(k['non_ps_step_net_of_trend_rel'], 0)} against the trend) to the raw change ({pts(k['upgrade_rate_non_ps_change_pts'], 2)},
-{pct(k['upgrade_rate_non_ps_rel_change'], 0)}) — {trigger_note}, and neither end is a measured effect of the change.
+if the earlier drift had continued) to the step from the pre-April level ({pts(k['non_ps_step_from_pre_april_level_pts'], 2)}, if the
+rate had held where it was in March); the raw change against the 12-month pre-window average
+({pts(k['upgrade_rate_non_ps_change_pts'], 2)}) includes the drift, so it is not a measure of the change — {trigger_note}, and neither
+end of the range is a measured effect of the change.
 
 **Retention and the trade-off.** The same month-level logic for churn, before and after the change, with an interval; the sizing
 multiplies the rate changes by the base and the MRR per account, so it inherits every caveat above. **Downgrades** are grouped by

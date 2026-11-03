@@ -290,25 +290,25 @@ def build_plays() -> list[Play]:
         share = float((g["mrr"] * g["loss_share"]).sum() / m) if m and g["loss_share"].notna().any() else float("nan")
         return g, m, share
 
-    # ---- P1 CSM renewal desk --------------------------------------------------------------------
+    # ---- P1 CSM renewal reviews -----------------------------------------------------------------
     g1, m1, s1 = grp("P1")
     wl = marts.load("silent_churn__watchlist")
     top = wl[(wl["queue"] == "csm") & (wl["priority_rank"] <= CSM_CAPACITY)]
     plays.append(Play(
-        id="P1", title="CSM renewal desk for the top 120 at-risk accounts", owner="Head of CS (named + pooled CSMs)",
+        id="P1", title="CSM renewal reviews for the top 120 at-risk accounts", owner="Head of CS (named + pooled CSMs)",
         who=f"The first {len(g1)} accounts of the CSM queue in docs/account_health_list.csv (CS capacity: {CSM_CAPACITY} reviews a "
             f"quarter): annual renewals in under 45 days first, soonest first ({int((top['priority_tier'] == 1).sum())} of them), then "
             f"renewals within 120 days ({int((top['priority_tier'] == 2).sum())}) and the rest by ARR at stake; {money(m1 * 12)} ARR",
         what="Usage review 60–90 days before renewal: re-activate idle seats (admin training, re-onboard teams that stopped "
              "logging in), agree a right-sized renewal before procurement asks, line up an executive sponsor where the "
              "champion left; for Technology accounts a headcount check-in before the next billing date; for the "
-             f"{int(top['suggested_play'].str.startswith('Usage is growing').sum())} accounts whose weekly active users are rising 20%+ "
+             f"{int(top['suggested_play'].str.contains('Usage is growing', regex=False).sum())} accounts whose weekly active users are rising 20%+ "
              "into idle seats, confirm team size and seat count instead (no discount)",
         evidence=(f"CSM-covered accounts the utilization rule flagged lost {pct(rates['early_warning_csm'], 0)} of their MRR over the "
                   f"next 12 months vs {pct(rates['not_flagged_csm'], 0)} for unflagged CSM-covered accounts (history, Oct 2024 – Sep 2025 "
                   f"month-ends); back-test precision {pct(rule.get('precision'), 0)} vs a {pct(rule.get('base_rate'), 0)} base rate, median "
                   f"lead {rule['by_billing_period']['monthly']['lead_median']:.0f} month-ends for monthly-billed and "
-                  f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts. The {sc.get('flagged_accounts', 0)} silently contracting accounts have already "
+                  f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts (the most the back-test window allows). The {sc.get('flagged_accounts', 0)} silently contracting accounts have already "
                   f"lost {money(sc.get('lost_arr', 0))} of ARR, but they churn or shrink again no more often than comparable accounts "
                   f"({pct(sc.get('followup', {}).get('silent_loss_6m'), 0)} vs {pct(sc.get('followup', {}).get('unflagged_matched_loss_6m'), 0)} "
                   "within 6 months), so the desk ranks by the early-warning flag and the renewal date"),
@@ -342,7 +342,7 @@ def build_plays() -> list[Play]:
     tnrr = seg[(seg["dimension"] == "industry") & (seg["dimension_value"] == "Technology")].set_index("month_end")["nrr"]
     r26 = rates
     plays.append(Play(
-        id="P3", title="Technology renewals: flexible seat bands", owner="Sales (renewal AEs) + Customer Success",
+        id="P3", title="Technology renewal desk: flexible seat bands", owner="Sales (renewal AEs) + Customer Success",
         who=f"The {len(g3):,} Technology accounts on annual contracts renewing in the next 6 months that are not on the CSM desk "
             f"({money(m3 * 12)} ARR)",
         what="Offer a seat band at renewal (commit to about 80% of today's seats, add seats back at the same price during the "
@@ -374,8 +374,10 @@ def build_plays() -> list[Play]:
             f"(today: {len(g4)} accounts, {money(g4['mrr'].sum() * 12)} ARR)",
         what="Unlock a 14-day Premium trial in-app, with sales-assist outreach for Mid-Market; lead with the behaviour that put "
              "the account on the list (Premium paywall hits, automation use, team growth)",
-        evidence=(f"In the purged time-split back-test (Oct–Dec 2025 held out) the top {UPGRADE_LIST} accounts upgraded at {pct(ex.get('precision_at_100_all'), 1)} within 90 days "
-                  f"vs a {pct(ex.get('base_rate_test'), 1)} base rate ({ex.get('lift_at_100_all', float('nan')):.1f}× lift; test AUC "
+        evidence=(f"In the purged time-split back-test (Oct–Dec 2025 held out) the top {UPGRADE_LIST} accounts upgraded at {pct(ex.get('precision_at_100_all'), 1)} "
+                  f"(95% {pct(ex.get('precision_at_100_all_lo'), 1)}–{pct(ex.get('precision_at_100_all_hi'), 1)}) within 90 days "
+                  f"vs a {pct(ex.get('base_rate_test'), 1)} base rate ({ex.get('lift_at_100_all', float('nan')):.1f}× lift, "
+                  f"{ex.get('lift_at_100_all_lo', float('nan')):.1f}–{ex.get('lift_at_100_all_hi', float('nan')):.1f}×; test AUC "
                   f"{ex.get('auc_test', float('nan')):.2f}); one list of 100 brings about {money(per_list)} of upgrade MRR within 90 days on its own (average over the test months). "
                   "Basic → Premium upgrades are small (about $200 MRR each), so this is a cheap play, not a big one") if ex else
                  "Upgrade signals precede upgrades",
@@ -388,17 +390,22 @@ def build_plays() -> list[Play]:
         addressable_label="upgrade MRR four quarterly lists bring without the play (back-test)"))
 
     # ---- P5 packaging follow-up ------------------------------------------------------------------
-    foregone = -float(tr.get("foregone_upgrade_mrr_per_month", 0.0)) if tr else 0.0
+    # foregone upgrade MRR a month if the April step is due to the change, measured from the pre-April level (the raw
+    # fall against the 12-month pre-window average includes the earlier drift and would overstate it)
+    foregone = -float(tr.get("foregone_upgrade_mrr_from_pre_april_level", 0.0)) if tr else 0.0
+    foregone_trend = -float(tr.get("foregone_upgrade_mrr_trend_adjusted", 0.0)) if tr else 0.0
     plays.append(Play(
         id="P5", title="Basic packaging: test a capped version before deciding", owner="Product / Pricing",
         who="New Basic signups from Jan 2027 (50/50 test for two quarters); then, if the test wins, every Basic account from Aug 2027",
         what="Keep advanced automations in Basic but cap them (e.g. a monthly run limit), or move analytics dashboards behind "
              "the Premium gate; decide at the end of the test on 6-month revenue per new Basic signup",
-        evidence=(f"Since April the voluntary Basic → Premium rate fell from {pct(tr.get('upgrade_rate_non_ps_pre'), 2)} to "
-                  f"{pct(tr.get('upgrade_rate_non_ps_post'), 2)} a month outside Paid Social; channel mix explains "
-                  f"{pct(tr.get('mix_share_of_change'), 0)} of the fall; part of it was a drift that started before April. The "
-                  f"retention upside is not distinguishable from zero, so the change costs about {money(-tr.get('net_mrr_per_month', 0))} "
-                  f"MRR a month net (range {money(-tr.get('net_mrr_hi', 0))} to {money(-tr.get('net_mrr_lo', 0))})") if tr else
+        evidence=(f"Outside Paid Social the voluntary Basic → Premium rate was already drifting down before April "
+                  f"({pct(tr.get('non_ps_rate_apr_sep_2025'), 1)} a month in Apr–Sep 2025, {pct(tr.get('non_ps_rate_oct_2025_mar_2026'), 1)} in "
+                  f"Oct 2025 – Mar 2026) and stepped down to {pct(tr.get('upgrade_rate_non_ps_post'), 2)} after it; "
+                  f"{abs(tr.get('non_ps_step_net_of_trend_pts', 0)) * 100:.1f}–{abs(tr.get('non_ps_step_from_pre_april_level_pts', 0)) * 100:.1f} "
+                  f"points of that coincide with the change (drift continued vs rate held at its pre-April level). Channel mix explains "
+                  f"{pct(tr.get('mix_share_of_change'), 0)} of the fall and the retention upside is not distinguishable from zero, so the "
+                  f"step is worth about {money(foregone_trend)}–{money(foregone)} of upgrade MRR a month — if it is due to the change") if tr else
                  "Upgrades fell around the April change",
         measure="Decision read in Jul 2027 on the 90-day upgrade rate and early churn of the two arms (≈ 450 signups each); full "
                 "read on 6-month revenue per new Basic signup (upgrade MRR + retained Basic MRR) in Dec 2027; guardrail: trial → "
@@ -408,7 +415,8 @@ def build_plays() -> list[Play]:
              "months count here",
         addressable_mrr=foregone * ROLLOUT_MONTHS_IN_WINDOW, outcome_rate=1.0, effect=(0.20, 0.40, 0.60), accounts=0,
         effect_label="share of the foregone upgrade MRR recovered",
-        addressable_label=f"foregone upgrade MRR in the {ROLLOUT_MONTHS_IN_WINDOW} roll-out months inside the window ({money(foregone)} a month)",
+        addressable_label=(f"foregone upgrade MRR in the {ROLLOUT_MONTHS_IN_WINDOW} roll-out months inside the window ({money(foregone)} a "
+                           f"month from the pre-April level; {money(foregone_trend)} if the drift would have continued)"),
         run_rate_mrr_per_year=foregone * 12 * 0.40,
         sizing_note=f"Small inside next year's NRR window because the test comes first; once rolled out it is worth about "
                     f"{money(foregone * 12 * 0.40)} of MRR a year at the base effect."))
@@ -438,7 +446,8 @@ def build_plays() -> list[Play]:
         effect_label="share of the retention gap to other SMB closed",
         outcome_label="excess 6-month MRR loss vs other SMB signups",
         addressable_label="MRR of program-cohort accounts paying today",
-        sizing_note="The 6-month gap is used as a floor for the 12-month loss (most program cohorts are not 12 months old yet)."))
+        sizing_note=("The 0→6-month gap of fresh cohorts stands in for the survivors' 12-month excess loss (most program cohorts are "
+                     "not 12 months old yet). It is a proxy, not a floor: excess churn is front-loaded, so it may overstate.")))
 
     # ---- P7 dunning ------------------------------------------------------------------------------
     invol = float(last12["churn_mrr_involuntary"].sum())

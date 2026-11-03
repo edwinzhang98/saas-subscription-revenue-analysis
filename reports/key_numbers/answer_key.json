@@ -17,9 +17,9 @@
     {
       "event": "S3 Basic packaging change (2026-04-15)",
       "planted": "upgrade hazard \u00d7 0.5, paywall hits \u00d7 0.4; upside: Basic churn \u00d7 0.85",
-      "recovered": "voluntary Basic upgrade rate 1.51% \u2192 0.69% per month (non-Paid-Social 1.60% \u2192 0.77%; in two steps: 2.07% in Q3 2025 \u2192 1.46% in Jan\u2013Mar 2026, before the change, \u2192 0.82% in May\u2013Jul 2026); paywall hits per active user \u00d7 0.39; automation runs \u00d7 2.95; Basic monthly churn 1.93% \u2192 1.79%",
+      "recovered": "voluntary Basic upgrade rate 1.51% \u2192 0.69% per month (non-Paid-Social 1.60% \u2192 0.77%; in two steps: 1.88% in Apr\u2013Sep 2025 \u2192 1.38% in Oct 2025 \u2013 Mar 2026, before the change (no change was planted before April, so this drift is composition or noise) \u2192 0.77% in May\u2013Sep 2026); paywall hits per active user \u00d7 0.39; automation runs \u00d7 2.95; Basic monthly churn 1.93% \u2192 1.79% (\u00d70.93, 95% change \u22120.62 pts to +0.31 pts: the planted upside is inside the interval but not separable from zero)",
       "naive_cut": "a before/after on the pooled Basic upgrade rate also picks up the Paid Social mix shift",
-      "verdict": "recovered"
+      "verdict": "recovered (upgrade step); retention upside not separable"
     },
     {
       "event": "S2 Paid Social program (from 2025-09)",
@@ -88,9 +88,14 @@
       "tech_nrr_2026_09": 0.9554793308164924
     },
     "s3_timing": {
-      "non_ps_q3_2025": 0.020667257159728374,
-      "non_ps_jan_mar_2026": 0.01462056161522395,
-      "non_ps_may_jul_2026": 0.008187134502923977
+      "non_ps_apr_sep_2025": 0.018805309734513276,
+      "non_ps_oct_2025_mar_2026": 0.013824321017861511,
+      "non_ps_may_sep_2026": 0.0076550714848587186
+    },
+    "s3_churn_interval": {
+      "change_pts": -0.0014171349886313057,
+      "lo": -0.006192561121101358,
+      "hi": 0.003060485430086429
     },
     "s3": {
       "upgrade_rate_pre": 0.015142150803461063,

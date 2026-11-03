@@ -340,7 +340,12 @@ def step_vs_drift(pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW, group: str
     a3 = m[(m["month_end"] >= "2026-05-31") & (m["month_end"] <= "2026-07-31")]
     d, lo, hi = newcombe_diff(b3["upgrades"].sum(), b3["n"].sum(), a3["upgrades"].sum(), a3["n"].sum())
     low = m.loc[m["rate"].idxmin()]
+    h1 = m[(m["month_end"] >= "2025-04-30") & (m["month_end"] <= "2025-09-30")]
+    h2 = m[(m["month_end"] >= "2025-10-31") & (m["month_end"] <= "2026-03-31")]
     return {"group": group, "slope_pts_per_month": float(slope), "trend_intercept": float(intercept), "pre_mean": pre_mean,
+            "step_from_pre_april_level_pts": actual_post - pre_end,     # if the rate had held at its (trend) level at the end of March
+            "rate_apr_sep_2025": float(h1["upgrades"].sum() / h1["n"].sum()),
+            "rate_oct_2025_mar_2026": float(h2["upgrades"].sum() / h2["n"].sum()),
             "pre_trend_level_at_end_of_pre": pre_end, "extrapolated_post": pred_post, "actual_post": actual_post,
             "raw_change_pts": actual_post - pre_mean, "raw_change_rel": actual_post / pre_mean - 1,
             "step_net_of_trend_pts": actual_post - pred_post, "step_net_of_trend_rel": actual_post / pred_post - 1,
@@ -439,6 +444,7 @@ def net_mrr_effect(pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW) -> dict:
     upgrade_point = up["change_pts"] * base * per_upgrade
     upgrade_lo, upgrade_hi = up["change_lo"] * base * per_upgrade, up["change_hi"] * base * per_upgrade
     upgrade_trend_adj = sd["step_net_of_trend_pts"] * base * per_upgrade      # if the pre-window drift had continued
+    upgrade_pre_april = sd["step_from_pre_april_level_pts"] * base * per_upgrade   # if the rate had held at its pre-April level
     ret_point = -ch["change_pts"] * base * ch["avg_basic_mrr_b"]
     ret_lo, ret_hi = -ch["change_hi"] * base * ch["avg_basic_mrr_b"], -ch["change_lo"] * base * ch["avg_basic_mrr_b"]
     return {"basic_base_non_ps_per_month": base, "mrr_per_upgrade": per_upgrade,
@@ -447,6 +453,7 @@ def net_mrr_effect(pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW) -> dict:
             "churn_change_pts": ch["change_pts"],
             "foregone_upgrade_mrr_per_month": upgrade_point, "foregone_upgrade_mrr_lo": upgrade_lo, "foregone_upgrade_mrr_hi": upgrade_hi,
             "foregone_upgrade_mrr_trend_adjusted": upgrade_trend_adj,
+            "foregone_upgrade_mrr_from_pre_april_level": upgrade_pre_april,
             "retained_basic_mrr_per_month": ret_point, "retained_basic_mrr_lo": ret_lo, "retained_basic_mrr_hi": ret_hi,
             "net_mrr_per_month": upgrade_point + ret_point, "net_mrr_lo": upgrade_lo + ret_lo, "net_mrr_hi": upgrade_hi + ret_hi,
             "net_mrr_per_month_trend_adjusted": upgrade_trend_adj + ret_point,
@@ -718,6 +725,9 @@ def key_numbers() -> dict:
         "non_ps_pre_trend_slope_pts_per_month": sd["slope_pts_per_month"], "non_ps_extrapolated_post_rate": sd["extrapolated_post"],
         "non_ps_step_net_of_trend_pts": sd["step_net_of_trend_pts"], "non_ps_step_net_of_trend_rel": sd["step_net_of_trend_rel"],
         "non_ps_rate_jan_mar_2026": sd["rate_jan_mar_2026"],
+        "non_ps_step_from_pre_april_level_pts": sd["step_from_pre_april_level_pts"],
+        "non_ps_pre_trend_level_end_of_march": sd["pre_trend_level_at_end_of_pre"],
+        "non_ps_rate_apr_sep_2025": sd["rate_apr_sep_2025"], "non_ps_rate_oct_2025_mar_2026": sd["rate_oct_2025_mar_2026"],
         "non_ps_rate_may_jul_2026": sd["rate_may_jul_2026"], "non_ps_step_3m_pts": sd["step_3m_pts"],
         "non_ps_step_3m_lo": sd["step_3m_lo"], "non_ps_step_3m_hi": sd["step_3m_hi"],
         "non_ps_lowest_month": sd["lowest_month"], "non_ps_lowest_month_rate": sd["lowest_month_rate"],
@@ -733,6 +743,7 @@ def key_numbers() -> dict:
         "net_effect_mrr_per_basic_account": net["mrr_per_basic_account"],
         "foregone_upgrade_mrr_per_month": net["foregone_upgrade_mrr_per_month"], "foregone_upgrade_mrr_lo": net["foregone_upgrade_mrr_lo"],
         "foregone_upgrade_mrr_hi": net["foregone_upgrade_mrr_hi"], "foregone_upgrade_mrr_trend_adjusted": net["foregone_upgrade_mrr_trend_adjusted"],
+        "foregone_upgrade_mrr_from_pre_april_level": net["foregone_upgrade_mrr_from_pre_april_level"],
         "retained_basic_mrr_per_month": net["retained_basic_mrr_per_month"], "retained_basic_mrr_lo": net["retained_basic_mrr_lo"],
         "retained_basic_mrr_hi": net["retained_basic_mrr_hi"],
         "net_mrr_per_month": net["net_mrr_per_month"], "net_mrr_lo": net["net_mrr_lo"], "net_mrr_hi": net["net_mrr_hi"],
@@ -743,6 +754,7 @@ def key_numbers() -> dict:
         "transition_12m_basic": t12_basic, "transition_12m_premium": t12_prem, "transition_24m_basic": t24_basic,
         "signups_total": int(len(ss)), "signups_basic": int((ss["plan_0"] == "basic").sum()),
         "signups_observed_12m": int(ss["state_12"].notna().sum()), "signups_observed_24m": int(ss["state_24"].notna().sum()),
+        "basic_signups_observed_12m": int(ss[ss["plan_0"] == "basic"]["state_12"].notna().sum()),
         "basic_signups_state_12m": {k: float(v) for k, v in ss[ss["plan_0"] == "basic"]["state_12"].value_counts(normalize=True).items()},
         "basic_signups_state_24m": {k: float(v) for k, v in ss[ss["plan_0"] == "basic"]["state_24"].value_counts(normalize=True).items()},
         # downgrades

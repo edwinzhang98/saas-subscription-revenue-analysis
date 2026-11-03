@@ -577,6 +577,29 @@ def capacity_metrics(ts: pd.DataFrame, k: int, period: str = "all") -> dict:
                 lift=float(m["precision"].mean() / base) if base else np.nan)
 
 
+def capacity_interval(ts: pd.DataFrame, k: int, period: str = "all", n_boot: int = N_BOOT_MODEL) -> dict:
+    """Account-level bootstrap 95% interval for precision (and lift) when the top-k accounts are worked each month:
+    accounts are resampled with replacement (all their month-ends together), each month's list is re-ranked on the
+    resampled rows, and precision is averaged over the months as in capacity_metrics."""
+    d = (ts if period == "all" else ts[ts["period"] == period]).reset_index(drop=True)
+    acct, me = d["customer_id"].to_numpy(), d["month_end"].to_numpy()
+    score, label = d["score"].to_numpy(), d["label"].to_numpy()
+    precs, lifts = [], []
+    for idx in _cluster_indices(acct, n_boot):
+        m_, s_, l_ = me[idx], score[idx], label[idx]
+        order = np.lexsort((-s_, m_))                    # by month, then score descending
+        m_o, l_o = m_[order], l_[order]
+        _, first = np.unique(m_o, return_index=True)
+        bounds = list(first) + [len(m_o)]
+        p_m = [l_o[a:min(a + k, b)].mean() for a, b in zip(bounds[:-1], bounds[1:])]
+        base = l_.mean()
+        precs.append(float(np.mean(p_m)))
+        lifts.append(float(np.mean(p_m)) / base if base else np.nan)
+    lo, hi = np.percentile(precs, [2.5, 97.5])
+    llo, lhi = np.nanpercentile(lifts, [2.5, 97.5])
+    return {"precision_lo": float(lo), "precision_hi": float(hi), "lift_lo": float(llo), "lift_hi": float(lhi)}
+
+
 def capture_curve(ts: pd.DataFrame, ks: np.ndarray | None = None) -> pd.DataFrame:
     """Share of the month's upgrades captured when the top-k accounts are worked, averaged over months per period."""
     ks = np.arange(0, 1001, 10) if ks is None else ks
@@ -636,7 +659,10 @@ def model_metrics(ts: pd.DataFrame) -> pd.DataFrame:
                  mean_predicted=float(d["score"].mean()))
         for k in CAPACITIES:
             c = capacity_metrics(ts, k, period)
+            ci = capacity_interval(ts, k, period)
             r.update({f"precision_at_{k}": c["precision"], f"recall_at_{k}": c["recall"], f"lift_at_{k}": c["lift"],
+                      f"precision_at_{k}_lo": ci["precision_lo"], f"precision_at_{k}_hi": ci["precision_hi"],
+                      f"lift_at_{k}_lo": ci["lift_lo"], f"lift_at_{k}_hi": ci["lift_hi"],
                       f"upgrades_per_month_at_{k}": c["upgrades_per_month"], f"mrr_covered_per_month_at_{k}": c["mrr_covered_per_month"]})
         rows.append(r)
     return pd.DataFrame(rows)
@@ -653,8 +679,9 @@ def auc_change_sentence(k: dict) -> str:
         verdict = "no clear change in the ranking"
     else:
         verdict = "the ranking weakened"
-    return (f"AUC {pre} before the change and {post} after — {verdict}, though three months with "
-            f"{k['test_upgrades_post']} upgrades cannot show a small change either way")
+    return (f"AUC {pre} for month-ends indexed before the change and {post} after — {verdict}, though three months with "
+            f"{k['test_upgrades_post']} upgrades cannot show a small change either way (the 'before' rows' 90-day label windows "
+            "run into May–June, so some of their upgrades already post-date the change)")
 
 
 def _scores_frame(d: pd.DataFrame, p: np.ndarray) -> pd.DataFrame:
@@ -937,6 +964,10 @@ def key_numbers() -> dict:
     for k in CAPACITIES:
         for p in ("pre", "post", "all"):
             out[f"precision_at_{k}_{p}"] = float(mm.loc[p, f"precision_at_{k}"])
+            out[f"precision_at_{k}_{p}_lo"] = float(mm.loc[p, f"precision_at_{k}_lo"])
+            out[f"precision_at_{k}_{p}_hi"] = float(mm.loc[p, f"precision_at_{k}_hi"])
+            out[f"lift_at_{k}_{p}_lo"] = float(mm.loc[p, f"lift_at_{k}_lo"])
+            out[f"lift_at_{k}_{p}_hi"] = float(mm.loc[p, f"lift_at_{k}_hi"])
             out[f"recall_at_{k}_{p}"] = float(mm.loc[p, f"recall_at_{k}"])
             out[f"lift_at_{k}_{p}"] = float(mm.loc[p, f"lift_at_{k}"])
             out[f"upgrades_per_month_at_{k}_{p}"] = float(mm.loc[p, f"upgrades_per_month_at_{k}"])
@@ -1128,9 +1159,12 @@ def fig_calibration(period: str = "all", cal: pd.DataFrame | None = None) -> go.
                      gridcolor=theme.GRID)
     fig.update_yaxes(tickformat=".0%", title_text="Observed upgrade rate", range=[0, lim])
     top = c.iloc[-1]
-    return theme.apply(fig, f"Top decile: predicted {pct(top['predicted'])}, observed {pct(top['observed'])} "
-                            f"({PERIOD_LABEL[period]})",
-                       "Test rows grouped into ten equal bins by score; whiskers = Wilson 95% interval", height=400)
+    over = top["predicted"] > top["observed_hi"]
+    span = {"all": "Jan – Jun 2026 test", "pre": "Jan – Mar 2026 test", "post": "Apr – Jun 2026 test"}.get(period, "test period")
+    title = (f"The model over-predicts its top decile ({pct(top['predicted'])} predicted vs {pct(top['observed'])} observed, {span}): "
+             "read propensities as a ranking, not a probability" if over else
+             f"Top decile: predicted {pct(top['predicted'])}, observed {pct(top['observed'])} ({span})")
+    return theme.apply(fig, title, "Test rows grouped into ten equal bins by score; whiskers = Wilson 95% interval on rows", height=400)
 
 
 def fig_odds_ratios(ors: pd.DataFrame | None = None) -> go.Figure:

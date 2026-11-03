@@ -45,7 +45,7 @@ Showcase: multi-page Streamlit app (`dashboard/app.py`), standalone `reports/rep
 5. **Data lives outside git** (`~/projects/data-projects/datasets/p5-saas-synthetic` by default, configurable); the dashboard reads a parquet cache, never recomputes the warehouse.
 
 ## 6. Phases
-1 Scope + definitions + data model → 2 generator + sanity checks → 3 SQL metric layer + data quality + Python cross-check → 4 analyses (notebooks 01–05, executed with nbconvert) → 5 Streamlit + `report.html` + screenshots → 6 MBR, readout, CS list, README → 7 clean-clone run with timing, acceptance checklist. Each phase ends with a commit + push.
+1 Scope + definitions + data model → 2 generator + sanity checks → 3 SQL metric layer + data quality + Python cross-check → 4 analyses (notebooks 01–05, executed with nbconvert) → 5 Streamlit + `report.html` + screenshots → 6 MBR, readout, CS list, README → 7 clean-clone run with timing, acceptance checklist. Each phase ends with a self-review and a commit + push.
 
 ## 7. Risks
 Synthetic data can look too clean → realistic noise, overlapping drivers and injected data-quality issues. Over-claiming causality → correlational language, intervals, and holdouts as the validation path.

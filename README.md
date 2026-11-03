@@ -15,25 +15,25 @@ Revenue analytics for a synthetic B2B SaaS company at its Q3 2026 close. A docum
 **Three things to know**
 
 1. **NRR flatters the trend.** 103.5% is down 3.5 points since June and still includes a one-off company-wide rollout at one customer; without it NRR is 101.0% (down 3.2 points since June), and Q3 alone annualises to 92.9%. If Q4 looks like Q3, the 12-month figure keeps falling.
-2. **Expansion slowed for two structural reasons, not just the Q2 one-off.** The one-off explains most of the 33% dollar drop from Q2, but the like-for-like rate fell from 4.9% to 3.4% of starting MRR year over year, past the 1-point line the VP set for a re-forecast. Driver one: Technology accounts brought $22.3K less expansion MRR than their Q3 2025 rate implies (their expansion fell from 6.2% to 1.2% of their own MRR a quarter, while their contraction rose from 0.9% to 5.7% — consistent with the hiring freezes CSMs report). Driver two: plan upgrades outside Technology, mostly Basic → Premium, brought $15.6K less. The Basic upgrade rate fell in two steps — from about 2% a month in Q3 2025 to 1.5% in Jan–Mar 2026, before anything changed, and to 0.8% after the April packaging change; the shift toward Paid Social signups explains only 4% of the fall.
-3. **324 accounts are quietly downgrading** — paying at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling: $1.07M ARR still on the books (4.3% of ARR), $649K already lost, 60% of them Technology. Their past cuts don't predict more loss; low seat utilization does: accounts using under half their seats shrank or left 2.3× as often as the average account, typically 3 months ahead for monthly-billed accounts and 6 for annual-billed (83% of the contractions it caught were flagged at least two month-ends ahead). That signal ranks the CS list.
+2. **Expansion slowed for two structural reasons, not just the Q2 one-off.** The one-off explains most of the 33% dollar drop from Q2, but the like-for-like rate fell from 4.9% to 3.4% of starting MRR year over year, past the 1-point line the VP set for a re-forecast. Driver one: Technology accounts brought $22.3K less expansion MRR than their Q3 2025 rate implies (their expansion fell from 6.2% to 1.2% of their own MRR a quarter, while their contraction rose from 0.9% to 5.7% — consistent with the hiring freezes CSMs report). Driver two: plan upgrades outside Technology, mostly Basic → Premium, brought $15.6K less. Outside Paid Social, the monthly Basic upgrade rate fell in two steps — from 1.9% in Apr–Sep 2025 to 1.4% in Oct 2025 – Mar 2026, before anything changed, and to 0.8% in May–Sep 2026 after the April packaging change (0.69% across all Basic accounts); the shift toward Paid Social signups explains only 4% of the fall.
+3. **324 accounts are quietly downgrading** — paying at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling: $1.07M ARR still on the books (4.3% of ARR), $649K already lost, 60% of them Technology. Their past cuts don't predict more loss; low seat utilization does: accounts using under half their seats shrank or left 2.3× as often as the average account, typically 3 months ahead for monthly-billed accounts, and for annual-billed accounts usually the full 6 months the back-test can measure (83% of the losses it caught — contractions or cancellations — were flagged at least two month-ends ahead). That signal ranks the CS list.
 
-The decisions agreed up front: the VP re-forecasts expansion if the like-for-like Q3 rate is ≥ 1 point below Q3 2025 (it is: −1.5 points); the Head of CS staffs CSM-led reviews if the top 120 accounts hold ≥ 60% of the revenue at stake (they hold 66%).
+The decisions agreed up front: the VP re-forecasts expansion if the like-for-like Q3 rate is ≥ 1 point below Q3 2025 (it is: −1.5 points); the Head of CS staffs CSM-led reviews if the top 120 accounts hold ≥ 60% of the revenue at stake (they hold 66% in the renewal-first queue order, 69% ranked purely by ARR at stake).
 
 ## Recommendations
 
-Seven plays, each with an owner, a control group and stated risks. Five work from account lists that exist today ([`docs/account_health_list.csv`](docs/account_health_list.csv)); two — the packaging test and payment-failure recovery — act on future signups and failed charges. Each play's size = measured addressable MRR × measured historical loss (or upgrade) rate × an **assumed** effect with a low–high range; every account counts in one play only ([`notebooks/05_recommendations.ipynb`](notebooks/05_recommendations.ipynb)).
+Seven plays, each with an owner, a control group and stated risks. Four work from the lists in [`docs/account_health_list.csv`](docs/account_health_list.csv) (P1–P4) and one (P6) from the Paid Social program cohort, identified by acquisition channel; two — the packaging test and payment-failure recovery — act on future signups and failed charges. Each play's size = measured addressable MRR × measured historical loss (or upgrade) rate × an **assumed** effect with a low–high range; every account counts in one play only ([`notebooks/05_recommendations.ipynb`](notebooks/05_recommendations.ipynb)).
 
 | # | Play | Owner | Next year's NRR | How we will know |
 |---|---|---|---|---|
-| P1 | CSM renewal desk for the top 120 at-risk accounts (renewals first) | Head of CS | +0.56 pts | 1-in-5 random holdout; 6- and 12-month GRR |
+| P1 | CSM renewal reviews for the top 120 at-risk accounts (renewals first) | Head of CS | +0.56 pts | 1-in-5 random holdout; 6- and 12-month GRR |
 | P7 | Payment-failure recovery: retries, card updater (66% of failed charges recover today) | Billing Ops / RevOps | +0.30 pts | A/B on the retry schedule |
-| P3 | Flexible seat bands for Technology annual renewals | Sales + CS | +0.26 pts | Offer in alternate renewal months |
+| P3 | Technology renewal desk: flexible seat bands for annual renewals | Sales + CS | +0.26 pts | Offer in alternate renewal months |
 | P2 | Digital re-engagement for the rest of the risk list (798 accounts) | Lifecycle Marketing | +0.16 pts | 50/50 by account |
-| P5 | Test a capped Basic package on new signups before reverting | Product / Pricing | +0.12 pts (≈ +0.7 pts a year once rolled out) | 50/50 test, decision read Jul 2027 |
+| P5 | Test a capped Basic package on new signups before reverting | Product / Pricing | +0.08 pts (≈ +0.5 pts a year once rolled out) | 50/50 test, decision read Jul 2027 |
 | P4 | Premium trial for the top 100 upgrade candidates each quarter | Sales-assist | +0.07 pts | 30% holdout |
 | P6 | Activation + annual offer for Paid Social cohorts | Growth Marketing | +0.04 pts (most value after next year) | Alternate signup weeks |
-| | **Total** | | **≈ +1.5 pts** (range +0.7 to +2.4) | |
+| | **Total** | | **≈ +1.5 pts (range +0.7 to +2.3)** | |
 
 The CS team works from [`docs/account_health_list.csv`](docs/account_health_list.csv): 1,408 accounts (989 on the risk list, 119 Technology renewals no risk flag caught, 300 upgrade opportunities) with queue, priority, reason codes, evidence in plain words, ARR at stake and the play. The board memo is [`docs/readout.md`](docs/readout.md); the recurring monthly review is [`docs/monthly_revenue_review.md`](docs/monthly_revenue_review.md).
 
@@ -72,7 +72,7 @@ Every page opens with the one question it answers and ends with "How to read thi
 ## Limitations
 
 - **Synthetic data:** effect sizes come from rules I wrote; findings describe this dataset only. The generator was calibrated until the VP's premise held, which is disclosed in the data model.
-- **Observational, not causal:** the packaging and Technology findings line up in time with known events. Because Basic upgrades were already drifting down before April, the part of the fall that lines up with the packaging change is 0.4 to 0.8 points of the monthly upgrade rate, depending on how much of the earlier drift would have continued — a range, not a measured effect. The proposed tests are the clean answer.
+- **Observational, not causal:** the packaging and Technology findings line up in time with known events. Because Basic upgrades were already drifting down before April, the part of the fall that lines up with the packaging change is 0.4 to 0.6 points of the monthly upgrade rate — 0.4 if the earlier drift had continued, 0.6 if the rate had held at its pre-April level; the 0.83-point fall against the 12-month pre-window average includes that drift and is not a measure of the change. The earlier drift has no identifiable cause in the billing data (composition or noise). The proposed tests are the clean answer.
 - **Small samples where flagged:** 73 post-change upgrades, 43 CS saves with follow-up, two prior years for seasonality — intervals are shown.
 - **Play effects are assumptions** until each holdout reads out; plan on the low end.
 - **What I would want next:** sales pipeline data for sales-assisted expansion, CRM notes and headcount signals for Technology accounts, user-level product events, and trial data to measure the packaging change's conversion goal.
@@ -104,8 +104,9 @@ Every number in this README, the readout and the dashboard is read from `reports
 | Number | Source |
 |---|---|
 | ARR, NRR, GRR, run-rate NRR, expansion rates, bridges, one-off | `metrics.json` ← `sql/23`–`25`, `analysis/metrics.py`, notebook 01 |
-| Basic upgrade rates, mix share, net packaging effect | `transitions.json` ← `sql/24`, `analysis/transitions.py`, notebook 02 |
+| Basic upgrade rates, mix share, net packaging effect | `transitions.json` ← `sql/30`, `analysis/transitions.py`, notebook 02 |
 | Upgrade signals, model, opportunity list | `expansion.json` ← `sql/41`, `analysis/expansion.py`, notebook 03 |
 | Silent contraction, early-warning rule, CS list | `silent_churn.json` ← `sql/50`, `sql/41`, `analysis/silent_churn.py`, notebook 04 |
 | Play sizes, NRR base, CS trigger, dunning recovery | `recommendations.json` ← `analysis/recommendations.py`, notebook 05 |
 | Data-quality, cross-check, known-answer results | `sql/91`, `reports/crosscheck_results.json`, `answer_key.json` |
+
