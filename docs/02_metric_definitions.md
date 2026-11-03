@@ -214,7 +214,7 @@ One row per account: the risk watchlist (§9, §9.1) and the top 300 upgrade opp
 
 ## 16. Where each metric is implemented
 
-| Metric | SQL file | Output table |
+| Metric | SQL file / Python module | Output table |
 |---|---|---|
 | Raw load, as-of date, MRR macros | `sql/00_load_raw.sql` | `raw.*`, `meta_run`, `mrr_of()`, `mrr_norm_of()` |
 | Clean sources & exclusions | `sql/01`–`05_stg_*.sql` | `stg_*` |
@@ -234,6 +234,13 @@ One row per account: the risk watchlist (§9, §9.1) and the top 300 upgrade opp
 | Silent contraction | `sql/50_rpt_silent_contraction.sql` | `rpt_silent_contraction` |
 | Billing reconciliation | `sql/90_dq_revenue_reconciliation.sql` | `dq_revenue_reconciliation` |
 | Data-quality checks | `sql/91_dq_checks.sql` | `dq_check_results` |
+| Expansion bridges, one-off detection, interactive waterfall / retention | `src/saas_rev/analysis/metrics.py` | `metrics__*` marts, `reports/key_numbers/metrics.json` |
+| Upgrade-rate decomposition (mix vs rate), downgrades, time to upgrade | `src/saas_rev/analysis/transitions.py` | `transitions__*`, `transitions.json` |
+| Upgrade signals, ranking model, opportunity list | `src/saas_rev/analysis/expansion.py` | `expansion__*`, `expansion.json` |
+| Silent contraction (parameterised), early-warning back-test, risk watchlist | `src/saas_rev/analysis/silent_churn.py` | `silent_churn__*`, `silent_churn.json` |
+| Play sizing (§15 lists, loss rates) | `src/saas_rev/analysis/recommendations.py` | `recommendations__plays`, `recommendations.json` |
+| CS account health list | `src/saas_rev/docs_mbr.py` | `docs/account_health_list.csv` |
+| Independent re-implementation (MRR → cohorts) | `src/saas_rev/crosscheck.py` | `reports/crosscheck_results.json` |
 
 ## 17. Questions people ask (and our answers)
 
