@@ -311,7 +311,7 @@ def build_plays() -> list[Play]:
                   f"month-ends); back-test precision {pct(rule.get('precision'), 0)} vs a {pct(rule.get('base_rate'), 0)} base rate, median "
                   f"lead {rule['by_billing_period']['monthly']['lead_median']:.0f} month-ends for monthly-billed and "
                   f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts (the most the back-test window allows). The {sc.get('flagged_accounts', 0)} silently contracting accounts have already "
-                  f"lost {money(sc.get('lost_arr', 0))} of ARR, but they churn or shrink again no more often than comparable accounts "
+                  f"lost {money(sc.get('lost_arr', 0))} of ARR, but they showed no clear excess risk of churning or shrinking again vs comparable accounts "
                   f"({pct(sc.get('followup', {}).get('silent_loss_6m'), 0)} vs {pct(sc.get('followup', {}).get('unflagged_matched_loss_6m'), 0)} "
                   "within 6 months), so the desk ranks by the early-warning flag and the renewal date"),
         measure="Hold out 1 in 5 eligible accounts at random each quarter (business as usual); compare 6- and 12-month GRR "

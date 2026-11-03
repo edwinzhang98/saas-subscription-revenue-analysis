@@ -42,7 +42,7 @@ Q3 expansion was **$63.7K** of new monthly revenue from existing customers, down
 - **324 accounts** (307 cutting on their own, 17 kept by CS on a smaller plan after asking to cancel) are paying at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling. Up from 162 in June and 89 a year ago.
 - **How:** mostly seat cuts at monthly billing dates (240 of the 324, typically a quarter of their seats).
 - **Who:** Technology companies are 60% of them, against 23% of other paying customers.
-- **What happens next:** they are no more likely to leave than similar customers (12% vs 12% within six months) — the damage is mostly done. The useful early signal is **low seat use**: accounts using less than half their seats over a quarter go on to shrink or leave about 2.3 times as often as the average account, typically 3 months ahead for monthly-billed accounts, and for annual-billed accounts usually the full 6 months the back-test can measure. 83% of the shrinking or cancelling accounts the rule caught were flagged at least two month-ends in advance.
+- **What happens next:** historically they showed no clear excess churn — 12.3% left within six months (95% 8.9–16.7%; n = 269) vs 11.7% of matched customers — so most of the damage is already done. The useful early signal is **low seat use**: accounts using less than half their seats over a quarter go on to shrink or leave about 2.3 times as often as the average account, typically 3 months ahead for monthly-billed accounts, and for annual-billed accounts usually the full 6 months the back-test can measure. 83% of the contraction or cancellation events the rule caught were flagged at least two month-ends in advance.
 
 ## 4. Where CS should focus
 

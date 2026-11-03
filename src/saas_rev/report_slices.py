@@ -46,8 +46,8 @@ def s_transitions() -> dict:
         f"<b>Basic → Premium upgrades fell {pct(-k['upgrade_rate_rel_change'], 0)} around the April packaging change, and the shift toward "
         f"Paid Social signups explains only {pct(k['mix_share_of_change'], 0)} of it.</b> The voluntary upgrade rate fell from "
         f"{pct(k['upgrade_rate_pre'], 2)} to {pct(k['upgrade_rate_post'], 2)} of Basic accounts a month ({k['voluntary_upgrades_pre']} "
-        f"upgrades in the 12 months before, {k['voluntary_upgrades_post']} in the 5 months after), in every channel, segment and tenure "
-        f"band. The fall lines up in time with the packaging change, but the rate was already drifting down before April "
+        f"upgrades in the 12 months before, {k['voluntary_upgrades_post']} in the 5 months after), across every channel and tenure "
+        f"band and in both SMB and Mid-Market. The fall lines up in time with the packaging change, but the rate was already drifting down before April "
         f"({pts(k['non_ps_pre_trend_slope_pts_per_month'], 3)} a month): measured from the pre-April level ({pct(k['non_ps_pre_trend_level_end_of_march'], 2)}) "
         f"the step is {abs(k['non_ps_step_from_pre_april_level_pts']) * 100:.2f} points, and {abs(k['non_ps_step_net_of_trend_pts']) * 100:.2f} if the "
         f"drift would have continued, so the part that coincides with the change is {abs(k['non_ps_step_net_of_trend_pts']) * 100:.1f} to "
@@ -172,10 +172,11 @@ def s_silent() -> dict:
                 f"billing date (median cut {pct(mix['median_seat_cut_pct'], 0)} of seats); {mix['seat_rightsize_renewal_accounts']} right-sized "
                 f"at an annual renewal; {mix['plan_downgrade_accounts']} downgraded the plan.")
     body += finding(
-        f"<b>Silent contraction is a loss already booked, not a churn predictor.</b> Accounts newly flagged in Jan 2025 – Mar 2026 churned "
+        f"<b>Silent contraction is mostly a loss already booked: no clear excess churn afterwards.</b> Accounts newly flagged in Jan 2025 – Mar 2026 churned "
         f"within 6 months at {pct(fu['silent_churn_6m'], 1)} (95%: {pct(fu['silent_churn_6m_lo'], 1)}–{pct(fu['silent_churn_6m_hi'], 1)}, "
         f"n = {fu['silent_n']}) vs {pct(fu['unflagged_matched_churn_6m'], 1)} for unflagged accounts with the same segment, billing and tenure "
-        "mix. So the CS list does not rank by past contraction; it ranks by a usage signal that comes before it.")
+        "mix — no clear difference, though the interval is wide. So the CS list does not rank by past contraction; it ranks by a "
+        "usage signal that comes before it.")
     body += fig(SC.fig_followup(marts.load("silent_churn__followup")))
     chosen = SC.rule_thresholds()
     body += finding(
@@ -188,7 +189,7 @@ def s_silent() -> dict:
         f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts (the most the back-test window allows: annual outcome windows run to renewal, ≤ 6 months); "
         f"{pct(rule['share_lead_ge2'], 0)} of caught events "
         f"were flagged at least 2 month-ends ahead (precision 95% interval {pct(rule['precision_lo'], 1)}–{pct(rule['precision_hi'], 1)}, "
-        "accounts resampled). Adding a WAU-trend condition lowered recall without raising precision. It misses most losses: "
+        "accounts resampled). Adding a WAU-trend condition lowered recall without raising precision. The threshold was chosen and scored on the same historical rows, so these figures may be a little optimistic until the frozen rule is checked on later quarters. It misses most losses: "
         "use it to rank the CSM queue, not to forecast churn.")
     body += fig(SC.fig_pr_tradeoff(marts.load("silent_churn__backtest_grid"), chosen))
     body += fig(SC.fig_lead_time(marts.load("silent_churn__lead_times"), chosen))
@@ -251,8 +252,8 @@ def _summary_silent(sc: dict) -> str:
     return finding(
         f"<b>Quiet downgrades:</b> {sc['flagged_accounts']:,} paying accounts pay at least 20% less than their peak of the last six months, after a seat, plan or discount cut, without cancelling "
         f"({money(sc['arr_at_risk'], 2)} ARR still on the books, {money(sc['lost_arr'])} already lost), up from {sc['flagged_accounts_2025_09']} a "
-        f"year ago; {pct(sc['profile']['technology_share_flagged'], 0)} are Technology accounts. Their past contraction does not predict "
-        f"further loss, but low seat utilization does: accounts under {pct(rule.get('utilization_threshold'), 0)} contracted or churned "
+        f"year ago; {pct(sc['profile']['technology_share_flagged'], 0)} are Technology accounts. Their past contraction showed no clear "
+        f"excess risk of further loss in the back-test, but low seat utilization did: accounts under {pct(rule.get('utilization_threshold'), 0)} contracted or churned "
         f"{rule.get('lift', 0):.1f}× as often, typically {rule['by_billing_period']['monthly']['lead_median']:.0f} months ahead for monthly-billed "
         f"accounts (annual-billed: usually the full {rule['by_billing_period']['annual']['lead_median']:.0f} months the back-test window allows) — "
         "that is how the CS list is ranked.")
