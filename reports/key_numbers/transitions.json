@@ -49,6 +49,8 @@
   "non_ps_step_3m_pts": -0.006433427112299973,
   "non_ps_step_3m_lo": -0.0109983294577219,
   "non_ps_step_3m_hi": -0.0021594018839755187,
+  "non_ps_lowest_month": "2026-05-31",
+  "non_ps_lowest_month_rate": 0.003703703703703704,
   "basic_churn_non_ps_may_sep_2025": 0.019316493313521546,
   "basic_churn_non_ps_may_sep_2026": 0.01789935832489024,
   "basic_churn_non_ps_change_pts": -0.0014171349886313057,
@@ -104,6 +106,11 @@
     "churned": 0.25418410041841005,
     "premium": 0.13127615062761505
   },
+  "basic_signups_state_24m": {
+    "basic": 0.42248520710059173,
+    "churned": 0.3656804733727811,
+    "premium": 0.2118343195266272
+  },
   "downgrades_last_12m": 82,
   "downgrades_last_12m_mrr_delta": -33743.18,
   "downgrades_last_12m_by_source": {
@@ -130,6 +137,9 @@
     "Education & Non-profit": 0.0012345679012345679
   },
   "downgrades_last_12m_mrr_retained_share": 0.4426040327613543,
+  "downgrades_prior_12m": 49,
+  "downgrade_rate_last_12m": 0.005122438780609695,
+  "downgrade_rate_prior_12m": 0.005934358725929514,
   "cs_save_downgrades_observed_6m": 43,
   "cs_save_paying_6m_share": 0.9069767441860465,
   "cs_save_paying_6m_lo": 0.7839729623651224,
@@ -163,5 +173,13 @@
     "Paid Search": 921,
     "Paid Social": 634,
     "Partner": 340
-  }
+  },
+  "holdout_basic_signups_per_month": 149.6,
+  "holdout_n_per_arm": 448.79999999999995,
+  "holdout_p_old_6m": 0.08258527827648114,
+  "holdout_p_new_6m": 0.03951771301753058,
+  "holdout_gap_pts": 0.043067565258950564,
+  "holdout_n_per_arm_needed_80_power": 481.2245278417366,
+  "holdout_power_at_n": 0.772042775944423,
+  "holdout_mde_pts_80_power": 0.04459619172395179
 }

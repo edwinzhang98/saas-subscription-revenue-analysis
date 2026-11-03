@@ -2,7 +2,7 @@
 
 **Prepared by:** Revenue Analytics (RevOps) · **Date:** 2026-11-03 · **Audience:** VP of Revenue, Head of Customer Success, Finance,
 Product, Growth Marketing · **Data:** billing and product usage as of 2026-09-30 (synthetic dataset) · **October flash** follows the 7 Nov close.
-Definitions: `docs/02_metric_definitions.md` v1.2 · data-quality status: all checks pass (`docs/03_data_quality_checks.md`).
+Definitions: `docs/02_metric_definitions.md` v1.2 · data quality: 36 checks pass, 0 fail, 13 monitored (`docs/03_data_quality_checks.md`).
 
 ## 1. Headline
 
@@ -29,7 +29,7 @@ Lakewave Payments rollout it is 101.0%.
 | Movement | September 2026 | Q3 2026 | Q3 2026 rate (of start) | Q3 2025 rate |
 |---|---|---|---|---|
 | Start MRR | $1.98M | $1.88M |  |  |
-| + New | $102.7K | $220.6K | 11.8% | 15.2% |
+| + New | $103K | $221K | 11.8% | 15.2% |
 | + Expansion | $27.8K | $63.7K | 3.4% | 4.9% |
 | + Reactivation | $869 | $2.3K | 0.1% | 0.1% |
 | − Contraction | $22.5K | $49.1K | 2.6% | 1.4% |
@@ -84,7 +84,7 @@ Chart: `reports/figures/mrr_waterfall.png` (monthly movements since Oct 2024) an
 | 2026-Q1 | 97.4% | 94.6% |  |  |
 | 2026-Q2 | 98.2% |  |  |  |
 
-Every cohort dips at month 12 (first annual renewal). Cohorts acquired after the Paid Social launch (Q4 2025 onward) start weaker.
+7 of the 8 cohorts with a full year of history dip at month 12 (the first annual renewal); 2024-Q1 is the exception. At month 6, 2025-Q3 (99.0%) and 2026-Q1 (94.6%) are below 100%; every other cohort was at 101.8%–105.1% — too few weak cohorts to call a trend yet.
 
 ## 4. Expansion: what changed in Q3
 
@@ -139,44 +139,63 @@ in Q3 2025 — −1.5 pts, beyond the 1.0-pt threshold → **re-forecast Q4 expa
 | Queue | Accounts | ARR | ARR at stake |
 |---|---|---|---|
 | csm | 120 | $2.4M | $1.1M |
-| renewal_desk | 71 | $130.0K | $70.1K |
-| digital | 798 | $1.5M | $519.2K |
-| sales_assist | 100 | $395.4K | $27.8K |
-| in_app | 200 | $561.5K | $24.2K |
+| renewal_desk | 190 | $1.6M | $673K |
+| digital | 798 | $1.5M | $519K |
+| sales_assist | 100 | $395K | $27.8K |
+| in_app | 200 | $514K | $22.4K |
 
-`csm` = the first 120 CSM-covered risk accounts (CS capacity; annual renewals within 120 days first, then ARR at stake) — play P1;
-`renewal_desk` = Technology annual renewals within 6 months on the risk list (P3); `digital` = the rest of the risk list (P2);
-`sales_assist` = the top 100 upgrade opportunities (P4); `in_app` = the next 200 (in-app prompt only). ARR at stake: risk = ARR × the
-flag's historical hit rate; expansion = expected upgrade ARR. Reason codes: `docs/02_metric_definitions.md §15`.
+`csm` = the first 120 CSM-covered risk accounts by priority (CS capacity) — play P1; `renewal_desk` = every Technology
+annual renewal in the next 6 months not in P1 — the flagged ones from the risk list and the rest from the renewal calendar
+(`list_type = renewal`) — play P3; `digital` = the rest of the risk list (P2); `sales_assist` = the top 100 upgrade
+opportunities (P4); `in_app` = the next 200 (in-app prompt only). Priority inside each queue: annual renewals in fewer than 45
+days first (soonest first), then renewals in 45–120 days, then everything else, by ARR at stake. ARR at stake is a ranking
+weight, not an expected loss: risk and renewal rows = ARR × the historical share of such accounts that went on to contract
+≥ 10% or churn; expansion rows = expected upgrade ARR. Reason codes: `docs/02_metric_definitions.md §15`.
+
+**CSM queue by owner** (capacity assumption A9: about 120 proactive reviews a quarter across the team; the Head of CS
+assigns — the queue is not cut per CSM, so the load below is what each owner would carry this quarter)
+
+| Coverage | Owner | Accounts | ARR at stake |
+|---|---|---|---|
+| named | CSM-01 | 9 | $145K |
+| named | CSM-02 | 12 | $175K |
+| named | CSM-03 | 4 | $79.6K |
+| named | CSM-04 | 9 | $221K |
+| pooled | CSM-05 | 15 | $72.1K |
+| pooled | CSM-06 | 16 | $111K |
+| pooled | CSM-07 | 10 | $40.7K |
+| pooled | CSM-08 | 17 | $85.5K |
+| pooled | CSM-09 | 15 | $110K |
+| pooled | CSM-10 | 13 | $108K |
 
 **CSM queue, first 10**
 
 | Account | Segment | Industry | Owner | Plan | ARR | ARR at stake | Renewal / next bill | Main reason | Play |
 |---|---|---|---|---|---|---|---|---|---|
-| Boldgate Supply | Enterprise | Retail & E-commerce | CSM-01 | enterprise | $55.9K | $30.2K | 2027-01-26 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
-| Stoneforge Commerce | Enterprise | Retail & E-commerce | CSM-02 | enterprise | $42.5K | $22.9K | 2026-12-22 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
-| Boldpath Institute | Enterprise | Education & Non-profit | CSM-04 | premium | $36.6K | $19.8K | 2026-11-27 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
-| Vividbridge Software | Enterprise | Technology | CSM-03 | premium | $32.3K | $17.4K | 2026-11-11 | UTIL_BELOW_50 | Urgent — renews in 42 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Juniperforge AI | Mid-Market | Technology | CSM-08 | premium | $7.7K | $4.2K | 2026-10-04 | UTIL_BELOW_50 | Urgent — renews in 4 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Lumenscale Media | Mid-Market | Media & Marketing | CSM-10 | premium | $16.1K | $8.7K | 2026-10-04 | UTIL_BELOW_50 | Urgent — renews in 4 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Coralwave Systems | Mid-Market | Technology | CSM-06 | premium | $10.1K | $5.4K | 2026-10-08 | UTIL_BELOW_50 | Urgent — renews in 8 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Everwood Advisory | Mid-Market | Professional Services | CSM-08 | basic | $1.9K | $1.0K | 2026-10-10 | UTIL_BELOW_50 | Urgent — renews in 10 days: Usage is growing into the seats: confirm team size and seat count before renewal; right-size only if the admin asks, no discount |
 | Junipervale Software | Mid-Market | Technology | CSM-08 | enterprise | $30.0K | $16.2K | 2026-10-10 | UTIL_BELOW_50 | Urgent — renews in 10 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
-| Redforge Payments | Enterprise | Financial Services | CSM-02 | premium | $29.9K | $16.1K | 2026-12-20 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
-| Aspengrid Software | Enterprise | Technology | CSM-03 | premium | $27.2K | $14.7K | 2026-12-26 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
-| Junipershift Associates | Mid-Market | Professional Services | CSM-06 | enterprise | $25.1K | $13.5K | 2027-01-03 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
-| Goldenstream Bio | Enterprise | Healthcare | CSM-04 | premium | $23.2K | $12.5K | 2026-11-13 | UTIL_BELOW_50 | Urgent — renews in 44 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
-| Nextlight Manufacturing | Enterprise | Manufacturing | CSM-04 | premium | $22.5K | $12.1K | 2027-01-03 | UTIL_BELOW_50 | Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal |
+| Mapleview Wealth | Mid-Market | Financial Services | CSM-09 | basic | $2.0K | $1.1K | 2026-10-13 | UTIL_BELOW_50 | Urgent — renews in 13 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Maplebridge AI | Mid-Market | Technology | CSM-05 | premium | $7.1K | $3.8K | 2026-10-18 | UTIL_BELOW_50 | Urgent — renews in 18 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Swiftspark Learning | Mid-Market | Education & Non-profit | CSM-07 | premium | $6.4K | $3.4K | 2026-10-21 | UTIL_BELOW_50 | Urgent — renews in 21 days: Usage is growing into the seats: confirm team size and seat count before renewal; right-size only if the admin asks, no discount |
+| Cedarloop Consulting | Mid-Market | Professional Services | CSM-07 | basic | $3.3K | $1.8K | 2026-10-22 | UTIL_BELOW_50 | Urgent — renews in 22 days: Pre-renewal utilization review now: activate idle seats or agree the right size before renewal |
+| Juniperwave Labs | Mid-Market | Technology | CSM-10 | basic | $2.7K | $1.5K | 2026-10-23 | UTIL_BELOW_50 | Urgent — renews in 23 days: Usage is growing into the seats: confirm team size and seat count before renewal; right-size only if the admin asks, no discount |
 
 ## 7. Upgrade opportunities (sales-assist queue, first 10)
 
 | Account | Segment | Industry | Owner | Plan | ARR | ARR at stake | Renewal / next bill | Main reason | Play |
 |---|---|---|---|---|---|---|---|---|---|
+| Juniperstack Schools | Mid-Market | Education & Non-profit | CSM-09 | basic | $6.5K | $319 | 2026-10-18 | CORE_ACTIONS_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
+| Falconloop Brands | Mid-Market | Retail & E-commerce | CSM-10 | basic | $2.6K | $199 | 2026-10-22 | AUTOMATION_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
+| Vividbay Institute | Mid-Market | Education & Non-profit | CSM-08 | basic | $4.2K | $189 | 2026-10-29 | AUTOMATION_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
+| Cedarbridge Associates | Mid-Market | Professional Services | CSM-06 | basic | $2.4K | $266 | 2026-11-04 | AUTOMATION_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
 | Willowspark Group | Mid-Market | Professional Services | CSM-08 | basic | $3.2K | $448 | 2026-12-26 | CORE_ACTIONS_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
 | Aspenview Materials | Mid-Market | Manufacturing | CSM-09 | basic | $5.2K | $375 | 2026-12-17 | CORE_ACTIONS_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
-| Harborrock Credit Union | SMB | Financial Services |  | basic | $3.3K | $326 | 2026-12-07 | CORE_ACTIONS_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
-| Juniperstack Schools | Mid-Market | Education & Non-profit | CSM-09 | basic | $6.5K | $319 | 2026-10-18 | CORE_ACTIONS_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
-| Cedarbridge Associates | Mid-Market | Professional Services | CSM-06 | basic | $2.4K | $266 | 2026-11-04 | AUTOMATION_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
+| Harborrock Credit Union | SMB | Financial Services | — | basic | $3.3K | $326 | 2026-12-07 | CORE_ACTIONS_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
 | Starcraft Manufacturing | Mid-Market | Manufacturing | CSM-09 | basic | $6.8K | $253 | 2026-11-17 | CORE_ACTIONS_TOP_DECILE | 14-day Premium trial + sales-assist outreach (P4) |
-| Falconloop Brands | Mid-Market | Retail & E-commerce | CSM-10 | basic | $2.6K | $199 | 2026-10-22 | AUTOMATION_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
 | Summitview Schools | Mid-Market | Education & Non-profit | CSM-08 | basic | $2.7K | $194 | 2026-12-29 | AUTOMATION_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
-| Vividbay Institute | Mid-Market | Education & Non-profit | CSM-08 | basic | $4.2K | $189 | 2026-10-29 | AUTOMATION_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
 | Coralvale Learning | Mid-Market | Education & Non-profit | CSM-08 | basic | $4.8K | $176 | 2026-12-30 | CORE_ACTIONS_ABOVE_MEDIAN | 14-day Premium trial + sales-assist outreach (P4) |
 
 ## 8. Focus for October / November

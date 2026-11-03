@@ -10,14 +10,14 @@
     {
       "event": "S4 Technology hiring freeze + layoffs (from 2026-04)",
       "planted": "team growth -0.35 pt/week; 65% of Tech accounts lose 10%\u201335% of the team in Jun\u2013Jul",
-      "recovered": "Tech expansion rate 1.47% \u2192 0.28% of starting MRR (Q3 2025 \u2192 Q3 2026); Tech contraction 0.9% \u2192 5.7%; Tech 12-month NRR 109% \u2192 96%",
+      "recovered": "Technology expansion 6.2% \u2192 1.2% and contraction 0.9% \u2192 5.7% of Technology starting MRR (Q3 2025 \u2192 Q3 2026); Technology 12-month NRR 109% \u2192 96%",
       "naive_cut": "company-wide averages hide that one industry drives most of the change",
       "verdict": "recovered"
     },
     {
       "event": "S3 Basic packaging change (2026-04-15)",
       "planted": "upgrade hazard \u00d7 0.5, paywall hits \u00d7 0.4; upside: Basic churn \u00d7 0.85",
-      "recovered": "voluntary Basic upgrade rate 1.51% \u2192 0.69% per month (non-Paid-Social 1.60% \u2192 0.77%); paywall hits per active user \u00d7 0.39; automation runs \u00d7 2.95; Basic monthly churn 1.93% \u2192 1.79%",
+      "recovered": "voluntary Basic upgrade rate 1.51% \u2192 0.69% per month (non-Paid-Social 1.60% \u2192 0.77%; in two steps: 2.07% in Q3 2025 \u2192 1.46% in Jan\u2013Mar 2026, before the change, \u2192 0.82% in May\u2013Jul 2026); paywall hits per active user \u00d7 0.39; automation runs \u00d7 2.95; Basic monthly churn 1.93% \u2192 1.79%",
       "naive_cut": "a before/after on the pooled Basic upgrade rate also picks up the Paid Social mix shift",
       "verdict": "recovered"
     },
@@ -31,9 +31,9 @@
     {
       "event": "S1 design partners and early adopters (Oct\u2013Dec 2023)",
       "planted": "40 design partners; early adopters with higher product fit",
-      "recovered": "Q4 2023 cohort NRR at month 12 101% vs median 99% for 2024 \u2013 Q3 2025 cohorts; 116% at month 24",
+      "recovered": "Q4 2023 cohort NRR at month 12 101% vs a median of 99% (top quartile from 103%, best 109%) for the 2024 \u2013 Q3 2025 cohorts; at month 24 116% vs up to 126% for the 3 later cohorts observed that long",
       "naive_cut": "early TTM NRR points (small base) overstate the steady state",
-      "verdict": "recovered"
+      "verdict": "weak \u2014 right direction at month 12, not distinctive"
     },
     {
       "event": "S6 seasonality",
@@ -80,10 +80,17 @@
     "s4": {
       "tech_expansion_rate_q3_2025": 0.014709600029446683,
       "tech_expansion_rate_q3_2026": 0.0028143640510551664,
+      "tech_expansion_rate_own_base_q3_2025": 0.061571545983723906,
+      "tech_expansion_rate_own_base_q3_2026": 0.011808498923364311,
       "tech_contraction_rate_q3_2025": 0.009412107689055692,
       "tech_contraction_rate_q3_2026": 0.056758223360872974,
       "tech_nrr_2025_09": 1.0948129815389476,
       "tech_nrr_2026_09": 0.9554793308164924
+    },
+    "s3_timing": {
+      "non_ps_q3_2025": 0.020667257159728374,
+      "non_ps_jan_mar_2026": 0.01462056161522395,
+      "non_ps_may_jul_2026": 0.008187134502923977
     },
     "s3": {
       "upgrade_rate_pre": 0.015142150803461063,
@@ -106,11 +113,22 @@
     "s1": {
       "nrr_2023Q4_m12": 1.0092179806547754,
       "nrr_later_cohorts_m12_median": 0.9851335644937588,
-      "nrr_2023Q4_m24": 1.1550631156871036
+      "nrr_later_cohorts_m12_p75": 1.0301758274544113,
+      "nrr_later_cohorts_m12_max": 1.087506976273802,
+      "nrr_2023Q4_m24": 1.1550631156871036,
+      "nrr_later_cohorts_m24_max": 1.2600409517237117,
+      "later_cohorts_m24_n": 3
     },
     "s6": {
       "2024": -0.009113431899231056,
       "2025": 0.0028385819767957413
     }
+  },
+  "summary": {
+    "events": 6,
+    "recovered": 4,
+    "weak": 1,
+    "not_separable": 1,
+    "not_recovered": 0
   }
 }

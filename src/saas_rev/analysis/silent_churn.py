@@ -21,6 +21,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from .. import marts, theme
+from ..config import get_settings
 from ..theme import money, pct
 
 TOPIC = "silent_churn"
@@ -34,19 +35,25 @@ UTIL_THRESHOLD = 0.50
 WAU_TREND_THRESHOLD: float | None = None          # None = utilization-only rule
 DOC_DEFAULT_RULE = (0.60, -0.15)                  # the v1.0 draft in 02 §9.1, kept for comparison
 WAU_DOWN_CODE = -0.15                             # reason-code threshold for "WAU is falling" (context only)
+WAU_UP_CODE = 0.20                                # reason-code threshold for "usage is growing into the seats" (context only)
 OUTCOME_DROP = 0.10                               # outcome = billing-neutral MRR down >= 10% or churn (02 §9.1)
 FOLLOWUP_MONTHS = 6
 HISTORY_START, HISTORY_END = pd.Timestamp("2025-01-31"), pd.Timestamp("2026-03-31")   # complete 6-month windows
 BACKTEST_START, BACKTEST_END = pd.Timestamp("2025-07-31"), pd.Timestamp("2026-06-30")  # flags-per-month window
 BACKTEST_QUARTERS = ["2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"]
+# per-quarter stability check of the chosen rule: the quarters with >= 1,500 eligible rows and complete windows for both
+# billing periods (Q3 2026 only has annual rows whose renewal fell before the as-of date)
+STABILITY_QUARTERS = ["2024-Q3", "2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"]
+N_BOOT_RULE = 1000                                # account-level bootstrap resamples for the rule's precision / recall intervals
 CSM_COVERAGE = ("named_csm", "pooled_csm")
 CSM_CAPACITY_PER_QUARTER = 120                    # assumption A9
 RENEWAL_SOON_DAYS = 120
+URGENT_RENEWAL_DAYS = 45                          # priority tier 1: annual renewals this close are worked by date, soonest first
 UTIL_GRID = [round(x, 2) for x in np.arange(0.40, 0.801, 0.05)]
 TREND_GRID = [None] + [round(x, 2) for x in np.arange(0.0, -0.401, -0.05)]
 
 CLASS_LABELS = {"silent": "Silent", "saved_re_risk": "Saved by CS (re-risk)"}
-CLASS_COLORS = {"silent": theme.SERIES[0], "saved_re_risk": theme.SERIES[1]}
+CLASS_COLORS = {"silent": theme.ACCENT, "saved_re_risk": theme.SAVED}
 PROFILE_DIMS = {
     "segment": "Segment", "industry": "Industry", "acquisition_channel": "Acquisition channel", "plan_id": "Plan",
     "billing_period": "Billing period", "tenure_band": "Tenure (months)", "cs_coverage": "CS coverage",
@@ -68,10 +75,12 @@ REASON_CODES = {
     "SAVED_BY_CS_6M": "the contraction was a CS save offer: the account asked to cancel and was kept on smaller terms",
     "UTIL_BELOW_50": "seat utilization over the last 13 complete weeks is below 50% (the early-warning rule)",
     "WAU_DOWN_15PCT": "weekly active users in the last 4 weeks are at least 15% below the previous 9 weeks (context)",
+    "WAU_UP_20PCT": "weekly active users in the last 4 weeks are at least 20% above the previous 9 weeks — usage is growing into "
+                    "the seats (context; with an early-warning flag the play is a seat-count conversation, not an idle-seat save)",
     "RENEWAL_WITHIN_120D": "the annual term ends within 120 days",
 }
 CODE_PRIORITY = ["SAVED_BY_CS_6M", "DOWNGRADED_6M", "SEATS_CUT_20PCT_6M", "RENEWAL_RIGHTSIZED_6M", "SPEND_DOWN_20PCT_6M",
-                 "UTIL_BELOW_50", "WAU_DOWN_15PCT", "RENEWAL_WITHIN_120D"]
+                 "UTIL_BELOW_50", "WAU_DOWN_15PCT", "WAU_UP_20PCT", "RENEWAL_WITHIN_120D"]
 
 
 # =============================================================================== helpers
@@ -395,8 +404,10 @@ def rule_flag(df: pd.DataFrame, util_thr: float, trend_thr: float | None) -> pd.
 
 
 def lead_times(rows: pd.DataFrame, util_thr: float, trend_thr: float | None) -> pd.DataFrame:
-    """One row per caught outcome event: the uninterrupted run of flagged month-ends ending at the last flag
-    before the outcome month; lead = month-ends from the run's first flag to the outcome month."""
+    """One row per caught outcome event (customer, outcome month): the uninterrupted run of flagged month-ends that
+    ends closest to the outcome; lead = month-ends from that run's first flag to the outcome month (02 §9.1). An
+    event preceded by two separate runs (flag, gap, flag again) counts once, with the later run — the outcome
+    window of the earlier run's last row also contains the event, so without this step it would count twice."""
     fl = rows.loc[rule_flag(rows, util_thr, trend_thr), ["customer_id", "month_idx", "outcome", "outcome_idx",
                                                             "outcome_month", "billing_period", "is_csm"]]
     fl = fl.sort_values(["customer_id", "month_idx"])
@@ -406,6 +417,8 @@ def lead_times(rows: pd.DataFrame, util_thr: float, trend_thr: float | None) -> 
                                  last_outcome=("outcome", "last"), outcome_idx=("outcome_idx", "last"),
                                  outcome_month=("outcome_month", "last"))
     caught = runs[runs["last_outcome"]].copy()
+    caught = (caught.sort_values(["customer_id", "outcome_idx", "last_idx"])
+                    .drop_duplicates(["customer_id", "outcome_idx"], keep="last"))   # one run per event: the one ending closest to it
     caught["lead"] = (caught["outcome_idx"] - caught["first_idx"]).astype(int)
     caught["run_length"] = (caught["last_idx"] - caught["first_idx"] + 1).astype(int)
     return caught.reset_index(drop=True)
@@ -444,6 +457,60 @@ def evaluate_rule(rows: pd.DataFrame, util_thr: float, trend_thr: float | None) 
         "lead_p75": float(caught["lead"].quantile(0.75)) if len(caught) else np.nan,
         "share_lead_ge2": float((caught["lead"] >= 2).mean()) if len(caught) else np.nan,
     }
+
+
+def rule_by_quarter(rows: pd.DataFrame, util_thr: float, trend_thr: float | None,
+                    quarters: list[str] | None = None) -> pd.DataFrame:
+    """Precision, recall, base rate and volume of one threshold pair in each calendar quarter of the back-test (row
+    grain). The operating point is chosen and scored on the same rows, which flatters the best cell of the grid;
+    this is the check that the pooled figures hold quarter by quarter."""
+    quarters = STABILITY_QUARTERS if quarters is None else quarters
+    d = rows[rows["quarter_label"].isin(quarters)].copy()
+    d["flag"] = rule_flag(d, util_thr, trend_thr)
+    d["tp"] = d["flag"] & d["outcome"]
+    d["csm_flag_id"] = d["customer_id"].where(d["flag"] & d["is_csm"])
+    g = d.groupby("quarter_label").agg(eligible_rows=("outcome", "size"), positives=("outcome", "sum"), flagged_rows=("flag", "sum"),
+                                       true_positives=("tp", "sum"), csm_accounts=("csm_flag_id", "nunique"))
+    g = g.reindex(quarters).reset_index()
+    g["base_rate"] = g["positives"] / g["eligible_rows"]
+    g["precision"] = g["true_positives"] / g["flagged_rows"].replace(0, np.nan)
+    g["recall"] = g["true_positives"] / g["positives"].replace(0, np.nan)
+    g["lift"] = g["precision"] / g["base_rate"]
+    g["utilization_threshold"], g["wau_trend_threshold"] = util_thr, trend_thr
+    return g
+
+
+def bootstrap_rule(rows: pd.DataFrame, util_thr: float, trend_thr: float | None, n_boot: int = N_BOOT_RULE) -> pd.DataFrame:
+    """95% intervals for precision and recall from an account-level (cluster) bootstrap: accounts are resampled with
+    replacement and every month-end of a drawn account travels with it, so the interval allows for the ~10 rows each
+    account contributes (a row-level interval treats them as independent and is too narrow). One row per billing
+    period plus 'all', computed on the same resamples."""
+    d = rows[["customer_id", "billing_period", "outcome"]].copy()
+    d["flag"] = rule_flag(rows, util_thr, trend_thr).to_numpy()
+    d["tp"] = d["flag"] & d["outcome"]
+    ids, inv = np.unique(d["customer_id"].to_numpy(), return_inverse=True)
+    n = len(ids)
+    counts, n_acc = {}, {}
+    for bp in ("monthly", "annual", "all"):
+        m = np.ones(len(d), bool) if bp == "all" else (d["billing_period"] == bp).to_numpy()
+        counts[bp] = tuple(np.bincount(inv[m], weights=d[c].to_numpy()[m].astype(float), minlength=n) for c in ("tp", "flag", "outcome"))
+        n_acc[bp] = int((np.bincount(inv[m], minlength=n) > 0).sum())
+    rng = np.random.default_rng(get_settings().seed)
+    draws = {bp: np.full((n_boot, 2), np.nan) for bp in counts}
+    for b in range(n_boot):
+        w = np.bincount(rng.integers(0, n, n), minlength=n).astype(float)
+        for bp, (tp, fl, pos) in counts.items():
+            t, f, p = w @ tp, w @ fl, w @ pos
+            draws[bp][b] = (t / f if f else np.nan, t / p if p else np.nan)
+    out = []
+    for bp, (tp, fl, pos) in counts.items():
+        plo, phi = np.nanpercentile(draws[bp][:, 0], [2.5, 97.5])
+        rlo, rhi = np.nanpercentile(draws[bp][:, 1], [2.5, 97.5])
+        out.append({"billing_period": bp, "accounts": n_acc[bp], "rows": int(np.bincount(inv, minlength=n).sum()) if bp == "all" else int((d["billing_period"] == bp).sum()),
+                    "precision": tp.sum() / fl.sum() if fl.sum() else np.nan, "precision_lo": float(plo), "precision_hi": float(phi),
+                    "recall": tp.sum() / pos.sum() if pos.sum() else np.nan, "recall_lo": float(rlo), "recall_hi": float(rhi),
+                    "n_boot": n_boot, "utilization_threshold": util_thr, "wau_trend_threshold": trend_thr})
+    return pd.DataFrame(out)
 
 
 def backtest_grid(rows: pd.DataFrame | None = None) -> pd.DataFrame:
@@ -499,6 +566,11 @@ def current_flags(util_thr: float, trend_thr: float | None, month_end: pd.Timest
 def _play(r) -> str:
     if r["contraction_class"] == "saved_re_risk":
         return "Post-save check-in: confirm the smaller plan is in use; secure the renewal early"
+    if r["early_warning"] and pd.notna(r["wau_trend"]) and r["wau_trend"] >= WAU_UP_CODE:
+        # idle seats but a growing team: a seat-count conversation, not an idle-seat save
+        return ("Usage is growing into the seats: confirm team size and seat count before renewal; right-size only if the admin asks, no discount"
+                if r["queue"] == "csm" else
+                "Usage is growing into the seats: automated seat-count check-in before the next renewal or billing date; no idle-seat nudge, no discount")
     if r["early_warning"] and r["renewal_within_120d"]:
         return ("Pre-renewal utilization review 60 days out: activate idle seats or agree the right size before renewal"
                 if r["queue"] == "csm" else "Digital pre-renewal sequence 60 days out: utilization nudge + renewal email series")
@@ -516,8 +588,9 @@ def build_watchlist(threshold: float = DECLINE_THRESHOLD, lookback: int = LOOKBA
                     util_thr: float | None = None, trend_thr: float | None = None,
                     month_end: pd.Timestamp = AS_OF) -> pd.DataFrame:
     """Union of the §9 flags (silent / saved) and the early-warning flags at `month_end`, with reason codes,
-    evidence, ARR at stake (current ARR x the historical hit rate of the flag bucket) and a priority rank
-    within each queue (CSM-covered vs digital): annual renewals within 120 days first, then ARR at stake."""
+    evidence, ARR at stake (current ARR x the historical hit rate of the flag bucket) and a priority rank within
+    each queue (CSM-covered vs digital) in three tiers: (1) annual renewals in under URGENT_RENEWAL_DAYS days, soonest
+    first; (2) annual renewals within RENEWAL_SOON_DAYS days, by ARR at stake; (3) everything else, by ARR at stake."""
     if util_thr is None:
         util_thr, trend_thr = rule_thresholds()
     flags = silent_flags(threshold, lookback)
@@ -576,6 +649,7 @@ def build_watchlist(threshold: float = DECLINE_THRESHOLD, lookback: int = LOOKBA
         "SPEND_DOWN_20PCT_6M": w["silent_flag"],
         ucode: w["early_warning"],
         "WAU_DOWN_15PCT": w["wau_trend"] <= WAU_DOWN_CODE,
+        "WAU_UP_20PCT": w["wau_trend"] >= WAU_UP_CODE,
         "RENEWAL_WITHIN_120D": w["renewal_within_120d"],
     }
     priority = [c if c != "UTIL_BELOW_50" else ucode for c in CODE_PRIORITY]
@@ -598,7 +672,8 @@ def build_watchlist(threshold: float = DECLINE_THRESHOLD, lookback: int = LOOKBA
         if pd.notna(r["utilization_13w"]):
             parts.append(f"utilization {pct(r['utilization_13w'], 0)} over 13 weeks")
         if pd.notna(r["wau_trend"]):
-            parts.append(f"WAU {pct(r['wau_trend'], 0, signed=True)} vs prior 9 weeks")
+            parts.append(f"WAU {pct(r['wau_trend'], 0, signed=True)} vs prior 9 weeks"
+                         + (" (usage growing into the seats)" if r["early_warning"] and r["wau_trend"] >= WAU_UP_CODE else ""))
         if r["billing_period"] == "annual" and pd.notna(r["next_renewal_date"]):
             parts.append(f"annual renewal {r['next_renewal_date']:%Y-%m-%d} ({int(r['days_to_renewal'])} days)")
         elif pd.notna(r["next_renewal_date"]):
@@ -609,7 +684,12 @@ def build_watchlist(threshold: float = DECLINE_THRESHOLD, lookback: int = LOOKBA
     w["suggested_play"] = w.apply(_play, axis=1)
     w["list_type"] = "risk"
     w["plan"] = w["plan_id"]
-    w = w.sort_values(["renewal_within_120d", "arr_at_stake", "customer_id"], ascending=[False, False, True]).reset_index(drop=True)
+    # --- priority: tier 1 = annual renewals in under 45 days, soonest first (a CSM working top-down must reach them before
+    #     the date passes); tier 2 = renewals in 45-120 days by ARR at stake; tier 3 = everything else by ARR at stake
+    w["priority_tier"] = np.select([w["renewal_within_120d"] & (w["days_to_renewal"] < URGENT_RENEWAL_DAYS), w["renewal_within_120d"]],
+                                   [1, 2], default=3)
+    w["_key"] = np.where(w["priority_tier"] == 1, w["days_to_renewal"], -w["arr_at_stake"])
+    w = w.sort_values(["priority_tier", "_key", "customer_id"]).reset_index(drop=True)
     w["overall_rank"] = np.arange(1, len(w) + 1)
     w = w.sort_values(["queue", "overall_rank"])
     w["priority_rank"] = w.groupby("queue").cumcount() + 1
@@ -617,7 +697,7 @@ def build_watchlist(threshold: float = DECLINE_THRESHOLD, lookback: int = LOOKBA
             "current_arr", "next_renewal_date", "days_to_renewal", "list_type", "flag_source", "contraction_class", "early_warning",
             "reason_code_1", "reason_code_2", "reason_code_3", "reason_codes", "evidence", "bucket_precision", "arr_at_stake",
             "lost_arr", "decline_pct_norm", "seat_cut_pct", "utilization_13w", "wau_trend", "tenure_months",
-            "renewal_within_120d", "queue", "priority_rank", "overall_rank", "suggested_play"]
+            "renewal_within_120d", "queue", "priority_tier", "priority_rank", "overall_rank", "suggested_play"]
     w["seats"] = w["seats"].astype(int)
     w["lost_arr"] = w["lost_arr"].fillna(0.0)
     out = w[cols].reset_index(drop=True)
@@ -640,6 +720,9 @@ def build() -> dict[str, pd.DataFrame]:
                          + [evaluate_rule(rows, u, w) | {"billing_period": "all"}])
     doc_by_bp = pd.DataFrame([evaluate_rule(rows[rows["billing_period"] == bp], *DOC_DEFAULT_RULE) | {"billing_period": bp} for bp in ("monthly", "annual")]
                              + [evaluate_rule(rows, *DOC_DEFAULT_RULE) | {"billing_period": "all"}])
+    by_quarter = pd.concat([rule_by_quarter(rows, u, w).assign(rule="chosen"),
+                            rule_by_quarter(rows, *DOC_DEFAULT_RULE).assign(rule="doc_default")], ignore_index=True)
+    bootstrap = bootstrap_rule(rows, u, w)
     tables = {
         f"{TOPIC}__flags": flags,
         f"{TOPIC}__definition_check": pd.DataFrame([check]),
@@ -651,6 +734,8 @@ def build() -> dict[str, pd.DataFrame]:
         f"{TOPIC}__backtest_rows": rows,
         f"{TOPIC}__backtest_grid": grid,
         f"{TOPIC}__rule_by_billing": pd.concat([by_bp.assign(rule="chosen"), doc_by_bp.assign(rule="doc_default")], ignore_index=True),
+        f"{TOPIC}__rule_by_quarter": by_quarter,
+        f"{TOPIC}__rule_bootstrap": bootstrap,
         f"{TOPIC}__lead_times": caught,
         f"{TOPIC}__watchlist": build_watchlist(),
     }
@@ -674,15 +759,27 @@ def key_numbers() -> dict:
     chosen = grid[grid["chosen"]].iloc[0]
     doc = grid[grid["doc_default"]].iloc[0]
     bb = marts.load(f"{TOPIC}__rule_by_billing")
+    bq = marts.load(f"{TOPIC}__rule_by_quarter")
+    bq = bq[bq["rule"] == "chosen"]
+    boot = marts.load(f"{TOPIC}__rule_bootstrap").set_index("billing_period")
     wl = marts.load(f"{TOPIC}__watchlist")
     check = marts.load(f"{TOPIC}__definition_check").iloc[0]
     by_cls = cur.groupby("contraction_class").agg(n=("customer_id", "size"), arr=("current_arr", "sum"), lost=("lost_arr", "sum"))
     mix_acc = mix.groupby("kind", observed=True)["accounts"].sum()
     csm_q = wl[wl["queue"] == "csm"].sort_values("priority_rank")
     top120 = csm_q.head(CSM_CAPACITY_PER_QUARTER)
+    rising = wl["suggested_play"].str.startswith("Usage is growing into the seats")   # the WAU_UP_20PCT play (early warning + WAU up, not a CS save)
     bp_rows = lambda rule: {bp: {m: (None if pd.isna(v) else float(v)) for m, v in bb[(bb["rule"] == rule) & (bb["billing_period"] == bp)].iloc[0]
                                  [["base_rate", "precision", "recall", "lift", "flags_per_month", "csm_flags_per_month", "event_recall", "lead_median",
                                    "lead_p25", "lead_p75", "share_lead_ge2"]].items()} for bp in ("monthly", "annual")}
+    interval = lambda bp: {f"{m}_{s}": float(boot.loc[bp, f"{m}_{s}"]) for m in ("precision", "recall") for s in ("lo", "hi")}
+    by_quarter = {
+        "first_quarter": theme.qname(bq["quarter_label"].iloc[0]), "last_quarter": theme.qname(bq["quarter_label"].iloc[-1]),
+        "quarters": int(len(bq)), "min_eligible_rows": int(bq["eligible_rows"].min()),
+        **{f"{m}_{s}": float(getattr(bq[m], s)()) for m in ("precision", "recall", "base_rate", "lift") for s in ("min", "max")},
+        "note": "precision, recall and base rate of the chosen rule in each calendar quarter (row grain); selection and evaluation "
+                "share these rows, so this is the check that the pooled figures are not the best grid cell by luck",
+    }
     rule_dict = lambda r: {"utilization_threshold": float(r["utilization_threshold"]),
                            "wau_trend_threshold": None if pd.isna(r["wau_trend_threshold"]) else float(r["wau_trend_threshold"]),
                            **{m: float(r[m]) for m in ["base_rate", "precision", "recall", "lift", "flags_per_month", "csm_flags_per_month",
@@ -732,7 +829,14 @@ def key_numbers() -> dict:
                for m in ("churn_6m", "churn_6m_lo", "churn_6m_hi", "loss_6m", "loss_6m_lo", "loss_6m_hi")},
             **{f"{g}_n": int(fu.loc[g, "n"]) for g in ("silent", "saved_re_risk", "unflagged_matched")},
         },
-        "rule": {**rule_dict(chosen), "by_billing_period": bp_rows("chosen"),
+        "rule": {**rule_dict(chosen), **interval("all"),
+                 "interval": f"95% account-level cluster bootstrap: {int(boot.loc['all', 'n_boot']):,} resamples of {int(boot.loc['all', 'accounts']):,} accounts "
+                             "(every month-end of a drawn account travels with it)",
+                 "bootstrap_accounts": int(boot.loc["all", "accounts"]), "bootstrap_resamples": int(boot.loc["all", "n_boot"]),
+                 "by_billing_period": {bp: {**bp_rows("chosen")[bp], **interval(bp)} for bp in ("monthly", "annual")},
+                 "by_quarter": by_quarter,
+                 "lead_time_note": "one run per caught event (the flag run ending closest to the outcome); the pooled median moves with "
+                                   "the monthly / annual mix, so quote the by-billing medians and share_lead_ge2",
                  "criterion": f"max recall s.t. precision >= 2x base rate and <= {CSM_CAPACITY_PER_QUARTER} distinct CSM-covered accounts flagged per quarter",
                  "eligibility": "paying, no open cancellation, no Contraction in t-2..t, outcome window complete, 13 complete weeks of usage"},
         "doc_default_rule": {**rule_dict(doc), "by_billing_period": bp_rows("doc_default")},
@@ -743,9 +847,19 @@ def key_numbers() -> dict:
             "current_arr": float(wl["current_arr"].sum()), "arr_at_stake": float(wl["arr_at_stake"].sum()),
             "renewals_within_120d": int(wl["renewal_within_120d"].sum()),
             "renewal_arr_within_120d": float(wl.loc[wl["renewal_within_120d"], "current_arr"].sum()),
+            "renewals_under_45d": int((wl["priority_tier"] == 1).sum()), "urgent_renewal_days": URGENT_RENEWAL_DAYS,
+            "priority": f"within each queue: tier 1 = annual renewals in under {URGENT_RENEWAL_DAYS} days, soonest first; tier 2 = annual "
+                        f"renewals within {RENEWAL_SOON_DAYS} days by ARR at stake; tier 3 = the rest by ARR at stake",
+            "csm_tier1_under_45d": int((csm_q["priority_tier"] == 1).sum()), "csm_tier2_45_120d": int((csm_q["priority_tier"] == 2).sum()),
+            "csm_tier3_rest": int((csm_q["priority_tier"] == 3).sum()),
+            "top120_csm_renewals_within_120d": int(top120["renewal_within_120d"].sum()),
             "top120_csm_arr_at_stake": float(top120["arr_at_stake"].sum()),
             "top120_csm_share_of_arr_at_stake": float(top120["arr_at_stake"].sum() / wl["arr_at_stake"].sum()),
             "top120_csm_share_of_csm_arr_at_stake": float(top120["arr_at_stake"].sum() / max(csm_q["arr_at_stake"].sum(), 1e-9)),
+            "rising_usage": int(rising.sum()), "csm_rising_usage": int((rising & (wl["queue"] == "csm")).sum()),
+            "top120_csm_rising_usage": int(top120["suggested_play"].str.startswith("Usage is growing into the seats").sum()),
+            "rising_usage_note": f"early-warning accounts (not CS saves) whose WAU rose {WAU_UP_CODE:.0%}+ (last 4 weeks vs the 9 before): "
+                                 "seat-count conversation, not an idle-seat save (reason code WAU_UP_20PCT)",
             "bucket_precision": {kk: float(v) for kk, v in build_watchlist().attrs["bucket_precision"].items()},
         },
     }
@@ -772,16 +886,20 @@ def fig_flagged_trend(trend: pd.DataFrame, threshold: float = DECLINE_THRESHOLD,
     fig.update_yaxes(tickprefix="$", tickformat="~s", rangemode="tozero")
     _month_axis(fig, trend["month_end"])
     tot = trend.groupby("month_end")[["current_arr", "accounts"]].sum()
-    last, june = tot.iloc[-1], tot.loc[pd.Timestamp("2026-06-30")] if pd.Timestamp("2026-06-30") in tot.index else tot.iloc[-4]
-    return theme.apply(fig, f"ARR at risk from silent contraction reached {money(last['current_arr'])} ({int(last['accounts'])} accounts) at Sep 2026, "
-                            f"from {money(june['current_arr'])} in June",
+    june_me = pd.Timestamp("2026-06-30")
+    last, june = tot.iloc[-1], tot.loc[june_me] if june_me in tot.index else tot.iloc[-4]
+    m2 = lambda x: money(x, 2) if abs(x) >= 1e6 else money(x)      # "$1.07M" / "$571K": the precision the text pages use
+    direction = "up from" if last["current_arr"] >= june["current_arr"] else "down from"
+    return theme.apply(fig, f"Flagged ARR (silent + saved by CS) reached {m2(last['current_arr'])} across {int(last['accounts'])} accounts at "
+                            f"{last.name:%b %Y}, {direction} {m2(june['current_arr'])} in {june.name:%b %Y}",
                        f"Current ARR (USD) of accounts whose billing-neutral spend is ≥ {pct(threshold, 0)} below its {lookback}-month peak after a "
-                       "seat, plan or discount contraction, at each month-end", height=400)
+                       "seat, plan or discount contraction (02 §9), at each month-end; silent = customer-initiated, saved = kept by a CS save offer",
+                       height=400)
 
 
 def fig_tech_flag_rate(rate: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    colors = {"Technology": theme.SERIES[1], "All other industries": theme.SERIES[0]}
+    colors = {"Technology": theme.TECH, "All other industries": theme.OTHER}
     for grp in ("Technology", "All other industries"):
         s = rate[rate["group"] == grp]
         fig.add_trace(go.Scatter(x=theme.month_x(s["month_end"]), y=s["rate"], mode="lines+markers", name=grp,
@@ -828,7 +946,7 @@ def fig_overrepresentation(prof: pd.DataFrame, dimension: str = "industry") -> g
 
 def fig_contraction_mix(mix: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    colors = {"Technology": theme.SERIES[1], "All other industries": theme.SERIES[0]}
+    colors = {"Technology": theme.TECH, "All other industries": theme.OTHER}
     kinds = [k for k in KIND_ORDER if k in set(mix["kind"].astype(str))]
     for grp in ("Technology", "All other industries"):
         s = mix[mix["group"] == grp].assign(kind=lambda d: d["kind"].astype(str)).set_index("kind").reindex(kinds).fillna(0)
@@ -848,8 +966,8 @@ def fig_contraction_mix(mix: pd.DataFrame) -> go.Figure:
 def fig_followup(fu: pd.DataFrame) -> go.Figure:
     s = fu[fu["group"] != "unflagged_raw"]
     fig = go.Figure()
-    for col, name, color in (("churn_6m", "Churned within 6 months", theme.SERIES[0]),
-                             ("loss_6m", "Churned or contracted again (≥ 10%) within 6 months", theme.SERIES[1])):
+    for col, name, color in (("churn_6m", "Churned within 6 months", theme.NESTED_BLUES[0]),
+                             ("loss_6m", "Churned or contracted again (≥ 10%) within 6 months", theme.NESTED_BLUES[1])):
         fig.add_trace(go.Bar(x=s["label"], y=s[col], name=name, marker=dict(color=color),
                              error_y=dict(type="data", symmetric=False, array=s[f"{col}_hi"] - s[col], arrayminus=s[col] - s[f"{col}_lo"],
                                           color=theme.INK_2, thickness=1.5, width=6),
@@ -861,8 +979,10 @@ def fig_followup(fu: pd.DataFrame) -> go.Figure:
     si, um = fu.set_index("group").loc["silent"], fu.set_index("group").loc["unflagged_matched"]
     return theme.apply(fig, f"Newly flagged silent accounts churned at {pct(si['churn_6m'], 1)} within 6 months vs {pct(um['churn_6m'], 1)} for comparable "
                             "unflagged accounts: the loss is mostly already booked",
-                       "Accounts newly flagged Jan 2025 – Mar 2026 (complete 6-month windows); whiskers = 95% Wilson intervals; "
-                       "comparable = unflagged paying accounts weighted to the flagged segment × billing × tenure mix", height=420)
+                       "Accounts newly flagged Jan 2025 – Mar 2026 (complete 6-month windows); comparable = unflagged paying accounts weighted to "
+                       "the flagged segment × billing × tenure mix; whiskers = 95% Wilson intervals on the rows (the unflagged groups are "
+                       "account-months, so their intervals ignore within-account correlation and are narrower than account-level ones)",
+                       height=420)
 
 
 def fig_pr_tradeoff(grid: pd.DataFrame, chosen: tuple[float, float | None] | None = None,
@@ -871,8 +991,13 @@ def fig_pr_tradeoff(grid: pd.DataFrame, chosen: tuple[float, float | None] | Non
     colour, everything else gray; the chosen operating point (and the slider point, if any) highlighted."""
     g = grid.copy()
     g["w"] = g["wau_trend_threshold"]
-    fam = {None: ("Utilization only", theme.SERIES[0]), -0.15: ("… and WAU trend ≤ −15%", theme.SERIES[1]),
-           0.0: ("… and WAU trend ≤ 0%", theme.SERIES[2])}
+    if chosen is None:
+        chosen = rule_thresholds()
+    # one colour per family: blue = the utilization-only line (the chosen family, labelled); violet = "plus a WAU-trend
+    # condition", solid for ≤ 0% and dashed for ≤ −15% (the v1.0 draft's family); thresholds for those stay in the hover
+    fam = {None: ("Utilization only", theme.ACCENT, "solid", "circle"),
+           0.0: ("… and WAU trend ≤ 0%", theme.SERIES[6], "solid", "square"),
+           -0.15: ("… and WAU trend ≤ −15%", theme.SERIES[6], "dash", "diamond")}
     fig = go.Figure()
     other = g[~g["w"].isna() & ~g["w"].isin([-0.15, 0.0])]
     fig.add_trace(go.Scatter(x=other["recall"], y=other["precision"], mode="markers", name="Other WAU-trend thresholds",
@@ -880,11 +1005,14 @@ def fig_pr_tradeoff(grid: pd.DataFrame, chosen: tuple[float, float | None] | Non
                              customdata=np.c_[other["utilization_threshold"], other["w"], other["lift"], other["csm_accounts_per_quarter"]],
                              hovertemplate="utilization < %{customdata[0]:.0%}, WAU trend ≤ %{customdata[1]:.0%}<br>precision %{y:.1%}, recall %{x:.1%}, "
                                            "lift %{customdata[2]:.2f}×<br>%{customdata[3]:.0f} CSM-covered accounts / quarter<extra></extra>"))
-    for w, (name, color) in fam.items():
+    for w, (name, color, dash, symbol) in fam.items():
         s = (g[g["w"].isna()] if w is None else g[g["w"] == w]).sort_values("utilization_threshold")
-        fig.add_trace(go.Scatter(x=s["recall"], y=s["precision"], mode="lines+markers+text", name=name,
-                                 line=dict(color=color, width=2), marker=dict(size=8, color=color),
-                                 text=[f"{u:.0%}" for u in s["utilization_threshold"]], textposition="top center",
+        labelled = w is None
+        is_chosen_pt = [chosen[1] is None and abs(u - chosen[0]) < 1e-9 for u in s["utilization_threshold"]] if labelled else []
+        fig.add_trace(go.Scatter(x=s["recall"], y=s["precision"], mode="lines+markers+text" if labelled else "lines+markers", name=name,
+                                 line=dict(color=color, width=2, dash=dash), marker=dict(size=8, color=color, symbol=symbol),
+                                 text=[f"{u:.0%}" for u in s["utilization_threshold"]] if labelled else None,
+                                 textposition=["top right" if c else "top center" for c in is_chosen_pt] if labelled else None,   # clear of the ring
                                  textfont=dict(size=10, color=theme.INK_2),
                                  customdata=np.c_[s["utilization_threshold"], s["lift"], s["csm_accounts_per_quarter"]],
                                  hovertemplate="utilization < %{customdata[0]:.0%}" + ("" if w is None else f", WAU trend ≤ {w:.0%}")
@@ -903,8 +1031,6 @@ def fig_pr_tradeoff(grid: pd.DataFrame, chosen: tuple[float, float | None] | Non
     def rule_label(u, w):
         return f"utilization < {u:.0%}" + ("" if w is None else f" and WAU trend ≤ {w:.0%}")
 
-    if chosen is None:
-        chosen = rule_thresholds()
     cp = point(*chosen)
     if cp is not None:
         fig.add_trace(go.Scatter(x=[cp["recall"]], y=[cp["precision"]], mode="markers", name="Chosen rule (02 §9.1 v1.2)",
@@ -912,8 +1038,10 @@ def fig_pr_tradeoff(grid: pd.DataFrame, chosen: tuple[float, float | None] | Non
                                  hovertemplate=f"chosen: {rule_label(*chosen)}<extra></extra>"))
     dp = point(*DOC_DEFAULT_RULE)
     if dp is not None:
-        fig.add_annotation(x=dp["recall"], y=dp["precision"], text="v1.0 draft (60% / −15%)", showarrow=True, arrowhead=0, ax=60, ay=40,
-                           font=dict(size=11, color=theme.INK_2), arrowcolor=theme.INK_2)
+        # label in the empty band below the base-rate line (lower right of the point), so the arrow never runs along a line
+        fig.add_annotation(x=dp["recall"], y=dp["precision"], text=f"v1.0 draft: {rule_label(*DOC_DEFAULT_RULE)}", showarrow=True,
+                           arrowhead=2, arrowsize=0.8, arrowwidth=1, ax=110, ay=120, font=dict(size=11, color=theme.INK_2),
+                           arrowcolor=theme.INK_2, xanchor="left")
     if current is not None and current != chosen:
         sp = point(*current)
         if sp is not None:
@@ -935,7 +1063,7 @@ def fig_lead_time(caught: pd.DataFrame, rule: tuple[float, float | None] | None 
     c["bucket"] = np.where(c["lead"] >= 7, "7+", c["lead"].astype(int).astype(str))
     order = ["1", "2", "3", "4", "5", "6", "7+"]
     fig = go.Figure()
-    colors = {"monthly": theme.SERIES[0], "annual": theme.SERIES[1]}
+    colors = theme.BILLING_COLORS
     for bp in ("monthly", "annual"):
         s = c[c["billing_period"] == bp]
         cnt = s["bucket"].value_counts().reindex(order).fillna(0)
@@ -949,5 +1077,6 @@ def fig_lead_time(caught: pd.DataFrame, rule: tuple[float, float | None] | None 
     ge2 = (c["lead"] >= 2).mean() if len(c) else np.nan
     return theme.apply(fig, f"Median lead time {med_m:.0f} month-ends for monthly-billed accounts and {med_a:.0f} for annual; "
                             f"{pct(ge2, 0)} of caught events were flagged at least 2 month-ends ahead",
-                       "Caught outcome events in the back-test; annual windows run to the renewal (≤ 6 months), so annual lead times stop at 6",
+                       "Caught outcome events in the back-test, one per event (the flag run ending closest to it); annual windows run to the "
+                       "renewal (≤ 6 months), so annual lead times stop at 6",
                        height=380)

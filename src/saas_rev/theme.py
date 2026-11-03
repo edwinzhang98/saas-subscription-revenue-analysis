@@ -53,10 +53,17 @@ DIVERGING_SCALE = [
     [0.65, "#9ec5f4"], [0.85, "#3987e5"], [1.00, "#184f95"],
 ]
 
-# ---- segment colors (identity follows the entity, not the rank)
-SEGMENT_COLORS = {"SMB": SERIES[0], "Mid-Market": SERIES[1], "Enterprise": SERIES[2]}
-PLAN_COLORS = {"basic": SERIES[0], "premium": SERIES[1], "enterprise": SERIES[2], "churned": DEEMPH}
+# ---- story entities: one colour per entity across every chart (identity follows the entity, not the rank).
+# Orange is reserved for Technology accounts, the main story of the analysis; nothing else uses it.
+TECH = SERIES[1]                      # Technology accounts (industry)
+OTHER = SERIES[0]                     # the comparison group: all other industries / everyone else
+PAID_SOCIAL = SERIES[4]               # Paid Social acquisition program
+SAVED = MUTED                         # saved by CS (re-risk): reported separately, mid gray (DEEMPH light gray = churned / "the rest")
+BILLING_COLORS = {"monthly": SERIES[0], "annual": SERIES[2]}
+SEGMENT_COLORS = {"SMB": SERIES[0], "Mid-Market": SERIES[6], "Enterprise": SERIES[2]}
+PLAN_COLORS = {"basic": SERIES[0], "premium": SERIES[6], "enterprise": SERIES[2], "churned": DEEMPH}
 PLAN_LABELS = {"basic": "Basic", "premium": "Premium", "enterprise": "Enterprise", "churned": "Churned"}
+NESTED_BLUES = (SERIES[0], SEQ_BLUE[2])   # a measure and the broader measure that contains it (dark, light)
 
 
 def template() -> go.layout.Template:
@@ -94,8 +101,10 @@ def apply(fig: go.Figure, title: str | None = None, subtitle: str | None = None,
     """Title (bold claim) + optional subtitle (what is plotted, units). Long lines wrap so they never clip."""
     import textwrap
     if title is not None:
-        t_lines = textwrap.wrap(esc(title), width=wrap) or [""]
-        s_lines = textwrap.wrap(esc(subtitle), width=int(wrap * 1.35)) if subtitle else []
+        # wrap the plain text first (an escaped "$" would count as 5 characters), never split at hyphens
+        t_lines = [esc(x) for x in textwrap.wrap(title, width=wrap, break_on_hyphens=False)] or [""]
+        s_lines = ([esc(x) for x in textwrap.wrap(subtitle, width=int(wrap * 1.35), break_on_hyphens=False)]
+                   if subtitle else [])
         text = "<b>" + "<br>".join(t_lines) + "</b>"
         if s_lines:
             text += "<br>" + "<br>".join(f"<span style='font-size:12px;color:{MUTED}'>{line}</span>" for line in s_lines)
@@ -134,16 +143,18 @@ def month_x(s):
 
 
 # ---- number formats -------------------------------------------------------------
-def money(x: float | None, decimals: int = 1) -> str:
-    """$1.2M / $12.3K / $950."""
+def money(x: float | None, decimals: int | None = None) -> str:
+    """$1.2M / $571K / $12.3K / $950. Default precision: one decimal for millions and for thousands below $100K,
+    none for $100K–$999K (so "$571K", not "$571.0K"); pass `decimals` to override."""
     if x is None or (isinstance(x, float) and math.isnan(x)):
         return "–"
     sign = "−" if x < 0 else ""
     a = abs(x)
     if a >= 1e6:
-        return f"{sign}${a / 1e6:.{decimals}f}M"
+        return f"{sign}${a / 1e6:.{1 if decimals is None else decimals}f}M"
     if a >= 1e3:
-        return f"{sign}${a / 1e3:.{decimals}f}K"
+        d = (0 if a >= 1e5 else 1) if decimals is None else decimals
+        return f"{sign}${a / 1e3:.{d}f}K"
     return f"{sign}${a:,.0f}"
 
 

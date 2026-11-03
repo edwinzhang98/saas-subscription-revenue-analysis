@@ -27,6 +27,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from .. import marts, theme
+from ..config import get_settings
 from ..theme import money, pct
 
 TOPIC = "recommendations"
@@ -158,24 +159,72 @@ def loss_rates() -> dict:
     annual = lambda d: d["current_period_type"] == "annual"
     for key, (a, b) in {"apr_sep_2026": ("2026-03-31", "2026-08-31"), "apr_sep_2025": ("2025-03-31", "2025-08-31")}.items():
         for lab, fn in {"tech": tech, "non_tech": lambda d: ~tech(d)}.items():
-            out[f"renewal_loss_{lab}_{key}"], out[f"renewal_loss_{lab}_{key}_n"] = renewal_loss(a, b, fn)
+            r = renewal_loss(a, b, fn)
+            out[f"renewal_loss_{lab}_{key}"], out[f"renewal_loss_{lab}_{key}_n"] = r["loss"], r["n"]
+            out[f"renewal_loss_{lab}_{key}_lo"], out[f"renewal_loss_{lab}_{key}_hi"] = r["lo"], r["hi"]
+            out[f"renewal_event_rate_{lab}_{key}"] = r["event_rate"]
     out["rule"] = (u, w)
     return out
 
 
-def renewal_loss(first_month_end: str, last_month_end: str, mask_fn) -> tuple[float, int]:
+def _boot_ratio(num: np.ndarray, den: np.ndarray, draws: int = 1000) -> tuple[float, float]:
+    """95% percentile interval of sum(num) / sum(den) resampling rows (each row is one account)."""
+    if len(den) == 0 or den.sum() <= 0:
+        return float("nan"), float("nan")
+    rng = np.random.default_rng(get_settings().seed)
+    idx = rng.integers(0, len(den), (draws, len(den)))
+    r = num[idx].sum(axis=1) / den[idx].sum(axis=1)
+    return float(np.percentile(r, 2.5)), float(np.percentile(r, 97.5))
+
+
+def renewal_loss(first_month_end: str, last_month_end: str, mask_fn) -> dict:
     """MRR lost at annual renewal: annual terms ending in the month after month-end t (t in the window), MRR at t vs
-    MRR one month-end later (churn = 0, each account capped at its pre-renewal MRR)."""
+    MRR one month-end later (churn = 0, each account capped at its pre-renewal MRR). Each account renews at most once
+    in a 6-month window, so resampling rows is an account-level bootstrap. Also the share of renewals that lost
+    >= 10% of MRR or churned (the hit-rate used for ARR at stake on the CS list)."""
     f = marts.load("fct_account_month_features")
     mrr = marts.load("fct_customer_mrr_monthly")[["customer_id", "month_end", "mrr"]]
     x = f[(f["month_end"] >= first_month_end) & (f["month_end"] <= last_month_end) & (f["current_period_type"] == "annual")
           & (f["current_period_end"] > f["month_end"]) & (f["current_period_end"] <= f["month_end"] + pd.offsets.MonthEnd(1))]
-    x = x[mask_fn(x)]
+    x = x[mask_fn(x)].sort_values(["customer_id", "month_end"])
     nxt = mrr.assign(month_end=mrr["month_end"] - pd.offsets.MonthEnd(1)).rename(columns={"mrr": "mrr_next"})
     j = x[["customer_id", "month_end", "mrr"]].merge(nxt, on=["customer_id", "month_end"], how="left").fillna({"mrr_next": 0.0})
     if j["mrr"].sum() <= 0:
-        return float("nan"), 0
-    return float(1 - np.minimum(j["mrr_next"], j["mrr"]).sum() / j["mrr"].sum()), int(len(j))
+        return {"loss": float("nan"), "n": 0, "lo": float("nan"), "hi": float("nan"), "event_rate": float("nan")}
+    den = j["mrr"].to_numpy(float)
+    lost = den - np.minimum(j["mrr_next"].to_numpy(float), den)
+    lo, hi = _boot_ratio(lost, den)
+    return {"loss": float(lost.sum() / den.sum()), "n": int(len(j)), "lo": lo, "hi": hi,
+            "event_rate": float((j["mrr_next"] <= 0.9 * j["mrr"]).mean())}
+
+
+def tech_quarter_rates(quarter: str) -> dict:
+    """Technology expansion and contraction in a quarter as a share of Technology's own starting MRR."""
+    mv = marts.load("fct_mrr_movements")
+    q = marts.load("rpt_mrr_quarterly").set_index("quarter_label")
+    first = pd.Timestamp(q.loc[quarter, "first_month_end"])
+    x = mv[(mv["quarter_label"] == quarter) & (mv["industry"] == "Technology")]
+    start = float(mv[(mv["month_end"] == first) & (mv["industry"] == "Technology")]["mrr_prev"].sum())
+    return {"start_mrr": start, "expansion_rate": float(x["expansion_mrr"].sum()) / start,
+            "contraction_rate": float(x["contraction_mrr"].sum()) / start}
+
+
+def cohort_grr_6m() -> dict:
+    """6-month GRR of first-paid cohorts Sep 2025 – Mar 2026 (complete 6-month windows): Paid Social vs other SMB
+    signups. Churned customers count at MRR 0; each customer is capped at its first-month MRR."""
+    f = marts.load("fct_customer_mrr_monthly")
+    first = f[f["months_since_first_paid"] == 0][["customer_id", "mrr"]]
+    k6 = f[f["months_since_first_paid"] == 6].merge(first, on="customer_id", suffixes=("", "_0"))
+    k6 = k6[k6["cohort_month_end"].between("2025-09-30", "2026-03-31")].sort_values("customer_id")
+    out = {}
+    for key, mask in {"paid_social": k6["acquisition_channel"] == "Paid Social",
+                      "other_smb": (k6["acquisition_channel"] != "Paid Social") & (k6["segment"] == "SMB")}.items():
+        x = k6[mask]
+        den = x["mrr_0"].to_numpy(float)
+        kept = np.minimum(x["mrr"].to_numpy(float), den)
+        lo, hi = _boot_ratio(kept, den)
+        out[key] = {"grr": float(kept.sum() / den.sum()), "lo": lo, "hi": hi, "n": int(len(x))}
+    return out
 
 
 def expected_loss_share(wl: pd.DataFrame, rates: dict) -> pd.Series:
@@ -227,7 +276,7 @@ def assignments() -> pd.DataFrame:
 
 # =============================================================================== the plays
 def build_plays() -> list[Play]:
-    met, tr, ex, sc, ak = _k("metrics"), _k("transitions"), _k("expansion"), _k("silent_churn"), _k("answer_key")
+    met, tr, ex, sc = _k("metrics"), _k("transitions"), _k("expansion"), _k("silent_churn")
     rates = loss_rates()
     a = assignments()
     wf = marts.load("rpt_mrr_waterfall_monthly")
@@ -248,15 +297,18 @@ def build_plays() -> list[Play]:
     plays.append(Play(
         id="P1", title="CSM renewal desk for the top 120 at-risk accounts", owner="Head of CS (named + pooled CSMs)",
         who=f"The first {len(g1)} accounts of the CSM queue in docs/account_health_list.csv (CS capacity: {CSM_CAPACITY} reviews a "
-            f"quarter): annual renewals within 120 days first ({int(top['renewal_within_120d'].sum())} of them), then by ARR at stake; "
-            f"{money(m1 * 12)} ARR",
+            f"quarter): annual renewals in under 45 days first, soonest first ({int((top['priority_tier'] == 1).sum())} of them), then "
+            f"renewals within 120 days ({int((top['priority_tier'] == 2).sum())}) and the rest by ARR at stake; {money(m1 * 12)} ARR",
         what="Usage review 60–90 days before renewal: re-activate idle seats (admin training, re-onboard teams that stopped "
              "logging in), agree a right-sized renewal before procurement asks, line up an executive sponsor where the "
-             "champion left; for Technology accounts a headcount check-in before the next billing date",
+             "champion left; for Technology accounts a headcount check-in before the next billing date; for the "
+             f"{int(top['suggested_play'].str.startswith('Usage is growing').sum())} accounts whose weekly active users are rising 20%+ "
+             "into idle seats, confirm team size and seat count instead (no discount)",
         evidence=(f"CSM-covered accounts the utilization rule flagged lost {pct(rates['early_warning_csm'], 0)} of their MRR over the "
                   f"next 12 months vs {pct(rates['not_flagged_csm'], 0)} for unflagged CSM-covered accounts (history, Oct 2024 – Sep 2025 "
                   f"month-ends); back-test precision {pct(rule.get('precision'), 0)} vs a {pct(rule.get('base_rate'), 0)} base rate, median "
-                  f"lead {rule.get('lead_median', 0):.0f} months. The {sc.get('flagged_accounts', 0)} silently contracting accounts have already "
+                  f"lead {rule['by_billing_period']['monthly']['lead_median']:.0f} month-ends for monthly-billed and "
+                  f"{rule['by_billing_period']['annual']['lead_median']:.0f} for annual-billed accounts. The {sc.get('flagged_accounts', 0)} silently contracting accounts have already "
                   f"lost {money(sc.get('lost_arr', 0))} of ARR, but they churn or shrink again no more often than comparable accounts "
                   f"({pct(sc.get('followup', {}).get('silent_loss_6m'), 0)} vs {pct(sc.get('followup', {}).get('unflagged_matched_loss_6m'), 0)} "
                   "within 6 months), so the desk ranks by the early-warning flag and the renewal date"),
@@ -285,7 +337,10 @@ def build_plays() -> list[Play]:
 
     # ---- P3 Technology renewals -----------------------------------------------------------------
     g3, m3, s3 = grp("P3")
-    rec_s4 = ak.get("recovered_values", {}).get("s4", {})
+    t25, t26 = tech_quarter_rates("2025-Q3"), tech_quarter_rates("2026-Q3")
+    seg = marts.load("rpt_segment_retention_ttm")
+    tnrr = seg[(seg["dimension"] == "industry") & (seg["dimension_value"] == "Technology")].set_index("month_end")["nrr"]
+    r26 = rates
     plays.append(Play(
         id="P3", title="Technology renewals: flexible seat bands", owner="Sales (renewal AEs) + Customer Success",
         who=f"The {len(g3):,} Technology accounts on annual contracts renewing in the next 6 months that are not on the CSM desk "
@@ -293,13 +348,16 @@ def build_plays() -> list[Play]:
         what="Offer a seat band at renewal (commit to about 80% of today's seats, add seats back at the same price during the "
              "term) in exchange for renewing annually, instead of waiting for a cut-or-churn decision; route Technology "
              "renewals to the renewal desk 90 days out",
-        evidence=(f"Technology annual renewals in Apr–Sep 2026 lost {pct(rates['renewal_loss_tech_apr_sep_2026'], 0)} of their MRR at "
-                  f"renewal (seat right-sizing + churn, n = {rates['renewal_loss_tech_apr_sep_2026_n']}) vs "
-                  f"{pct(rates['renewal_loss_non_tech_apr_sep_2026'], 0)} for other industries in the same months and "
-                  f"{pct(rates['renewal_loss_tech_apr_sep_2025'], 0)} for Technology a year earlier; Technology expansion fell from {pct(rec_s4.get('tech_expansion_rate_q3_2025'), 1)} to "
-                  f"{pct(rec_s4.get('tech_expansion_rate_q3_2026'), 1)} of starting MRR a quarter (Q3 2025 → Q3 2026) and their "
-                  f"12-month NRR is {pct(rec_s4.get('tech_nrr_2026_09'), 1)}") if rec_s4 else
-                 "Technology accounts drive most of the 2026 contraction",
+        evidence=(f"Technology annual renewals in Apr–Sep 2026 lost {pct(r26['renewal_loss_tech_apr_sep_2026'], 0)} of their MRR at renewal "
+                  f"(seat right-sizing + churn; 95% {pct(r26['renewal_loss_tech_apr_sep_2026_lo'], 0)}–{pct(r26['renewal_loss_tech_apr_sep_2026_hi'], 0)}, "
+                  f"n = {r26['renewal_loss_tech_apr_sep_2026_n']}) vs {pct(r26['renewal_loss_non_tech_apr_sep_2026'], 0)} "
+                  f"({pct(r26['renewal_loss_non_tech_apr_sep_2026_lo'], 0)}–{pct(r26['renewal_loss_non_tech_apr_sep_2026_hi'], 0)}) for other "
+                  f"industries and {pct(r26['renewal_loss_tech_apr_sep_2025'], 0)} ({pct(r26['renewal_loss_tech_apr_sep_2025_lo'], 0)}–"
+                  f"{pct(r26['renewal_loss_tech_apr_sep_2025_hi'], 0)}) for Technology a year earlier — the direction CSMs report, "
+                  f"not a gap the intervals separate. Across all Technology accounts, expansion fell from {pct(t25['expansion_rate'], 1)} "
+                  f"to {pct(t26['expansion_rate'], 1)} of their starting MRR a quarter and contraction rose from "
+                  f"{pct(t25['contraction_rate'], 1)} to {pct(t26['contraction_rate'], 1)} (Q3 2025 → Q3 2026); their 12-month NRR "
+                  f"is {pct(float(tnrr.get(AS_OF, np.nan)), 1)} ({pct(float(tnrr.get(LY, np.nan)), 1)} a year earlier)"),
         measure="Randomise the offer by renewal month (alternate months) or by account where volume allows; KPI = renewal GRR "
                 "of offered vs not-offered Technology accounts; report the seats given back separately",
         risk="The band gives back MRR that some accounts would have kept; if the sector recovers the band looks expensive — "
@@ -316,7 +374,7 @@ def build_plays() -> list[Play]:
             f"(today: {len(g4)} accounts, {money(g4['mrr'].sum() * 12)} ARR)",
         what="Unlock a 14-day Premium trial in-app, with sales-assist outreach for Mid-Market; lead with the behaviour that put "
              "the account on the list (Premium paywall hits, automation use, team growth)",
-        evidence=(f"In the time-split back-test the top {UPGRADE_LIST} accounts upgraded at {pct(ex.get('precision_at_100_all'), 1)} within 90 days "
+        evidence=(f"In the purged time-split back-test (Oct–Dec 2025 held out) the top {UPGRADE_LIST} accounts upgraded at {pct(ex.get('precision_at_100_all'), 1)} within 90 days "
                   f"vs a {pct(ex.get('base_rate_test'), 1)} base rate ({ex.get('lift_at_100_all', float('nan')):.1f}× lift; test AUC "
                   f"{ex.get('auc_test', float('nan')):.2f}); a list brings about {money(per_list)} of upgrade MRR a quarter on its own. "
                   "Basic → Premium upgrades are small (about $200 MRR each), so this is a cheap play, not a big one") if ex else
@@ -341,7 +399,7 @@ def build_plays() -> list[Play]:
                   f"{pct(tr.get('mix_share_of_change'), 0)} of the fall; part of it was a drift that started before April. The "
                   f"retention upside is not distinguishable from zero, so the change costs about {money(-tr.get('net_mrr_per_month', 0))} "
                   f"MRR a month net (range {money(-tr.get('net_mrr_hi', 0))} to {money(-tr.get('net_mrr_lo', 0))})") if tr else
-                 "Upgrades halved after the April change",
+                 "Upgrades fell around the April change",
         measure="Decision read in Jul 2027 on the 90-day upgrade rate and early churn of the two arms (≈ 450 signups each); full "
                 "read on 6-month revenue per new Basic signup (upgrade MRR + retained Basic MRR) in Dec 2027; guardrail: trial → "
                 "paid conversion of the test cell",
@@ -357,8 +415,8 @@ def build_plays() -> list[Play]:
 
     # ---- P6 Paid Social cohorts ------------------------------------------------------------------
     g6 = a[a["play"] == "P6"]
-    rec_s2 = ak.get("recovered_values", {}).get("s2", {})
-    gap = max(float(rec_s2.get("grr_6m_other_smb", 0)) - float(rec_s2.get("grr_6m_paid_social", 0)), 0.0) if rec_s2 else 0.0
+    cg = cohort_grr_6m()
+    gap = max(cg["other_smb"]["grr"] - cg["paid_social"]["grr"], 0.0)
     ttu = tr.get("time_to_upgrade_12m_by_channel", {}) if tr else {}
     plays.append(Play(
         id="P6", title="Paid Social cohorts: activation and annual offer", owner="Growth Marketing + Lifecycle",
@@ -366,11 +424,12 @@ def build_plays() -> list[Play]:
             f"{money(g6['mrr'].sum() * 12)} ARR) and every new Paid Social signup",
         what="Activation sequence in the first 30 days (first automation, invite teammates), annual-plan offer at day 30, and "
              "exclusion of the audiences with the weakest 6-month revenue retention from targeting",
-        evidence=(f"6-month GRR of Paid Social program cohorts {pct(rec_s2.get('grr_6m_paid_social'), 0)} vs "
-                  f"{pct(rec_s2.get('grr_6m_other_smb'), 0)} for other SMB signups; 12 months after signup "
-                  f"{pct(ttu.get('Paid Social'), 0)} had upgraded vs {pct(min([v for c, v in ttu.items() if c != 'Paid Social'] or [0]), 0)}–"
-                  f"{pct(max([v for c, v in ttu.items() if c != 'Paid Social'] or [0]), 0)} for other channels") if rec_s2 else
-                 "Paid Social cohorts retain worse than other SMB cohorts",
+        evidence=(f"6-month GRR of the Sep 2025 – Mar 2026 Paid Social cohorts {pct(cg['paid_social']['grr'], 0)} "
+                  f"(95% {pct(cg['paid_social']['lo'], 0)}–{pct(cg['paid_social']['hi'], 0)}, n = {cg['paid_social']['n']}) vs "
+                  f"{pct(cg['other_smb']['grr'], 0)} ({pct(cg['other_smb']['lo'], 0)}–{pct(cg['other_smb']['hi'], 0)}) for other SMB "
+                  f"signups of the same months; 12 months after signup {pct(ttu.get('Paid Social'), 0)} had upgraded vs "
+                  f"{pct(min([v for c, v in ttu.items() if c != 'Paid Social'] or [0]), 0)}–"
+                  f"{pct(max([v for c, v in ttu.items() if c != 'Paid Social'] or [0]), 0)} for other channels"),
         measure="Alternate signup weeks get the new onboarding (holdout by week); KPI = 6-month revenue retained per $1 of "
                 "first-month MRR by channel cohort, which Marketing weighs against CAC",
         risk="Tighter targeting lowers signup volume; the budget trade-off needs CAC (not in this data). Most of the value "
@@ -378,7 +437,8 @@ def build_plays() -> list[Play]:
         addressable_mrr=float(g6["mrr"].sum()), outcome_rate=gap, effect=(0.20, 0.35, 0.50), accounts=len(g6),
         effect_label="share of the retention gap to other SMB closed",
         outcome_label="excess 6-month MRR loss vs other SMB signups",
-        addressable_label="MRR of program-cohort accounts paying today"))
+        addressable_label="MRR of program-cohort accounts paying today",
+        sizing_note="The 6-month gap is used as a floor for the 12-month loss (most program cohorts are not 12 months old yet)."))
 
     # ---- P7 dunning ------------------------------------------------------------------------------
     invol = float(last12["churn_mrr_involuntary"].sum())
@@ -463,6 +523,8 @@ def key_numbers() -> dict:
                        for k, v in r.items() if k != "rule"},
         "dunning_recovery_rate": _dunning_recovery_rate(),
         "head_of_cs_trigger": _cs_trigger(),
+        "tech_rates": {"q3_2025": tech_quarter_rates("2025-Q3"), "q3_2026": tech_quarter_rates("2026-Q3")},
+        "cohort_grr_6m": cohort_grr_6m(),
         "plays": [{k: (float(v) if isinstance(v, (int, float, np.floating, np.integer)) else v) for k, v in row.items()}
                   for row in t[["id", "play", "owner", "accounts", "addressable_mrr", "outcome_rate", "effect_low", "effect_base",
                                 "effect_high", "reach", "impact_mrr", "impact_mrr_low", "impact_mrr_high", "nrr_pts",

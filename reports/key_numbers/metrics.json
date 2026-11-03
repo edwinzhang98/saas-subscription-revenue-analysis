@@ -11,12 +11,15 @@
   "nrr_ttm_2026_06": 1.0700889331799919,
   "nrr_ttm_2025_09": 1.0475405660846793,
   "grr_ttm_2025_09": 0.8589814867320813,
+  "grr_ttm_2026_06": 0.8580187416197208,
   "nrr_ttm_ex_one_off": 1.0097673790601445,
   "nrr_ttm_2026_06_ex_one_off": 1.0413926812703704,
+  "nrr_ttm_2025_09_ex_one_off": 1.039989492491529,
   "nrr_base_customers": 2377,
   "nrr_runrate_q3_2026": 0.9287458845577075,
   "nrr_runrate_q3_2025": 1.0360979160402506,
   "nrr_runrate_q2_2026": 1.0841262310695001,
+  "nrr_runrate_first_below_100": true,
   "expansion_q3_2026": 63726.96000000001,
   "expansion_q2_2026": 94897.8,
   "expansion_q3_2025": 49591.78,
@@ -33,6 +36,9 @@
   "one_off_company": "Lakewave Payments",
   "one_off_expansion_mrr": 26400.0,
   "one_off_share_of_q2": 0.27819401503512203,
+  "one_off_month": "2026-05",
+  "one_off_seats_before": 550,
+  "one_off_seats_after": 1210,
   "bridge_qoq": {
     "Q2 2026 expansion": 94897.79999999999,
     "Remove one-off rollout": -26400.0,
@@ -55,5 +61,87 @@
   "seasonality_q2_q3_change_pts": {
     "2024": -0.009113431899231056,
     "2025": 0.0028385819767957413
-  }
+  },
+  "tech_mrr_start_q3_2025": 242028.68000000002,
+  "tech_mrr_start_q3_2026": 447328.66,
+  "tech_share_of_mrr_q3_2026": 0.23833376869660053,
+  "tech_base_expansion_rate_q3_2025": 0.061571545983723906,
+  "tech_base_expansion_rate_q2_2026": 0.045800367167663,
+  "tech_base_expansion_rate_q3_2026": 0.011808498923364311,
+  "tech_base_contraction_rate_q3_2025": 0.009412107689055692,
+  "tech_base_contraction_rate_q2_2026": 0.023472840860071068,
+  "tech_base_contraction_rate_q3_2026": 0.056758223360872974,
+  "tech_base_churn_rate_q3_2025": 0.0379541796451561,
+  "tech_base_churn_rate_q2_2026": 0.02872536277459584,
+  "tech_base_churn_rate_q3_2026": 0.03231959248933435,
+  "tech_base_seat_add_rate_q3_2025": 0.04720134820385749,
+  "tech_base_seat_add_rate_q2_2026": 0.039381192583803175,
+  "tech_base_seat_add_rate_q3_2026": 0.007223503184437143,
+  "tech_base_seat_cut_rate_q3_2025": 0.0035594128761930197,
+  "tech_base_seat_cut_rate_q2_2026": 0.01834956407139582,
+  "tech_base_seat_cut_rate_q3_2026": 0.05018869124102176,
+  "tech_expansion_contribution_q3_2025": 0.014709600029446683,
+  "tech_expansion_contribution_q3_2026": 0.0028143640510551664,
+  "tech_nrr_2025_09": 1.0948129815389476,
+  "tech_nrr_2026_09": 0.9554793308164924,
+  "tech_nrr_change_lo": -0.25631101400725737,
+  "tech_nrr_change_hi": -0.018731230326126773,
+  "industry_nrr_falls_clear_of_noise": [
+    "Technology"
+  ],
+  "expansion_contribution_by_bucket": {
+    "Technology (all)": {
+      "2025-Q3": 0.014709600029446683,
+      "2025-Q4": 0.01244219453270972,
+      "2026-Q1": 0.015078554660954558,
+      "2026-Q2": 0.011171637608310515,
+      "2026-Q3": 0.0028143640510551664
+    },
+    "Non-Tech seat expansion": {
+      "2025-Q3": 0.019712752133129795,
+      "2025-Q4": 0.030801948182384072,
+      "2026-Q1": 0.030841505463379777,
+      "2026-Q2": 0.02614234583978557,
+      "2026-Q3": 0.02473407161310521
+    },
+    "Non-Tech plan upgrades": {
+      "2025-Q3": 0.01448742723379481,
+      "2025-Q4": 0.013203530576050816,
+      "2026-Q1": 0.0067717569018747115,
+      "2026-Q2": 0.004924778414024288,
+      "2026-Q3": 0.006184399676394065
+    },
+    "Non-Tech other": {
+      "2025-Q3": 4.1457514738664717e-05,
+      "2025-Q4": 0.00031713678110050083,
+      "2026-Q1": 5.1890311294824505e-05,
+      "2026-Q2": 0.00010295859076689917,
+      "2026-Q3": 0.00022046991911194163
+    },
+    "One-off rollout": {
+      "2025-Q3": 0.0,
+      "2025-Q4": 0.0,
+      "2026-Q1": 0.0,
+      "2026-Q2": 0.01631908499187162,
+      "2026-Q3": 0.0
+    }
+  },
+  "tech_expansion_fall_main_quarter": "2026-Q3",
+  "tech_expansion_fall_main_share": 0.7025731622673891,
+  "plan_upgrade_fall_main_quarter": "2026-Q1",
+  "plan_upgrade_fall_main_share": 0.7746299322399895,
+  "cohort_month12": {
+    "cohorts": 8,
+    "cohorts_dipping": 7,
+    "exceptions": [
+      "2024-Q1"
+    ],
+    "median_step": -0.06707651667273662,
+    "median_typical_step": 0.004259738884982878,
+    "worst_cohort": "2025-Q3",
+    "worst_step": -0.13779243594616508,
+    "worst_value": 0.8569144361806462
+  },
+  "cohort_month12_annual_median_step": -0.10250547842190882,
+  "cohort_month12_monthly_median_step": 0.0032220433265884862
 }

@@ -39,12 +39,18 @@ STATES = ["basic", "premium", "enterprise", "churned"]
 PLANS = ["basic", "premium", "enterprise"]
 PAID_SOCIAL = "Paid Social"
 GROUP_PS, GROUP_OTHER = "Paid Social", "Other channels"
-GROUP_COLORS = {GROUP_PS: theme.SERIES[1], GROUP_OTHER: theme.ACCENT}
+GROUP_COLORS = {GROUP_PS: theme.PAID_SOCIAL, GROUP_OTHER: theme.OTHER}
 TENURE_BINS = [-1, 2, 6, 12, 24, 10_000]
 TENURE_LABELS = ["0-2 months", "3-6 months", "7-12 months", "13-24 months", "25+ months"]
 SOURCE_LABELS = {"self_serve": "Self-serve", "renewal": "At renewal", "customer_success": "CS save",
                  "sales": "Sales-assisted", "system": "Seat cap (system)"}
-SOURCE_COLORS = {"self_serve": theme.SERIES[0], "renewal": theme.SERIES[3], "customer_success": theme.SERIES[1]}
+# Who initiated a downgrade. The Plan Transitions page also draws the plan colours (Basic blue, Premium violet,
+# Enterprise green, Churned gray), so the initiators avoid all four: the two customer-initiated kinds take the
+# contraction amber and red, and a CS save wears the shared saved-by-CS gray (theme.SAVED) with a hatch, so it
+# never reads as the solid Churned gray of the Sankey above it.
+SOURCE_COLORS = {"self_serve": theme.SERIES[3], "renewal": theme.SERIES[7], "customer_success": theme.SAVED}
+SOURCE_PATTERNS = {"customer_success": dict(shape="/", fgcolor=theme.MUTED, size=8, solidity=0.22)}
+SOURCE_TEXT = {"self_serve": theme.INK, "renewal": "#ffffff", "customer_success": theme.INK}   # label ink inside each fill
 DIMENSION_LABELS = {"segment": "Segment", "acquisition_channel": "Acquisition channel", "industry": "Industry",
                     "tenure_band": "Tenure at start of month", "billing_period": "Billing period",
                     "channel_group": "Channel group"}
@@ -61,7 +67,7 @@ def wilson(k, n, z: float = Z):
         denom = 1 + z ** 2 / n
         centre = (p + z ** 2 / (2 * n)) / denom
         half = z * np.sqrt(p * (1 - p) / n + z ** 2 / (4 * n ** 2)) / denom
-    return centre - half, centre + half
+    return np.clip(centre - half, 0, 1), np.clip(centre + half, 0, 1)      # clip float noise (e.g. -1e-18 at k = 0)
 
 
 def newcombe_diff(k1, n1, k2, n2) -> tuple[float, float, float]:
@@ -308,14 +314,21 @@ def mix_rate_decomposition(pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW, b
     return summary, t
 
 
+def _monthly_group(group: str = GROUP_OTHER) -> pd.DataFrame:
+    """Monthly upgrade rate of one channel group with a month index t (0 = first month in the data), the
+    x of the linear trend fitted in step_vs_drift and drawn by fig_upgrade_rate_monthly."""
+    m = upgrade_rate_monthly("channel_group")
+    m = m[m["group"] == group].sort_values("month_end").reset_index(drop=True)
+    m["t"] = np.arange(len(m))
+    return m
+
+
 def step_vs_drift(pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW, group: str = GROUP_OTHER) -> dict:
     """Was the 2026 fall a step at the packaging date or a drift that was already under way?
     (1) a weighted linear trend fitted to the monthly rate over the pre window and extrapolated to
     the post months: the gap between actual and extrapolated is the step net of drift; (2) the three
     outcome months before April 2026 vs the three after it, with an interval."""
-    m = upgrade_rate_monthly("channel_group")
-    m = m[m["group"] == group].sort_values("month_end").reset_index(drop=True)
-    m["t"] = np.arange(len(m))
+    m = _monthly_group(group)
     a, c = _in_window(m, pre), _in_window(m, post)
     slope, intercept = np.polyfit(a["t"], a["rate"], 1, w=np.sqrt(a["n"]))
     pred = intercept + slope * c["t"]
@@ -326,13 +339,39 @@ def step_vs_drift(pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW, group: str
     b3 = m[(m["month_end"] >= "2026-01-31") & (m["month_end"] <= "2026-03-31")]
     a3 = m[(m["month_end"] >= "2026-05-31") & (m["month_end"] <= "2026-07-31")]
     d, lo, hi = newcombe_diff(b3["upgrades"].sum(), b3["n"].sum(), a3["upgrades"].sum(), a3["n"].sum())
-    return {"group": group, "slope_pts_per_month": float(slope), "pre_mean": pre_mean,
+    low = m.loc[m["rate"].idxmin()]
+    return {"group": group, "slope_pts_per_month": float(slope), "trend_intercept": float(intercept), "pre_mean": pre_mean,
             "pre_trend_level_at_end_of_pre": pre_end, "extrapolated_post": pred_post, "actual_post": actual_post,
             "raw_change_pts": actual_post - pre_mean, "raw_change_rel": actual_post / pre_mean - 1,
             "step_net_of_trend_pts": actual_post - pred_post, "step_net_of_trend_rel": actual_post / pred_post - 1,
             "rate_jan_mar_2026": float(b3["upgrades"].sum() / b3["n"].sum()),
             "rate_may_jul_2026": float(a3["upgrades"].sum() / a3["n"].sum()),
-            "step_3m_pts": d, "step_3m_lo": lo, "step_3m_hi": hi}
+            "step_3m_pts": d, "step_3m_lo": lo, "step_3m_hi": hi,
+            "lowest_month": str(pd.Timestamp(low["month_end"]).date()), "lowest_month_rate": float(low["rate"])}
+
+
+def drift_check(early: tuple = (pd.Timestamp("2025-04-30"), pd.Timestamp("2025-09-30")),
+                late: tuple = (pd.Timestamp("2025-10-31"), pd.Timestamp("2026-03-31")), dim: str = "segment",
+                min_n: int = 500) -> pd.DataFrame:
+    """The drift inside the pre window, by one dimension: the non-Paid-Social upgrade rate in the first half of
+    the pre window vs the second half (both before the packaging change). A fall within every group means the
+    drift is not a shift in the base's composition along that dimension."""
+    b = basic_base((early[0], late[1]))
+    b = b[b["channel_group"] == GROUP_OTHER]
+    out = []
+    for lab, w in (("early", early), ("late", late)):
+        x = _in_window(b, w)
+        g = x.groupby(dim, observed=True).agg(n=("customer_id", "size"), upgrades=("voluntary_upgrade", "sum")).reset_index()
+        out.append(g.rename(columns={dim: "group"}).assign(half=lab))
+    t = pd.concat(out, ignore_index=True)
+    t = t.pivot(index="group", columns="half", values=["n", "upgrades"])
+    t.columns = [f"{a}_{b}" for a, b in t.columns]
+    t = t.reset_index()
+    t = t[(t["n_early"] >= min_n) & (t["n_late"] >= min_n)].copy()
+    t["rate_early"], t["rate_late"] = t["upgrades_early"] / t["n_early"], t["upgrades_late"] / t["n_late"]
+    t.insert(0, "dimension", dim)
+    t["early_window"], t["late_window"] = window_label(early), window_label(late)
+    return t
 
 
 # =============================================================================== 4. packaging upside
@@ -438,26 +477,28 @@ def downgrade_events() -> pd.DataFrame:
         for cid, tt in zip(d["customer_id"], t):
             vals.append(np.nan if tt > AS_OF else float(piv.at[cid, tt] > 0))
         d[f"paying_{h}m"] = vals
-    # state 6 months later and a benchmark: comparable accounts' share paying 6 months later
+    # state 6 months later and a benchmark at each horizon: comparable accounts' share paying h months later
     st = p[["customer_id", "month_end", "state"]].rename(columns={"month_end": "t6", "state": "state_6m"})
     d["t6"] = d["month_end"] + pd.offsets.MonthEnd(6)
-    d = d.merge(st, on=["customer_id", "t6"], how="left")
-    paying = p[p["mrr"] > 0][["customer_id", "month_end", "plan_id", "segment"]]
-    paying = paying.assign(t6=paying["month_end"] + pd.offsets.MonthEnd(6))
-    paying = paying[paying["t6"] <= AS_OF]
-    later = p[["customer_id", "month_end", "mrr"]].rename(columns={"month_end": "t6", "mrr": "mrr_6m"})
-    paying = paying.merge(later, on=["customer_id", "t6"], how="left")
+    d = d.merge(st, on=["customer_id", "t6"], how="left").drop(columns=["t6"])
     dn_keys = set(zip(d["customer_id"], d["month_end"]))
+    paying = p[p["mrr"] > 0][["customer_id", "month_end", "plan_id", "segment"]]
     paying = paying[[(c, m) not in dn_keys for c, m in zip(paying["customer_id"], paying["month_end"])]]
-    bench = paying.groupby(["month_end", "plan_id", "segment"]).agg(
-        comparable_n=("customer_id", "size"), comparable_paying_6m=("mrr_6m", lambda s: float((s > 0).mean()))).reset_index()
-    d = d.merge(bench, left_on=["month_end", "from_plan_id", "segment"], right_on=["month_end", "plan_id", "segment"],
-                how="left").drop(columns=["plan_id", "t6"])
+    later = p[["customer_id", "month_end", "mrr"]].rename(columns={"month_end": "t_h", "mrr": "mrr_h"})
+    for h in (6, 12):
+        x = paying.assign(t_h=paying["month_end"] + pd.offsets.MonthEnd(h))
+        x = x[x["t_h"] <= AS_OF].merge(later, on=["customer_id", "t_h"], how="left")
+        bench = x.groupby(["month_end", "plan_id", "segment"]).agg(
+            **{f"comparable_n_{h}m": ("customer_id", "size"),
+               f"comparable_paying_{h}m": ("mrr_h", lambda s: float((s > 0).mean()))}).reset_index()
+        d = d.merge(bench, left_on=["month_end", "from_plan_id", "segment"], right_on=["month_end", "plan_id", "segment"],
+                    how="left").drop(columns=["plan_id"])
+    d = d.rename(columns={"comparable_n_6m": "comparable_n"}).drop(columns=["comparable_n_12m"])
     return d[["change_id", "customer_id", "company_name", "effective_date", "month_end", "quarter_label", "change_source",
               "source_label", "from_plan_id", "to_plan_id", "from_seats", "to_seats", "seats_cut", "from_billing_period",
               "to_billing_period", "from_discount_pct", "to_discount_pct", "from_mrr", "to_mrr", "delta_mrr",
               "mrr_retained_share", "segment", "industry", "acquisition_channel", "cs_coverage", "state_6m",
-              "paying_6m", "paying_12m", "comparable_n", "comparable_paying_6m"]].sort_values("effective_date")
+              "paying_6m", "paying_12m", "comparable_n", "comparable_paying_6m", "comparable_paying_12m"]].sort_values("effective_date")
 
 
 def downgrade_summary(window: tuple = (pd.Timestamp("2025-10-31"), AS_OF)) -> pd.DataFrame:
@@ -497,11 +538,12 @@ def downgrade_rate_by(dim: str = "segment", window: tuple = (pd.Timestamp("2025-
 
 
 def downgrade_survival(h: int = 6) -> pd.DataFrame:
-    """Share of downgraded accounts still paying h months later, by source, with a Wilson interval,
-    next to the comparable-account benchmark (same plan, segment and month, no downgrade)."""
+    """Share of downgraded accounts still paying h months later (h = 6 or 12), by source, with a Wilson
+    interval, next to the comparable-account benchmark at the same horizon (same plan, segment and month,
+    no downgrade)."""
     d = downgrade_events().dropna(subset=[f"paying_{h}m"])
     g = d.groupby("change_source").agg(downgrades=("change_id", "size"), paying=(f"paying_{h}m", "sum"),
-                                       comparable_paying=("comparable_paying_6m", "mean"),
+                                       comparable_paying=(f"comparable_paying_{h}m", "mean"),
                                        mrr_retained_share=("mrr_retained_share", "mean")).reset_index()
     g["paying_share"] = g["paying"] / g["downgrades"]
     g["lo"], g["hi"] = wilson(g["paying"], g["downgrades"])
@@ -557,6 +599,46 @@ def time_to_upgrade(by: str = "acquisition_channel", max_k: int = 24, cohort_win
     return out
 
 
+# =============================================================================== 7. sizing the packaging holdout
+def holdout_power(alpha: float = 0.05, power: float = 0.80, test_months: int = 6, horizon: int = 6) -> dict:
+    """Size of the holdout that would measure the packaging change (re-gate advanced automations for a random
+    half of new Basic signups for `test_months` months; primary metric = share of a signup cohort with a voluntary
+    upgrade within `horizon` months). Old-packaging rate = Basic signups Apr-Sep 2025, whose first six months end
+    before April 2026; new-packaging rate = old rate x (1 + the non-Paid-Social relative change in the monthly
+    rate), an approximation. Two-sided z-test for two proportions at the stated alpha and power."""
+    from statistics import NormalDist
+    sig = signup_states()
+    recent = sig[(sig["plan_0"] == "basic") & (sig["cohort_month_end"] >= POST_WINDOW[0])]
+    per_month = len(recent) / recent["cohort_month_end"].nunique()
+    n_arm = per_month * test_months / 2
+    old = time_to_upgrade("plan_id", max_k=horizon, cohort_window=(PRE_WINDOW[0], pd.Timestamp("2025-09-30")))
+    p_old = float(old.loc[old["k"] == horizon, "cif_upgrade"].iloc[0])
+    s, _ = mix_rate_decomposition()
+    p_new = p_old * (1 + s["non_ps"]["rel_change"])
+    var = p_old * (1 - p_old) + p_new * (1 - p_new)
+    z_a, z_b = NormalDist().inv_cdf(1 - alpha / 2), NormalDist().inv_cdf(power)
+    gap = p_old - p_new
+    return {"basic_signups_per_month": per_month, "n_per_arm": n_arm, "p_old": p_old, "p_new": p_new, "gap_pts": gap,
+            "n_per_arm_needed": float((z_a + z_b) ** 2 * var / gap ** 2), "mde_pts": float((z_a + z_b) * np.sqrt(var / n_arm)),
+            "power_at_n": float(NormalDist().cdf(abs(gap) / np.sqrt(var / n_arm) - z_a)), "alpha": alpha, "target_power": power}
+
+
+def downgrade_rate_yoy(window: tuple = (pd.Timestamp("2025-10-31"), AS_OF),
+                       prior: tuple = (pd.Timestamp("2024-10-31"), pd.Timestamp("2025-09-30"))) -> dict:
+    """Downgrades per Premium / Enterprise account-month (customers paying on a higher plan at the end of m-1),
+    last 12 months vs the 12 before: did downgrades rise faster than the base that can downgrade?"""
+    d, p = downgrade_events(), _panel()
+    base = p[p["plan_id"].isin(["premium", "enterprise"]) & (p["mrr"] > 0)][["customer_id", "month_end"]]
+    base = base.assign(outcome_month=base["month_end"] + pd.offsets.MonthEnd(1))
+    out = {}
+    for lab, w in (("last", window), ("prior", prior)):
+        n_dn, n_base = len(_in_window(d, w)), len(_in_window(base, w, "outcome_month"))
+        lo, hi = wilson(n_dn, n_base)
+        out.update({f"downgrades_{lab}": n_dn, f"account_months_{lab}": n_base, f"rate_{lab}": n_dn / n_base,
+                    f"rate_{lab}_lo": float(lo), f"rate_{lab}_hi": float(hi)})
+    return out
+
+
 # =============================================================================== build / key numbers
 def build() -> dict[str, pd.DataFrame]:
     """Derived tables written to the parquet cache (topic prefix `transitions__`)."""
@@ -600,12 +682,13 @@ def key_numbers() -> dict:
     t12_basic, t12_prem, t24_basic = transition_shares(12, "basic"), transition_shares(12, "premium"), transition_shares(24, "basic")
     ss = signup_states()
     sv = downgrade_survival(6).set_index("change_source")
-    dsum = downgrade_summary()
     d12 = _in_window(downgrade_events(), (pd.Timestamp("2025-10-31"), AS_OF))
     ttu = time_to_upgrade("acquisition_channel")
     ttu12 = ttu[ttu["k"] == 12].set_index("group")
     base_all = _basic_base()
     controlled = s_ct["non_ps_non_tech"]
+    dy = downgrade_rate_yoy()
+    hp = holdout_power()
     return {
         "as_of": str(AS_OF.date()), "packaging_change_date": str(PACKAGING_DATE.date()),
         "pre_window": s["pre_window"], "post_window": s["post_window"],
@@ -637,6 +720,7 @@ def key_numbers() -> dict:
         "non_ps_rate_jan_mar_2026": sd["rate_jan_mar_2026"],
         "non_ps_rate_may_jul_2026": sd["rate_may_jul_2026"], "non_ps_step_3m_pts": sd["step_3m_pts"],
         "non_ps_step_3m_lo": sd["step_3m_lo"], "non_ps_step_3m_hi": sd["step_3m_hi"],
+        "non_ps_lowest_month": sd["lowest_month"], "non_ps_lowest_month_rate": sd["lowest_month_rate"],
         # packaging upside: Basic logo churn
         "basic_churn_non_ps_may_sep_2025": ch["churn_a"], "basic_churn_non_ps_may_sep_2026": ch["churn_b"],
         "basic_churn_non_ps_change_pts": ch["change_pts"], "basic_churn_non_ps_change_lo": ch["change_lo"],
@@ -660,6 +744,7 @@ def key_numbers() -> dict:
         "signups_total": int(len(ss)), "signups_basic": int((ss["plan_0"] == "basic").sum()),
         "signups_observed_12m": int(ss["state_12"].notna().sum()), "signups_observed_24m": int(ss["state_24"].notna().sum()),
         "basic_signups_state_12m": {k: float(v) for k, v in ss[ss["plan_0"] == "basic"]["state_12"].value_counts(normalize=True).items()},
+        "basic_signups_state_24m": {k: float(v) for k, v in ss[ss["plan_0"] == "basic"]["state_24"].value_counts(normalize=True).items()},
         # downgrades
         "downgrades_last_12m": int(len(d12)), "downgrades_last_12m_mrr_delta": float(d12["delta_mrr"].sum()),
         "downgrades_last_12m_by_source": {k: int(v) for k, v in d12["change_source"].value_counts().items()},
@@ -669,6 +754,9 @@ def key_numbers() -> dict:
         "premium_downgrade_rate_last_12m_by_segment": {r.group: float(r.rate) for r in downgrade_rate_by("segment").itertuples()},
         "premium_downgrade_rate_last_12m_by_industry": {r.group: float(r.rate) for r in downgrade_rate_by("industry").itertuples()},
         "downgrades_last_12m_mrr_retained_share": float(1 + d12["delta_mrr"].sum() / d12["from_mrr"].sum()),
+        # downgrades per Premium / Enterprise account-month, last 12 months vs the 12 before
+        "downgrades_prior_12m": dy["downgrades_prior"], "downgrade_rate_last_12m": dy["rate_last"],
+        "downgrade_rate_prior_12m": dy["rate_prior"],
         "cs_save_downgrades_observed_6m": int(sv.loc["customer_success", "downgrades"]),
         "cs_save_paying_6m_share": float(sv.loc["customer_success", "paying_share"]),
         "cs_save_paying_6m_lo": float(sv.loc["customer_success", "lo"]), "cs_save_paying_6m_hi": float(sv.loc["customer_success", "hi"]),
@@ -682,6 +770,11 @@ def key_numbers() -> dict:
         "time_to_upgrade_12m_by_channel": {g: float(r["cif_upgrade"]) for g, r in ttu12.iterrows()},
         "churn_12m_by_channel": {g: float(r["cif_churn"]) for g, r in ttu12.iterrows()},
         "basic_signups_by_channel": {g: int(r["customers"]) for g, r in ttu12.iterrows()},
+        # sizing the packaging holdout (P5): two quarters of new Basic signups, 50 / 50, 6-month upgrade share
+        "holdout_basic_signups_per_month": hp["basic_signups_per_month"], "holdout_n_per_arm": hp["n_per_arm"],
+        "holdout_p_old_6m": hp["p_old"], "holdout_p_new_6m": hp["p_new"], "holdout_gap_pts": hp["gap_pts"],
+        "holdout_n_per_arm_needed_80_power": hp["n_per_arm_needed"], "holdout_power_at_n": hp["power_at_n"],
+        "holdout_mde_pts_80_power": hp["mde_pts"],
     }
 
 
@@ -698,46 +791,65 @@ def fig_sankey(horizon: int = 12, filters: dict | None = None, cohort_window: tu
     n_view = int(links["customers_in_view"].iloc[0])
     stages = ["start", "12m"] + (["24m"] if horizon == 24 else [])
     stage_title = {"start": "First paid month", "12m": "12 months later", "24m": "24 months later"}
-    nodes = []
-    for st in stages:
-        for s in STATES:
-            if st == "start" and s == "churned":
-                continue
-            nodes.append((st, s))
-    idx = {n: i for i, n in enumerate(nodes)}
     present = set(zip(links["stage_from"], links["state_from"])) | set(zip(links["stage_to"], links["state_to"]))
-    node_cust = {}
-    for r in links.itertuples():
-        node_cust[(r.stage_from, r.state_from)] = node_cust.get((r.stage_from, r.state_from), 0) + r.customers
-    for (st, s), grp in links.groupby(["stage_to", "state_to"]):
-        node_cust[(st, s)] = int(grp["customers"].sum())
-    labels = [f"{_label(s)} · {node_cust.get((st, s), 0):,}" if (st, s) in present else "" for st, s in nodes]
-    colors = [PLAN_COLORS[s] for _, s in nodes]
-    xs = {"start": 0.02, "12m": 0.5 if horizon == 24 else 0.98, "24m": 0.98}
+    nodes = [(st, s) for st in stages for s in STATES if (st, s) in present]      # only states that occur
+    idx = {n: i for i, n in enumerate(nodes)}
+    size = {}
+    for keys, g in links.groupby(["stage_from", "state_from"]):
+        size[keys] = int(g["customers"].sum())
+    for keys, g in links.groupby(["stage_to", "state_to"]):
+        size[keys] = int(g["customers"].sum())
+    thickness, pad = 16, 28
+    xs = {"start": 0.004, "12m": 0.5 if horizon == 24 else 0.996, "24m": 0.996}   # node centres (0 is ignored by Plotly)
     fig = go.Figure(go.Sankey(
-        arrangement="snap",
-        node=dict(label=labels, color=colors, pad=18, thickness=16, line=dict(color=theme.SURFACE, width=1),
-                  x=[xs[st] for st, _ in nodes], y=[0.001 + 0.2 * STATES.index(s) for _, s in nodes],
-                  hovertemplate="%{label} customers<extra></extra>"),
+        arrangement="fixed",
+        node=dict(label=[""] * len(nodes), color=[PLAN_COLORS[s] for _, s in nodes], pad=pad, thickness=thickness,
+                  line=dict(color=theme.SURFACE, width=1), x=[xs[st] for st, _ in nodes], y=[0.5] * len(nodes),
+                  customdata=[f"{stage_title[st]}: {_label(s)}, {size[(st, s)]:,} customers ({size[(st, s)] / n_view:.0%})"
+                              for st, s in nodes],
+                  hovertemplate="%{customdata}<extra></extra>"),
         link=dict(source=[idx[(r.stage_from, r.state_from)] for r in links.itertuples()],
                   target=[idx[(r.stage_to, r.state_to)] for r in links.itertuples()],
                   value=links["customers"].tolist(),
                   color=[_rgba(PLAN_COLORS[s], 0.30) for s in links["state_from"]],
                   customdata=np.c_[links["share_of_from"], [_label(s) for s in links["state_from"]],
                                    [_label(s) for s in links["state_to"]]],
-                  hovertemplate="%{customdata[1]} → %{customdata[2]}: %{value:,} customers (%{customdata[0]:.1%} of %{customdata[1]})<extra></extra>"),
-        textfont=dict(color=theme.INK, size=12)))
-    for st in stages:
-        fig.add_annotation(x=xs[st], y=1.08, xref="paper", yref="paper", text=stage_title[st], showarrow=False,
-                           font=dict(color=theme.INK_2, size=12),
-                           xanchor="left" if st == "start" else ("right" if st == stages[-1] else "center"))
+                  hovertemplate="%{customdata[1]} → %{customdata[2]}: %{value:,} customers (%{customdata[0]:.1%} of %{customdata[1]})<extra></extra>")))
     ss = signup_states(filters, cohort_window).dropna(subset=[f"state_{horizon}"])
     b = ss[ss["plan_0"] == "basic"][f"state_{horizon}"].value_counts(normalize=True)
-    title = (f"Of customers who started on Basic, {pct(b.get('premium', 0) + b.get('enterprise', 0), 0)} are on a higher plan "
-             f"and {pct(b.get('churned', 0), 0)} have churned {horizon} months later")
-    sub = f"{n_view:,} customers with {horizon} months of history (first paid month-end on or before {(AS_OF - pd.offsets.MonthEnd(horizon)):%b %Y}); link width = customers"
-    fig.update_layout(margin=dict(l=20, r=20, t=110, b=20), showlegend=False)
-    return theme.apply(fig, title, sub, height=440 if horizon == 12 else 480)
+    if len(b):
+        title = (f"Of Basic signups, {pct(b.get('premium', 0) + b.get('enterprise', 0), 0)} are on a higher plan {horizon} months "
+                 f"later and {pct(b.get('churned', 0), 0)} have churned")
+    else:     # e.g. the Enterprise segment alone: nobody in view started on Basic
+        title = (f"No Basic signups in this selection; {pct((ss[f'state_{horizon}'] == 'churned').mean(), 0)} of these signups "
+                 f"have churned {horizon} months later")
+    sub = (f"{n_view:,} customers followed from their first paid month ({ss['cohort_month_end'].min():%b %Y} – "
+           f"{ss['cohort_month_end'].max():%b %Y}) to {horizon} months later; node labels and link widths = customers")
+    fig.update_layout(margin=dict(l=128, r=128, t=124, b=16), showlegend=False)
+    fig = theme.apply(fig, title, sub, height=440 if horizon == 12 else 480)
+    # Fixed node layout (each column stacked top-down in plan order, `pad` px apart, heights as Plotly computes them),
+    # so the labels can sit outside the outer columns instead of on top of the links.
+    plot_h = fig.layout.height - fig.layout.margin.t - fig.layout.margin.b
+    cols = {st: [n for n in nodes if n[0] == st] for st in stages}
+    ky = (plot_h - (max(len(c) for c in cols.values()) - 1) * pad) / n_view
+    ys = {}
+    for col in cols.values():
+        top = 0.0
+        for n in col:
+            ys[n] = (top + size[n] * ky / 2) / plot_h
+            top += size[n] * ky + pad
+    fig.update_traces(node_y=[ys[n] for n in nodes])
+    for st, s in nodes:
+        outer = st == "start" or st == stages[-1]
+        fig.add_annotation(x=xs[st], y=1 - ys[(st, s)], xref="paper", yref="paper", text=f"{_label(s)} · {size[(st, s)]:,}",
+                           showarrow=False, yanchor="middle", xanchor="right" if st == "start" else "left",
+                           xshift=-(thickness / 2 + 6) if st == "start" else thickness / 2 + 6,
+                           font=dict(color=theme.INK, size=12),
+                           bgcolor=None if outer else _rgba(theme.SURFACE, 0.85), borderpad=2)
+    for st in stages:
+        fig.add_annotation(x=xs[st], y=1, xref="paper", yref="paper", yanchor="bottom", yshift=8, text=stage_title[st],
+                           showarrow=False, font=dict(color=theme.INK_2, size=12), xanchor="center")
+    return fig
 
 
 def fig_transition_heatmap(horizon: int = 12, filters: dict | None = None) -> go.Figure:
@@ -754,10 +866,12 @@ def fig_transition_heatmap(horizon: int = 12, filters: dict | None = None) -> go
     fig.update_yaxes(autorange="reversed", showgrid=False, automargin=True)
     fig.update_xaxes(showgrid=False, side="top")
     b = piv.loc["basic"]
-    return theme.apply(fig, f"{horizon} months on: {pct(b['basic'], 0)} of Basic account-months are still Basic, "
+    return theme.apply(fig, f"{horizon} months on: {pct(b['basic'], 0)} of Basic account-months still on Basic, "
                             f"{pct(b['premium'] + b['enterprise'], 0)} moved up, {pct(b['churned'], 0)} churned",
-                       f"Share of customers paying at a month-end that is in each state {horizon} months later, pooled over all "
-                       "start months with the horizon observed; n = account-months", height=300)
+                       f"Share of the account-months on each plan that are in each state {horizon} months later. Every paying "
+                       "month-end counts as a start, so accounts already past their first year sit alongside new ones — unlike "
+                       "the Sankey, which follows signups from their first paid month; pooled over all start months with the "
+                       "horizon observed; n = account-months", height=320)
 
 
 def fig_upgrade_rate_quarterly(filters: dict | None = None, start: str = "2024-Q4") -> go.Figure:
@@ -768,7 +882,7 @@ def fig_upgrade_rate_quarterly(filters: dict | None = None, start: str = "2024-Q
         s = g[g["group"] == grp]
         c = GROUP_COLORS[grp]
         fig.add_trace(go.Scatter(x=pd.concat([s["quarter_label"], s["quarter_label"][::-1]]),
-                                 y=pd.concat([s["hi"], s["lo"][::-1]]), fill="toself", fillcolor=_rgba(c, 0.15),
+                                 y=pd.concat([s["hi"], s["lo"][::-1]]), fill="toself", mode="lines", fillcolor=_rgba(c, 0.15),
                                  line=dict(color="rgba(0,0,0,0)"), hoverinfo="skip", showlegend=False, name=f"{grp} 95% interval"))
         fig.add_trace(go.Scatter(x=s["quarter_label"], y=s["rate"], mode="lines+markers", name=grp,
                                  line=dict(color=c, width=2), marker=dict(size=8, color=c, line=dict(color=theme.SURFACE, width=2)),
@@ -843,7 +957,7 @@ def fig_mix_rate(summary: dict, table: pd.DataFrame | None = None) -> go.Figure:
             base.append(level if v >= 0 else level + v)
             y.append(abs(v))
             level += v
-            colors.append(theme.ACCENT if v >= 0 else theme.SERIES[7])
+            colors.append(theme.MUTED)        # sign is in the label and the bar's direction; red is an initiator colour on this page
             text.append(pts(v, 2))
     fig = go.Figure(go.Bar(x=x, y=y, base=base, marker=dict(color=colors), text=text, textposition="outside",
                            textfont=dict(color=theme.INK), cliponaxis=False, hovertemplate="%{x}: %{text}<extra></extra>"))
@@ -860,44 +974,51 @@ def fig_mix_rate(summary: dict, table: pd.DataFrame | None = None) -> go.Figure:
 def fig_upgrade_rate_monthly(start: str = "2025-01-31", pre: tuple = PRE_WINDOW, post: tuple = POST_WINDOW) -> go.Figure:
     """Timing within the non-Paid-Social base (the Paid Social series is too small for a monthly
     read; it is on the quarterly chart): a step at the packaging date vs the drift already under way."""
-    allm = upgrade_rate_monthly("channel_group")
-    allm = allm[allm["group"] == GROUP_OTHER].sort_values("month_end").reset_index(drop=True)
-    allm["t"] = np.arange(len(allm))
+    allm = _monthly_group(GROUP_OTHER)
     s = allm[allm["month_end"] >= start]
     c = GROUP_COLORS[GROUP_OTHER]
     x = theme.month_x(s["month_end"])
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=pd.concat([x, x[::-1]]), y=pd.concat([s["hi"], s["lo"][::-1]]), fill="toself",
+    fig.add_trace(go.Scatter(x=pd.concat([x, x[::-1]]), y=pd.concat([s["hi"], s["lo"][::-1]]), fill="toself", mode="lines",
                              fillcolor=_rgba(c, 0.12), line=dict(color="rgba(0,0,0,0)"), hoverinfo="skip", showlegend=False))
     fig.add_trace(go.Scatter(x=x, y=s["rate"], mode="lines+markers", name="Non-Paid-Social Basic customers", line=dict(color=c, width=2),
                              marker=dict(size=8, color=c, line=dict(color=theme.SURFACE, width=2)),
                              customdata=np.c_[s["n"], s["upgrades"]],
                              hovertemplate="%{x|%b %Y}<br>%{y:.2%} (%{customdata[1]:,} upgrades / %{customdata[0]:,} account-months)<extra></extra>"))
+    # every number drawn here and in the title comes from the same step_vs_drift() call (same windows, same fit)
     sd = step_vs_drift(pre, post)
-    a = _in_window(allm, pre)
-    slope, intercept = np.polyfit(a["t"], a["rate"], 1, w=np.sqrt(a["n"]))
+    slope, intercept = sd["slope_pts_per_month"], sd["trend_intercept"]
     ext = allm[(allm["month_end"] >= pre[0]) & (allm["month_end"] <= post[1])]
     fig.add_trace(go.Scatter(x=theme.month_x(ext["month_end"]), y=intercept + slope * ext["t"], mode="lines",
                              name="Pre-window trend, extended", line=dict(color=theme.INK_2, width=1.5, dash="dot"),
                              hovertemplate="%{x|%b %Y}<br>trend %{y:.2%}<extra></extra>"))
-    for w, lab, col in ((pre, "pre", theme.DEEMPH), (post, "post", theme.INK_2)):
-        ww = _in_window(allm, w)
-        rate = ww["upgrades"].sum() / ww["n"].sum()
+    for w, lab, rate, col in ((pre, "before", sd["pre_mean"], theme.DEEMPH), (post, "after", sd["actual_post"], theme.INK_2)):
         x0 = theme.month_x(pd.Series([w[0]])).iloc[0]
         x1 = theme.month_x(pd.Series([w[1]])).iloc[0] + pd.Timedelta(days=27)
         fig.add_shape(type="line", x0=x0, x1=x1, y0=rate, y1=rate, line=dict(color=col, width=2))
         fig.add_annotation(x=x1, y=rate, text=f"{lab} {pct(rate, 2)}", showarrow=False, xanchor="left", xshift=4,
                            font=dict(color=theme.INK_2, size=11))
+    # the trend's average over the post window (what the step is measured against), labelled at the window's middle month
+    pm = _in_window(allm, post).reset_index(drop=True)
+    mid = pm.iloc[len(pm) // 2]
+    fig.add_annotation(x=theme.month_x(pd.Series([mid["month_end"]])).iloc[0], y=intercept + slope * mid["t"], yshift=11,
+                       text=f"trend {pct(sd['extrapolated_post'], 2)}", showarrow=False, font=dict(color=theme.INK_2, size=11))
     fig.add_vline(x=PACKAGING_DATE, line=dict(color=theme.AXIS, width=1, dash="dot"))
     fig.add_annotation(x=PACKAGING_DATE, y=1.0, yref="paper", text="15 Apr 2026", showarrow=False, xanchor="left",
                        xshift=4, font=dict(color=theme.MUTED, size=11))
     fig.update_yaxes(tickformat=".1%", rangemode="tozero")
     fig.update_xaxes(tickformat="%b %Y", dtick="M3", range=[x.min() - pd.Timedelta(days=15), x.max() + pd.Timedelta(days=110)])
-    return theme.apply(fig, f"Non-Paid-Social upgrades were already drifting down before April 2026, then stepped down: "
-                            f"{pct(sd['rate_jan_mar_2026'], 2)} (Jan–Mar) → {pct(sd['rate_may_jul_2026'], 2)} (May–Jul); "
-                            f"{pts(sd['step_net_of_trend_pts'], 2)} against the pre-window trend, {pts(sd['raw_change_pts'], 2)} against the pre-window mean",
-                       "Monthly voluntary Basic → higher upgrade rate, Paid Social excluded, Wilson 95% intervals; dotted line = linear trend fitted on "
-                       f"{window_label(pre)} (weighted by base size) and extended; horizontal lines = pooled window rates", height=420)
+    raw, step = sd["raw_change_pts"], sd["step_net_of_trend_pts"]
+    title = (f"Non-Paid-Social Basic upgrades {'fell' if raw < 0 else 'rose'} from {pct(sd['pre_mean'], 2)} to "
+             f"{pct(sd['actual_post'], 2)} of accounts a month")
+    if raw < step < 0 and sd["slope_pts_per_month"] < 0:
+        title += f"; {abs(step) * 100:.2f} of the {abs(raw) * 100:.2f}-point fall is beyond the downtrend already under way"
+    else:
+        title += f"; {pts(step, 2)} against the pre-window trend extended"
+    return theme.apply(fig, title,
+                       f"Voluntary Basic → higher upgrades per Basic account-month, Paid Social excluded, Wilson 95% bands; flat lines = "
+                       f"pooled rates, {window_label(pre)} (before) and {window_label(post)} (after); dotted = linear trend fitted on "
+                       "the before window (weighted by base size), extended", height=420)
 
 
 def fig_basic_churn_monthly(start: str = "2025-01-31") -> go.Figure:
@@ -906,25 +1027,31 @@ def fig_basic_churn_monthly(start: str = "2025-01-31") -> go.Figure:
     x = theme.month_x(g["month_end"])
     ch = basic_churn_compare()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=pd.concat([x, x[::-1]]), y=pd.concat([g["hi"], g["lo"][::-1]]), fill="toself",
-                             fillcolor=_rgba(theme.ACCENT, 0.12), line=dict(color="rgba(0,0,0,0)"), hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=pd.concat([x, x[::-1]]), y=pd.concat([g["hi"], g["lo"][::-1]]), fill="toself", mode="lines",
+                             fillcolor=_rgba(theme.OTHER, 0.12), line=dict(color="rgba(0,0,0,0)"), hoverinfo="skip", showlegend=False))
     fig.add_trace(go.Scatter(x=x, y=g["rate"], mode="lines+markers", name="Basic monthly logo churn (non-Paid-Social)",
-                             line=dict(color=theme.ACCENT, width=2), marker=dict(size=8, color=theme.ACCENT, line=dict(color=theme.SURFACE, width=2)),
+                             line=dict(color=theme.OTHER, width=2), marker=dict(size=8, color=theme.OTHER, line=dict(color=theme.SURFACE, width=2)),
                              customdata=np.c_[g["n"], g["churned"]],
                              hovertemplate="%{x|%b %Y}<br>%{y:.2%} (%{customdata[1]:,} / %{customdata[0]:,})<extra></extra>"))
-    for lab, w, c in (("May–Sep 2025", CHURN_WINDOW_LY, theme.DEEMPH), ("May–Sep 2026", CHURN_WINDOW_CUR, theme.INK_2)):
-        rate = ch["churn_a"] if w == CHURN_WINDOW_LY else ch["churn_b"]
+    # pooled rate over each comparison window: drawn as flat lines and named in the legend (a label beside the
+    # 2025 line would sit on the monthly series)
+    for w, rate, c in ((CHURN_WINDOW_LY, ch["churn_a"], theme.DEEMPH), (CHURN_WINDOW_CUR, ch["churn_b"], theme.INK_2)):
         x0, x1 = theme.month_x(pd.Series([w[0]])).iloc[0], theme.month_x(pd.Series([w[1]])).iloc[0] + pd.Timedelta(days=27)
-        fig.add_shape(type="line", x0=x0, x1=x1, y0=rate, y1=rate, line=dict(color=c, width=2))
-        fig.add_annotation(x=x1, y=rate, text=f"{lab}: {pct(rate, 2)}", showarrow=False, xanchor="left", xshift=4,
-                           font=dict(color=theme.INK_2, size=11))
-    fig.add_vline(x=pd.Timestamp("2026-04-15"), line=dict(color=theme.AXIS, width=1, dash="dot"))
+        fig.add_trace(go.Scatter(x=[x0, x1], y=[rate, rate], mode="lines", line=dict(color=c, width=2),
+                                 name=f"{window_label(w)}: {pct(rate, 2)} pooled", hoverinfo="skip"))
+    fig.add_vline(x=PACKAGING_DATE, line=dict(color=theme.AXIS, width=1, dash="dot"))
+    fig.add_annotation(x=PACKAGING_DATE, y=1.0, yref="paper", text="15 Apr 2026", showarrow=False, xanchor="left",
+                       xshift=4, font=dict(color=theme.MUTED, size=11))
     fig.update_yaxes(tickformat=".1%", rangemode="tozero")
-    fig.update_xaxes(tickformat="%b %Y", dtick="M3", range=[x.min() - pd.Timedelta(days=15), x.max() + pd.Timedelta(days=140)])
-    return theme.apply(fig, f"Basic logo churn is {pts(ch['change_pts'], 2)} per month after the packaging change (May–Sep 2026 vs 2025, "
-                            f"95%: {pts(ch['change_lo'], 2)} to {pts(ch['change_hi'], 2)}) — not distinguishable from zero",
+    fig.update_xaxes(tickformat="%b %Y", dtick="M3", range=[x.min() - pd.Timedelta(days=15), x.max() + pd.Timedelta(days=15)])
+    d = ch["change_pts"]
+    title = (f"Basic logo churn was {abs(d) * 100:.2f} pts a month {'lower' if d < 0 else 'higher'} in {ch['window_b']} than "
+             f"a year earlier (95%: {pts(ch['change_lo'], 2)} to {pts(ch['change_hi'], 2)})")
+    if ch["change_lo"] < 0 < ch["change_hi"]:
+        title += ", a change not distinguishable from zero"
+    return theme.apply(fig, title,
                        "Customers on Basic at the previous month-end who churned in the month ÷ customers on Basic, Paid Social excluded; "
-                       "Wilson 95% intervals; horizontal lines = pooled rate over each comparison window", height=400)
+                       "Wilson 95% intervals", height=400)
 
 
 def fig_downgrades_quarterly(start: str = "2024-Q1") -> go.Figure:
@@ -935,7 +1062,9 @@ def fig_downgrades_quarterly(start: str = "2024-Q1") -> go.Figure:
     fig = go.Figure()
     for src in ("self_serve", "renewal", "customer_success"):
         s = g[g["change_source"] == src].set_index("quarter_label")["downgrades"].reindex(quarters).fillna(0)
-        fig.add_trace(go.Bar(x=quarters, y=s.values, name=SOURCE_LABELS[src], marker=dict(color=SOURCE_COLORS[src], line=dict(color=theme.SURFACE, width=1)),
+        fig.add_trace(go.Bar(x=quarters, y=s.values, name=SOURCE_LABELS[src],
+                             marker=dict(color=SOURCE_COLORS[src], pattern=SOURCE_PATTERNS.get(src, {}),
+                                         line=dict(color=theme.SURFACE, width=1)),
                              hovertemplate="%{x}<br>" + SOURCE_LABELS[src] + ": %{y} downgrades<extra></extra>"))
     fig.update_layout(barmode="stack", bargap=0.45)
     fig.update_yaxes(rangemode="tozero", title_text="Downgrades")
@@ -951,11 +1080,12 @@ def fig_downgrade_rate(dim: str = "segment", window: tuple = (pd.Timestamp("2025
         g = g.set_index("group").reindex([x for x in TENURE_LABELS if x in set(g["group"])]).reset_index()
     else:
         g = g.sort_values("rate")
+    c = PLAN_COLORS[from_plan]           # identity follows the entity: these are Premium (or Enterprise) account-months
     fig = go.Figure(go.Scatter(x=g["rate"], y=g["group"], mode="markers+text", name=f"{_label(from_plan)} downgrade rate",
                                text=[pct(v, 2) for v in g["rate"]], textposition="middle right", textfont=dict(color=theme.INK, size=11),
-                               marker=dict(size=10, color=theme.SERIES[3], line=dict(color=theme.SURFACE, width=2)),
+                               marker=dict(size=10, color=c, line=dict(color=theme.SURFACE, width=2)),
                                error_x=dict(type="data", symmetric=False, array=g["hi"] - g["rate"], arrayminus=g["rate"] - g["lo"],
-                                            color=theme.SERIES[3], thickness=1, width=0),
+                                            color=c, thickness=1, width=0),
                                customdata=np.c_[g["n"], g["downgrades"]],
                                hovertemplate="%{y}<br>%{x:.2%} per month (%{customdata[1]:,} downgrades / %{customdata[0]:,} account-months)<extra></extra>"))
     fig.update_xaxes(tickformat=".1%", showgrid=True, gridcolor=theme.GRID, rangemode="tozero")
@@ -975,47 +1105,85 @@ def fig_downgrade_survival(h: int = 6) -> go.Figure:
     s = s.set_index("change_source").reindex(order).reset_index()
     labels = [f"{SOURCE_LABELS[c]} (n = {int(n)})" for c, n in zip(s["change_source"], s["downgrades"])]
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=labels, y=s["paying_share"], name=f"Downgraded accounts still paying after {h} months",
-                         marker=dict(color=[SOURCE_COLORS[c] for c in s["change_source"]]),
+    # Bars wear the initiator colours of the quarterly chart above them; the x labels name the initiator, so the
+    # bars stay out of the legend (one swatch could not stand for three colours) and only the benchmark is listed.
+    fig.add_trace(go.Bar(x=labels, y=s["paying_share"], name=f"Downgraded accounts still paying after {h} months", showlegend=False,
+                         marker=dict(color=[SOURCE_COLORS[c] for c in s["change_source"]],
+                                     pattern=dict(shape=[SOURCE_PATTERNS.get(c, {}).get("shape", "") for c in s["change_source"]],
+                                                  fgcolor=theme.MUTED, size=8, solidity=0.22)),
                          error_y=dict(type="data", symmetric=False, array=s["hi"] - s["paying_share"], arrayminus=s["paying_share"] - s["lo"],
                                       color=theme.INK_2, thickness=1.5, width=6),
                          text=[pct(v, 0) for v in s["paying_share"]], textposition="inside", insidetextanchor="start",
-                         textfont=dict(color="#ffffff"),
+                         textfont=dict(color=[SOURCE_TEXT[c] for c in s["change_source"]]),
                          hovertemplate="%{x}<br>%{y:.1%} still paying (95%: %{customdata[0]:.0%} – %{customdata[1]:.0%})<extra></extra>",
                          customdata=np.c_[s["lo"], s["hi"]]))
-    fig.add_trace(go.Scatter(x=labels, y=s["comparable_paying"], mode="markers", name="Comparable accounts, no downgrade (same plan, segment, month)",
+    fig.add_trace(go.Scatter(x=labels, y=s["comparable_paying"], mode="markers", name="Comparable accounts that did not downgrade",
                              marker=dict(symbol="diamond", size=12, color=theme.INK, line=dict(color=theme.SURFACE, width=2)),
                              hovertemplate="%{x}<br>comparable accounts %{y:.1%} still paying<extra></extra>"))
-    fig.update_yaxes(tickformat=".0%", range=[0, 1.08])
+    fig.update_yaxes(tickformat=".0%", range=[0, 1.08], title_text=f"Still paying {h} months later")
     fig.update_layout(bargap=0.5)
     cs = s[s["change_source"] == "customer_success"].iloc[0]
+    vs = ("in line with" if cs["lo"] <= cs["comparable_paying"] <= cs["hi"] else
+          "below" if cs["comparable_paying"] > cs["hi"] else "above")          # the benchmark inside / outside the saves' interval
     return theme.apply(fig, f"{pct(cs['paying_share'], 0)} of CS-saved accounts are still paying {h} months later (95%: {pct(cs['lo'], 0)}–{pct(cs['hi'], 0)}), "
-                            f"close to the {pct(cs['comparable_paying'], 0)} of comparable accounts that never asked to leave",
-                       "Share still paying h months after the downgrade, by who initiated it; whiskers = Wilson 95% intervals; "
-                       "diamonds = benchmark, not a counterfactual (saved accounts had asked to cancel)", height=380)
+                            f"{vs} the {pct(cs['comparable_paying'], 0)} of comparable accounts that never asked to leave",
+                       f"Share of downgraded accounts still paying {h} months after the downgrade, by who initiated it; whiskers = Wilson "
+                       "95% intervals; diamonds = accounts on the same plan and segment in the same month that did not downgrade — a "
+                       "benchmark, not a counterfactual (saved accounts had asked to cancel)", height=380)
 
 
 def fig_time_to_upgrade(by: str = "acquisition_channel", max_k: int = 24) -> go.Figure:
     t = time_to_upgrade(by, max_k)
     groups = t.groupby("group")["cif_upgrade"].max().sort_values(ascending=False).index.tolist()
-    slots = [c for i, c in enumerate(theme.SERIES) if i != 1]          # SERIES[1] is reserved for Paid Social
-    palette = {g: slots[i % len(slots)] for i, g in enumerate([g for g in groups if g != PAID_SOCIAL])}
-    if PAID_SOCIAL in groups:
-        palette[PAID_SOCIAL] = theme.SERIES[1]
+    n_of = t.groupby("group")["customers"].first()
+    by_channel = by == "acquisition_channel" and PAID_SOCIAL in groups
+    if by == "segment":
+        palette = {g: theme.SEGMENT_COLORS.get(g, theme.INK_2) for g in groups}
+    elif by_channel:   # Paid Social against everyone else: one colour for the comparison channels, named at the line ends
+        palette = {g: theme.PAID_SOCIAL if g == PAID_SOCIAL else theme.OTHER for g in groups}
+    else:
+        palette = {g: theme.SERIES[[0, 2, 3, 5, 7][i % 5]] for i, g in enumerate(groups)}   # no orange (Technology) / pink (Paid Social)
     fig = go.Figure()
+    other_shown = False
     for g in groups:
         s = t[t["group"] == g]
         c = palette[g]
         last = s.iloc[-1]
-        fig.add_trace(go.Scatter(x=np.r_[0, s["k"]], y=np.r_[0, s["cif_upgrade"]], mode="lines", name=f"{g} (n = {int(last['customers']):,})",
-                                 line=dict(color=c, width=2, shape="hv"),
+        if by_channel and g != PAID_SOCIAL:
+            name, legendgroup = f"Other channels (n = {int(n_of.drop(PAID_SOCIAL).sum()):,})", "other"
+            showlegend, other_shown = not other_shown, True
+        else:
+            name, legendgroup, showlegend = f"{g} (n = {int(last['customers']):,})", g, True
+        fig.add_trace(go.Scatter(x=np.r_[0, s["k"]], y=np.r_[0, s["cif_upgrade"]], mode="lines", name=name, legendgroup=legendgroup,
+                                 showlegend=showlegend, line=dict(color=c, width=2, shape="hv"),
                                  customdata=np.c_[np.r_[0, s["cif_churn"]], np.r_[int(last["customers"]), s["at_risk"]]],
                                  hovertemplate=g + "<br>month %{x}: %{y:.1%} upgraded, %{customdata[0]:.1%} churned<br>%{customdata[1]:,} still at risk<extra></extra>"))
     fig.add_vline(x=12, line=dict(color=theme.AXIS, width=1, dash="dot"))
+    ymax = float(t["cif_upgrade"].max()) * 1.08
     fig.update_xaxes(title_text="Months since first paid month-end", dtick=3, range=[0, max_k + 0.5])
-    fig.update_yaxes(tickformat=".0%", rangemode="tozero")
+    fig.update_yaxes(tickformat=".0%", range=[0, ymax])
+    fig.update_layout(margin=dict(r=128, b=56))
     k12 = t[t["k"] == 12].set_index("group")["cif_upgrade"]
-    top, bot = k12.idxmax(), k12.idxmin()
-    return theme.apply(fig, f"By month 12, {pct(k12[top], 0)} of {top} Basic signups have upgraded vs {pct(k12[bot], 0)} of {bot}",
-                       "Cumulative share of Basic signups with a first voluntary upgrade, churn treated as a competing event "
-                       "(Aalen-Johansen); customers without 24 months of history are censored", height=420)
+    if by_channel:
+        rest = k12.drop(PAID_SOCIAL)
+        title = (f"By month 12, {pct(k12[PAID_SOCIAL], 0)} of Paid Social Basic signups have upgraded vs "
+                 f"{pct(rest.min(), 0)}–{pct(rest.max(), 0)} in the other channels")
+    else:
+        top, bot = k12.idxmax(), k12.idxmin()
+        title = f"By month 12, {pct(k12[top], 0)} of {top} Basic signups have upgraded vs {pct(k12[bot], 0)} of {bot}"
+    fig = theme.apply(fig, title, "Cumulative share of Basic signups with a first voluntary upgrade, by months since the first paid "
+                                  "month-end; churn is a competing event (Aalen-Johansen); signups with less history are censored "
+                                  "at the as-of date", height=420)
+    # name every line at its end (identity never by colour alone); nudge labels apart so none overlap
+    plot_h = fig.layout.height - fig.layout.margin.t - fig.layout.margin.b
+    gap = 15 * ymax / plot_h
+    ends = sorted(((g, float(t[t["group"] == g]["cif_upgrade"].iloc[-1]), int(t[t["group"] == g]["k"].iloc[-1])) for g in groups),
+                  key=lambda e: -e[1])
+    placed = []
+    for g, y, k in ends:
+        placed.append((g, min(y, placed[-1][1] - gap) if placed else y, k))
+    shift = max(0.0, gap / 2 - placed[-1][1])
+    for g, y, k in placed:
+        fig.add_annotation(x=k, y=y + shift, text=g, showarrow=False, xanchor="left", xshift=6, yanchor="middle",
+                           font=dict(color=theme.INK_2, size=11))
+    return fig

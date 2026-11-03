@@ -31,8 +31,8 @@
       "median_upgraders": 0.16530054644808742,
       "median_stayers": 0.0625,
       "top_quintile_lift": 2.394025678444664,
-      "top_quintile_lift_lo": 2.194701805734332,
-      "top_quintile_lift_hi": 2.609409382477686,
+      "top_quintile_lift_lo": 2.1404027713061984,
+      "top_quintile_lift_hi": 2.6594497865081084,
       "top_quintile_lift_pre": 2.3437539738861837,
       "top_quintile_lift_post": 2.208325466307599
     },
@@ -45,8 +45,8 @@
       "median_upgraders": 0.29603547209181014,
       "median_stayers": 0.15748031496062992,
       "top_quintile_lift": 2.3424302974437015,
-      "top_quintile_lift_lo": 2.1451580612089516,
-      "top_quintile_lift_hi": 2.5558430879532534,
+      "top_quintile_lift_lo": 2.0768382095979434,
+      "top_quintile_lift_hi": 2.6027056826648667,
       "top_quintile_lift_pre": 2.291798836534027,
       "top_quintile_lift_post": 2.4151860258166438
     },
@@ -59,8 +59,8 @@
       "median_upgraders": 0.8220211161387632,
       "median_stayers": 0.5636363636363636,
       "top_quintile_lift": 1.66591475748194,
-      "top_quintile_lift_lo": 1.50022396102602,
-      "top_quintile_lift_hi": 1.8484848871238644,
+      "top_quintile_lift_lo": 1.4423812554434488,
+      "top_quintile_lift_hi": 1.8956658619117082,
       "top_quintile_lift_pre": 2.179350796959882,
       "top_quintile_lift_post": 1.9886446923223664
     }
@@ -69,74 +69,74 @@
     "gate_user_share": {
       "pre": 2.3437539738861837,
       "post": 2.208325466307599,
-      "post_lo": 1.6642350544018636,
-      "post_hi": 2.918819121003485
+      "post_lo": 1.610480233290223,
+      "post_hi": 2.814693323508544
     },
     "gate_hits_per_wau": {
       "pre": 2.291798836534027,
       "post": 2.4151860258166438,
-      "post_lo": 1.84211980878535,
-      "post_hi": 3.154049303470566
+      "post_lo": 1.8273659842578152,
+      "post_hi": 3.0140450377191867
     },
     "automation_per_wau": {
       "pre": 2.179350796959882,
       "post": 1.9886446923223664,
-      "post_lo": 1.4730359358626997,
-      "post_hi": 2.6741092462943787
+      "post_lo": 1.4483389687852373,
+      "post_hi": 2.491057389095661
     },
     "seats": {
       "pre": 1.1551179220826062,
       "post": 1.3185538496274556,
-      "post_lo": 0.9213510297296764,
-      "post_hi": 1.8799961732905914
+      "post_lo": 0.7431109487384691,
+      "post_hi": 1.9143278608381689
     },
     "utilization_13w": {
       "pre": 1.3479231712620259,
       "post": 1.3586610576199034,
-      "post_lo": 0.9435187684155772,
-      "post_hi": 1.9487216431385463
+      "post_lo": 0.8614363585160086,
+      "post_hi": 1.8977100069252075
     },
     "core_actions_per_wau": {
       "pre": 1.3277423989995625,
       "post": 1.6006164596740995,
-      "post_lo": 1.1444907986230128,
-      "post_hi": 2.2296687575145917
+      "post_lo": 1.0208466893700054,
+      "post_hi": 2.310527396968286
     },
     "seat_growth_3m": {
       "pre": 1.419013815402704,
       "post": 1.1152105812739297,
-      "post_lo": 0.6888787958019865,
-      "post_hi": 1.7951878732920044
+      "post_lo": 0.5240470427164576,
+      "post_hi": 1.7572434079116879
     },
     "max_weekly_utilization_13w": {
-      "pre": 1.6469418116777828,
-      "post": 0.0,
-      "post_lo": 0.0,
-      "post_hi": 3.2868629525938498
+      "pre": 1.0466574732476737,
+      "post": 0.8749011499947599,
+      "post_lo": 0.5831435834623744,
+      "post_hi": 1.1837316995548608
     },
     "integration_syncs_per_week": {
       "pre": 1.169516550376208,
       "post": 0.8206580366774542,
-      "post_lo": 0.5137010432707749,
-      "post_hi": 1.3058730009203543
+      "post_lo": 0.3905354863909868,
+      "post_hi": 1.3025551355775238
     },
     "invites_per_seat_13w": {
       "pre": 1.107266435986159,
       "post": 0.9243610994735788,
-      "post_lo": 0.6062555737157205,
-      "post_hi": 1.4043174750221872
+      "post_lo": 0.4542042094908403,
+      "post_hi": 1.4116578280971237
     },
     "wau_trend": {
       "pre": 0.926108620583446,
       "post": 1.172585376922703,
-      "post_lo": 0.8239555462206689,
-      "post_hi": 1.663392549846218
+      "post_lo": 0.8277220380098489,
+      "post_hi": 1.5155179330327724
     },
     "reports_per_wau": {
       "pre": 0.9347181165324113,
       "post": 0.8245599943775664,
-      "post_lo": 0.5161503351593819,
-      "post_hi": 1.3120379689392754
+      "post_lo": 0.35902468324521086,
+      "post_hi": 1.3346918164234671
     }
   },
   "signals_lift_holds_post": [
@@ -145,19 +145,43 @@
     "automation_per_wau",
     "core_actions_per_wau"
   ],
-  "train_rows": 15580,
-  "train_accounts": 1731,
-  "base_rate_train": 0.04768934531450578,
+  "interval_method": "account-level bootstrap 95% (bin rates, lifts, threshold rule, AUC); ordinary bootstrap for SMD",
+  "n_boot_bins": 1000,
+  "n_boot_model": 300,
+  "n_boot_smd": 1000,
+  "train_end": "2025-09-30",
+  "embargo_months": [
+    "2025-10-31",
+    "2025-11-30",
+    "2025-12-31"
+  ],
+  "test_start": "2026-01-31",
+  "test_end": "2026-06-30",
+  "train_rows": 12109,
+  "train_accounts": 1471,
+  "base_rate_train": 0.048641506317615,
+  "embargo_rows": 3471,
+  "embargo_accounts": 1301,
+  "embargo_upgrades": 154,
   "test_rows": 8961,
+  "test_accounts": 1932,
   "test_upgrades": 227,
+  "test_upgrades_pre": 124,
+  "test_upgrades_post": 103,
   "base_rate_test": 0.02533199419707622,
   "base_rate_test_pre": 0.030038759689922482,
   "base_rate_test_post": 0.021311814607903993,
-  "auc_test": 0.6767118022735595,
-  "auc_test_pre": 0.6617797525055589,
-  "auc_test_post": 0.6920236458055379,
-  "mean_predicted_test_pre": 0.04232853705464306,
-  "mean_predicted_test_post": 0.041400514280280014,
+  "auc_test": 0.6764939085592887,
+  "auc_test_pre": 0.6629136992040218,
+  "auc_test_post": 0.6902748414376322,
+  "auc_test_lo": 0.6249304579957069,
+  "auc_test_hi": 0.7201045644057993,
+  "auc_test_pre_lo": 0.5981768120601001,
+  "auc_test_pre_hi": 0.7351510785326586,
+  "auc_test_post_lo": 0.6249881729413235,
+  "auc_test_post_hi": 0.762316348033816,
+  "mean_predicted_test_pre": 0.040978152160265624,
+  "mean_predicted_test_post": 0.04023492195688185,
   "capacity_default": 100,
   "n_opportunities": 1997,
   "opportunities_expected_upgrades": 41.44636831366142,
@@ -178,7 +202,7 @@
   "automation_drift": 1.882927308691102,
   "deploy_post_shift": -0.5287470891186268,
   "deploy_post_base_rate": 0.021311814607903993,
-  "intercept_prior_correction_train": -0.5702959293333476,
+  "intercept_prior_correction_train": -0.5613879641919388,
   "reason_code_counts": {
     "AUTOMATION_ABOVE_MEDIAN": 414,
     "CORE_ACTIONS_ABOVE_MEDIAN": 362,
@@ -207,34 +231,34 @@
     "2026-05-31",
     "2026-06-30"
   ],
-  "precision_at_100_pre": 0.06666666666666667,
-  "recall_at_100_pre": 0.1558938045956142,
-  "lift_at_100_pre": 2.2193548387096773,
-  "upgrades_per_month_at_100_pre": 6.666666666666667,
-  "mrr_covered_per_month_at_100_pre": 1488.0,
-  "precision_at_100_post": 0.06666666666666667,
-  "recall_at_100_post": 0.19469651139342606,
-  "lift_at_100_post": 3.1281553398058253,
-  "upgrades_per_month_at_100_post": 6.666666666666667,
-  "mrr_covered_per_month_at_100_post": 1440.0,
-  "precision_at_100_all": 0.06666666666666667,
-  "recall_at_100_all": 0.17529515799452014,
-  "lift_at_100_all": 2.631718061674009,
-  "upgrades_per_month_at_100_all": 6.666666666666667,
-  "mrr_covered_per_month_at_100_all": 1464.0,
-  "precision_at_200_pre": 0.05833333333333334,
-  "recall_at_200_pre": 0.2753938953781598,
-  "lift_at_200_pre": 1.941935483870968,
-  "upgrades_per_month_at_200_pre": 11.666666666666666,
-  "mrr_covered_per_month_at_200_pre": 2316.0,
+  "precision_at_100_pre": 0.07,
+  "recall_at_100_pre": 0.16402388589642722,
+  "lift_at_100_pre": 2.3303225806451615,
+  "upgrades_per_month_at_100_pre": 7.0,
+  "mrr_covered_per_month_at_100_pre": 1504.0,
+  "precision_at_100_post": 0.056666666666666664,
+  "recall_at_100_post": 0.1624487463870404,
+  "lift_at_100_post": 2.6589320388349513,
+  "upgrades_per_month_at_100_post": 5.666666666666667,
+  "mrr_covered_per_month_at_100_post": 1040.0,
+  "precision_at_100_all": 0.06333333333333334,
+  "recall_at_100_all": 0.1632363161417338,
+  "lift_at_100_all": 2.5001321585903087,
+  "upgrades_per_month_at_100_all": 6.333333333333333,
+  "mrr_covered_per_month_at_100_all": 1272.0,
+  "precision_at_200_pre": 0.05666666666666667,
+  "recall_at_200_pre": 0.26726381407734673,
+  "lift_at_200_pre": 1.8864516129032258,
+  "upgrades_per_month_at_200_pre": 11.333333333333334,
+  "mrr_covered_per_month_at_200_pre": 2444.0,
   "precision_at_200_post": 0.04833333333333334,
   "recall_at_200_post": 0.278315520602272,
   "lift_at_200_post": 2.2679126213592236,
   "upgrades_per_month_at_200_post": 9.666666666666666,
-  "mrr_covered_per_month_at_200_post": 2138.6666666666665,
-  "precision_at_200_all": 0.05333333333333334,
-  "recall_at_200_all": 0.2768547079902159,
-  "lift_at_200_all": 2.105374449339207,
-  "upgrades_per_month_at_200_all": 10.666666666666666,
-  "mrr_covered_per_month_at_200_all": 2227.3333333333335
+  "mrr_covered_per_month_at_200_post": 2208.0,
+  "precision_at_200_all": 0.0525,
+  "recall_at_200_all": 0.27278966733980936,
+  "lift_at_200_all": 2.0724779735682817,
+  "upgrades_per_month_at_200_all": 10.5,
+  "mrr_covered_per_month_at_200_all": 2326.0
 }

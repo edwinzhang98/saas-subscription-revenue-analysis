@@ -16,7 +16,7 @@ from .theme import money, pct, pts, qname
 DOCS = REPO_ROOT / "docs"
 CSM_CAPACITY = 120          # proactive reviews per quarter (assumption A9)
 EXPANSION_ROWS = 300        # expansion rows in the CSV (P4's top 100 + the next 200 for in-app prompts); full list on the dashboard
-HEALTH_COLUMNS = ["queue", "priority_rank", "play", "list_type", "customer_id", "company_name", "segment", "industry", "cs_coverage",
+HEALTH_COLUMNS = ["queue", "priority_rank", "priority_tier", "play", "list_type", "customer_id", "company_name", "segment", "industry", "cs_coverage",
                   "csm_owner", "plan", "billing_period", "seats", "current_arr", "arr_at_stake", "next_renewal_date",
                   "days_to_renewal", "renewal_within_120d", "reason_code_1", "reason_code_2", "reason_code_3", "evidence",
                   "suggested_play"]
@@ -31,35 +31,94 @@ def _safe(name: str) -> pd.DataFrame | None:
 
 
 # =============================================================================== account health list
+P3_PLAY = ("Renewal desk 90 days out: offer a seat band (commit to about 80% of today's seats, add seats back at the same "
+           "price during the term) in exchange for an annual renewal (P3)")
+
+
+def _rank_in_queue(out: pd.DataFrame) -> pd.DataFrame:
+    """Priority within each queue (02 §15): tier 1 = annual renewals in fewer than 45 days, soonest first; tier 2 = annual
+    renewals in 45–120 days, by ARR at stake; tier 3 = everything else, by ARR at stake."""
+    annual = out["billing_period"].eq("annual")
+    d = out["days_to_renewal"]
+    out["_tier"] = np.select([annual & (d < 45), annual & (d <= 120)], [1, 2], default=3)
+    out["_key"] = np.where(out["_tier"] == 1, d.fillna(9999), -out["arr_at_stake"].fillna(0))
+    out["_q"] = out["queue"].map(QUEUE_ORDER)
+    out = out.sort_values(["_q", "_tier", "_key", "customer_id"]).reset_index(drop=True)
+    out["priority_rank"] = out.groupby("queue").cumcount() + 1
+    out["priority_tier"] = out["_tier"]
+    return out.drop(columns=["_tier", "_key", "_q"])
+
+
+def _urgent(df: pd.DataFrame) -> pd.DataFrame:
+    """Risk and renewal rows whose annual term ends in fewer than 45 days get an 'Urgent' prefix (not upgrade rows)."""
+    urgent = df["billing_period"].eq("annual") & (df["days_to_renewal"] < 45) & df["list_type"].ne("expansion")
+    df.loc[urgent, "suggested_play"] = ("Urgent — renews in " + df.loc[urgent, "days_to_renewal"].astype(int).astype(str) + " days: "
+                                        + df.loc[urgent, "suggested_play"].str.replace(" 60 days out", " now", regex=False)
+                                        .str.replace(" 90 days out", " now", regex=False))
+    return df
+
+
+def _tech_renewals_not_flagged(taken: set) -> pd.DataFrame:
+    """P3 accounts that are not on the risk watchlist: Technology annual renewals in the next 6 months, from the
+    renewal calendar. ARR at stake = ARR × the share of Technology annual renewals in Apr–Sep 2026 that lost >= 10% of
+    MRR or churned at renewal (the same kind of hit rate the risk rows use)."""
+    from .analysis import recommendations as R
+    a = R.assignments()
+    ids = a.loc[(a["play"] == "P3") & ~a["customer_id"].isin(taken), "customer_id"]
+    feat = marts.load("fct_account_month_features")
+    now = feat[(feat["month_end"] == R.AS_OF) & feat["customer_id"].isin(ids)].copy()
+    cust = marts.load("stg_customers")[["customer_id", "company_name", "csm_owner"]]
+    nr = marts.load("int_next_renewal")[["customer_id", "next_renewal_date"]]
+    now = now.merge(cust, on="customer_id", how="left").merge(nr, on="customer_id", how="left")
+    now["billing_period"] = now["current_period_type"].fillna(now["billing_period"])
+    now["days_to_renewal"] = (now["next_renewal_date"] - R.AS_OF).dt.days
+    rate = R.loss_rates()["renewal_event_rate_tech_apr_sep_2026"]
+    now["current_arr"] = now["arr"]
+    now["arr_at_stake"] = now["arr"] * rate
+    now["plan"] = now["plan_id"]
+    now["list_type"] = "renewal"
+    now["play"], now["queue"] = "P3", "renewal_desk"
+    now["renewal_within_120d"] = now["days_to_renewal"] <= 120
+    now["reason_code_1"] = "TECH_RENEWAL_WITHIN_180D"
+    now["reason_code_2"], now["reason_code_3"] = "", ""
+    now["evidence"] = now.apply(lambda r: (
+        f"Technology annual renewal {r['next_renewal_date']:%Y-%m-%d} ({int(r['days_to_renewal'])} days); "
+        + (f"utilization {pct(r['utilization_13w'], 0)} over 13 weeks; " if pd.notna(r["utilization_13w"]) else "")
+        + (f"WAU {pct(r['wau_trend'], 0, signed=True)} vs prior 9 weeks; " if pd.notna(r["wau_trend"]) else "")
+        + f"{pct(rate, 0)} of Technology renewals since April lost 10%+ of MRR or churned"), axis=1)
+    now["suggested_play"] = P3_PLAY
+    return now
+
+
+# =============================================================================== account health list
 def account_health_list() -> pd.DataFrame | None:
-    """The CS account list (02 §15): the risk watchlist and the top of the upgrade-opportunity list, one row per account
-    (risk wins), each with the play it belongs to and the queue that works it:
-      csm           P1 — first 120 CSM-covered risk accounts by watchlist priority (annual renewals within 120 days first,
-                    then ARR at stake)
-      renewal_desk  P3 — Technology annual renewals within 6 months that are on the risk list but not in P1
+    """The CS account list (02 §15), one row per account, each with the play it belongs to and the queue that works it:
+      csm           P1 — first 120 CSM-covered risk accounts by watchlist priority
+      renewal_desk  P3 — Technology annual renewals within 6 months not in P1 (flagged ones from the risk list, the rest
+                    from the renewal calendar, list_type 'renewal')
       digital       P2 — the rest of the risk list
       sales_assist  P4 — top 100 upgrade opportunities not on the risk list
-      in_app        the next 200 upgrade opportunities (in-app prompt only)"""
+      in_app        the next 200 upgrade opportunities (in-app prompt only)
+    Within each queue: annual renewals in < 45 days first (soonest first), then 45–120 days, then the rest, by ARR at stake."""
     from .analysis import recommendations as R
     risk, opp = _safe("silent_churn__watchlist"), _safe("expansion__opportunities")
     if risk is None and opp is None:
         return None
     plays = R.assignments().set_index("customer_id")["play"]
-    frames = []
+    frames, taken = [], set()
     if risk is not None:
         r = risk.copy()
         r["list_type"] = "risk"
         r["play"] = r["customer_id"].map(plays).fillna("P2")
         r["queue"] = r["play"].map({"P1": "csm", "P3": "renewal_desk"}).fillna("digital")
-        urgent = r["renewal_within_120d"] & (r["days_to_renewal"] < 45)
-        r.loc[urgent, "suggested_play"] = ("Urgent — renews in " + r.loc[urgent, "days_to_renewal"].astype(int).astype(str) + " days: "
-                                           + r.loc[urgent, "suggested_play"].str.replace(" 60 days out", " now", regex=False))
-        r = r.sort_values(["renewal_within_120d", "arr_at_stake", "customer_id"], ascending=[False, False, True])
+        r.loc[r["play"] == "P3", "suggested_play"] = P3_PLAY
         frames.append(r)
+        taken |= set(r["customer_id"])
+    tr = _tech_renewals_not_flagged(taken)
+    frames.append(tr)
+    taken |= set(tr["customer_id"])
     if opp is not None:
-        o = opp.copy()
-        if risk is not None:
-            o = o[~o["customer_id"].isin(risk["customer_id"])]
+        o = opp[~opp["customer_id"].isin(taken)].copy()
         o = o.sort_values(["expected_mrr", "customer_id"], ascending=[False, True]).head(EXPANSION_ROWS)
         o["list_type"] = "expansion"
         o["play"] = np.where(o["customer_id"].map(plays).eq("P4"), "P4", "")
@@ -70,14 +129,11 @@ def account_health_list() -> pd.DataFrame | None:
         o["suggested_play"] = np.where(o["play"] == "P4", "14-day Premium trial + sales-assist outreach (P4)",
                                        "In-app Premium prompt at the paywall")
         frames.append(o)
-    out = pd.concat(frames, ignore_index=True)
-    for c in HEALTH_COLUMNS:
-        if c not in out.columns:
-            out[c] = np.nan
-    out["_q"] = out["queue"].map(QUEUE_ORDER)
-    out = out.sort_values(["_q", "renewal_within_120d", "arr_at_stake", "customer_id"],
-                          ascending=[True, False, False, True]).reset_index(drop=True)
-    out["priority_rank"] = out.groupby("queue").cumcount() + 1
+    out = pd.concat([f.reindex(columns=sorted((set(HEALTH_COLUMNS) - {"priority_tier"}) | {"utilization_13w"})) for f in frames],
+                    ignore_index=True)
+    out = _urgent(out)
+    out = _rank_in_queue(out)
+    out["csm_owner"] = out["csm_owner"].fillna("—")
     out["current_arr"] = out["current_arr"].round(0)
     out["arr_at_stake"] = out["arr_at_stake"].round(0)
     out["seats"] = out["seats"].astype(int)
@@ -152,12 +208,15 @@ def write_mbr() -> Path:
         return x[["Account", "Segment", "Industry", "Owner", "MRR before → after", "Movement"]]
 
     br_q, br_y = k["bridge_qoq"], k["bridge_yoy"]
+    dq = marts.load("dq_check_results")
+    dq_pass, dq_fail, dq_info = ((dq["status"] == x).sum() for x in ("pass", "fail", "info"))
+    cohort_note = _cohort_sentence(coh[coh["cohort_grain"] == "quarter"])
     hl = account_health_list()
     parts = [f"""# Q3 2026 close revenue review (September month-end)
 
 **Prepared by:** Revenue Analytics (RevOps) · **Date:** 2026-11-03 · **Audience:** VP of Revenue, Head of Customer Success, Finance,
 Product, Growth Marketing · **Data:** billing and product usage as of 2026-09-30 (synthetic dataset) · **October flash** follows the 7 Nov close.
-Definitions: `docs/02_metric_definitions.md` v1.2 · data-quality status: all checks pass (`docs/03_data_quality_checks.md`).
+Definitions: `docs/02_metric_definitions.md` v1.2 · data quality: {dq_pass} checks pass, {dq_fail} fail, {dq_info} monitored (`docs/03_data_quality_checks.md`).
 
 ## 1. Headline
 
@@ -189,7 +248,7 @@ Chart: `reports/figures/mrr_waterfall.png` (monthly movements since Oct 2024) an
 
 {_md_table(cpiv, {c: pct for c in cpiv.columns[1:]})}
 
-Every cohort dips at month 12 (first annual renewal). Cohorts acquired after the Paid Social launch (Q4 2025 onward) start weaker.
+{cohort_note}
 
 ## 4. Expansion: what changed in Q3
 
@@ -230,14 +289,28 @@ in Q3 2025 — {pts(k['expansion_rate_q3_2026'] - k['expansion_rate_q3_2025'])},
         qs = hl.groupby("queue", sort=False).agg(accounts=("customer_id", "size"), arr=("current_arr", "sum"), at_stake=("arr_at_stake", "sum")).reset_index()
         qs["queue"] = pd.Categorical(qs["queue"], list(QUEUE_ORDER)); qs = qs.sort_values("queue")
         qs = qs.rename(columns={"queue": "Queue", "accounts": "Accounts", "arr": "ARR", "at_stake": "ARR at stake"})
+        cq_ = hl[hl["queue"] == "csm"]
+        owner_load = (cq_.groupby(["cs_coverage", "csm_owner"]).agg(accounts=("customer_id", "size"), at_stake=("arr_at_stake", "sum"))
+                      .reset_index().sort_values(["cs_coverage", "csm_owner"]))
+        owner_load["cs_coverage"] = owner_load["cs_coverage"].map({"named_csm": "named", "pooled_csm": "pooled"})
+        owner_load = owner_load.rename(columns={"cs_coverage": "Coverage", "csm_owner": "Owner", "accounts": "Accounts",
+                                                "at_stake": "ARR at stake"})
         parts.append(f"""## 6. Who works which accounts (`docs/account_health_list.csv`)
 
 {_md_table(qs, {'Accounts': lambda v: f'{int(v):,}', 'ARR': money, 'ARR at stake': money})}
 
-`csm` = the first {CSM_CAPACITY} CSM-covered risk accounts (CS capacity; annual renewals within 120 days first, then ARR at stake) — play P1;
-`renewal_desk` = Technology annual renewals within 6 months on the risk list (P3); `digital` = the rest of the risk list (P2);
-`sales_assist` = the top 100 upgrade opportunities (P4); `in_app` = the next 200 (in-app prompt only). ARR at stake: risk = ARR × the
-flag's historical hit rate; expansion = expected upgrade ARR. Reason codes: `docs/02_metric_definitions.md §15`.
+`csm` = the first {CSM_CAPACITY} CSM-covered risk accounts by priority (CS capacity) — play P1; `renewal_desk` = every Technology
+annual renewal in the next 6 months not in P1 — the flagged ones from the risk list and the rest from the renewal calendar
+(`list_type = renewal`) — play P3; `digital` = the rest of the risk list (P2); `sales_assist` = the top 100 upgrade
+opportunities (P4); `in_app` = the next 200 (in-app prompt only). Priority inside each queue: annual renewals in fewer than 45
+days first (soonest first), then renewals in 45–120 days, then everything else, by ARR at stake. ARR at stake is a ranking
+weight, not an expected loss: risk and renewal rows = ARR × the historical share of such accounts that went on to contract
+≥ 10% or churn; expansion rows = expected upgrade ARR. Reason codes: `docs/02_metric_definitions.md §15`.
+
+**CSM queue by owner** (capacity assumption A9: about 120 proactive reviews a quarter across the team; the Head of CS
+assigns — the queue is not cut per CSM, so the load below is what each owner would carry this quarter)
+
+{_md_table(owner_load, {'Accounts': lambda v: f'{int(v):,}', 'ARR at stake': money})}
 
 **CSM queue, first 10**
 
@@ -259,6 +332,27 @@ flag's historical hit rate; expansion = expected upgrade ARR. Reason codes: `doc
     p = DOCS / "monthly_revenue_review.md"
     p.write_text("\n".join(parts))
     return p
+
+
+def _cohort_sentence(cq: pd.DataFrame) -> str:
+    """What the quarterly cohort table says, computed (no hand-written generalisations)."""
+    piv = cq.pivot(index="cohort", columns="months_since_first_paid", values="nrr")
+    piv = piv[[c >= "2023-Q4" for c in piv.index]]
+    full = piv.dropna(subset=[11, 12]) if {11, 12} <= set(piv.columns) else piv.iloc[0:0]
+    dips = full[full[12] < full[11]]
+    rises = [c for c in full.index if c not in dips.index]
+    parts = [f"{len(dips)} of the {len(full)} cohorts with a full year of history dip at month 12 (the first annual renewal)"
+             + (f"; {', '.join(rises)} {'is the exception' if len(rises) == 1 else 'are the exceptions'}." if rises else ".")]
+    if 6 in piv.columns:
+        m6 = piv[6].dropna()
+        low = m6[m6 < 1.0]
+        rest = m6[m6 >= 1.0]
+        if len(low):
+            items = [f"{c} ({pct(v)})" for c, v in low.items()]
+            listed = items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+            parts.append(f"At month 6, {listed} {'is' if len(low) == 1 else 'are'} below 100%; every other cohort was at "
+                         f"{pct(rest.min())}–{pct(rest.max())} — too few weak cohorts to call a trend yet.")
+    return " ".join(parts)
 
 
 def _default_next_month(k: dict) -> str:

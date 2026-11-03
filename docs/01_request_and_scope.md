@@ -1,7 +1,7 @@
 # 01 — Request and scope
 
 **Requester:** VP of Revenue · **Also consulted:** Head of Customer Success, Finance (board pack owner), Product (pricing & packaging), Growth Marketing
-**Analyst:** Revenue Analyst, RevOps / Product Analytics · **Received:** 2026-11-03 · **Board pack due:** 2026-11-12 (Q3 board meeting 2026-11-19)
+**Analyst:** Revenue Analyst, RevOps / Product Analytics · **Received:** 2026-10-13 · **Delivered:** 2026-11-03 · **Board pack due:** 2026-11-12 (Q3 board meeting 2026-11-19)
 
 ## 1. The request (verbatim)
 

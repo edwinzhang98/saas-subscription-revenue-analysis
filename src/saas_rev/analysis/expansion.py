@@ -3,10 +3,16 @@
 Answers scope question Q5 under the leakage and bias rules of 02_metric_definitions.md §13:
   * how upgraders differ from matched stayers in the 90 days before a voluntary Basic -> Premium upgrade;
   * whether each signal survived the 2026-04-15 Basic packaging change (advanced automations moved into Basic);
-  * a simple logistic propensity model, back-tested on a time split, and the ranked opportunity list for CS.
+  * a simple logistic propensity model, back-tested on a purged time split, and the ranked opportunity list for CS.
 
 Every model input is observable at the index month-end t (fct_account_month_features); the label_* columns
 are used only as outcomes. Nothing here reads generator parameters.
+
+Intervals: an account contributes up to ~10 month-end rows, so rates on account-month rows are not independent.
+Bin rates, lifts, the threshold rule and the test AUC therefore carry account-level (cluster) bootstrap intervals:
+accounts are resampled with replacement and the statistic is recomputed on their rows (bin edges and score
+deciles stay fixed). Standardized mean differences use an ordinary bootstrap of the matched rows (one row per
+upgrade / per stayer account).
 """
 from __future__ import annotations
 
@@ -25,10 +31,21 @@ TOPIC = "expansion"
 AS_OF = pd.Timestamp("2026-09-30")
 PACKAGING_CHANGE = pd.Timestamp("2026-04-15")
 FIRST_POST_MONTH = pd.Timestamp("2026-04-30")      # first month-end whose 13-week window contains post-change weeks
-TRAIN_END = pd.Timestamp("2025-12-31")
-TEST_START, TEST_END = pd.Timestamp("2026-01-31"), pd.Timestamp("2026-06-30")
 MIN_TENURE = 3                                      # months since first paid month-end (02 §13)
 HORIZON_DAYS = 90
+# Purged time split. A row at month-end t carries a label window (t, t + 90 days], so the three month-ends before the
+# test period are held out ("embargo"): otherwise an upgrade in Jan–Mar 2026 would be a training label (from the
+# Oct–Dec 2025 rows of the same account) and a test label at once, and the back-test would look better than it is.
+TRAIN_END = pd.Timestamp("2025-09-30")              # last training month-end
+TEST_START, TEST_END = pd.Timestamp("2026-01-31"), pd.Timestamp("2026-06-30")
+EMBARGO_MONTHS = ("2025-10-31", "2025-11-30", "2025-12-31")   # held out: neither trained on nor scored
+SPLIT_NOTE = ("trained on month-ends to Sep 2025 (Oct – Dec 2025 held out, so no training label window reaches "
+              "the test period), tested on Jan – Jun 2026")
+MIN_BIN_SHARE = 0.05            # a signal bin thinner than this share of rows (e.g. the 1% of rows above a 100%
+                                # peak-utilization mass point) is merged into its lower neighbour: a "quintile" of
+                                # 250 rows is not a CS rule, and the merged bin is the rule CS would state ("≥ 100%")
+MIN_UPGRADES_FOR_LIFT = 5       # a bin with fewer upgrades than this in a period is shown as "not estimable"
+N_BOOT_BINS = 1000              # account-level bootstrap draws for bin rates / lifts and the threshold rule
 TENURE_BAND_EDGES = [2, 6, 12, 24, 10 ** 6]
 TENURE_BAND_LABELS = ["3-6", "7-12", "13-24", "25+"]
 PRICE_DELTA = {"monthly": 35.0 - 15.0, "annual": (336.0 - 144.0) / 12}   # Premium - Basic list price per seat-month
@@ -40,19 +57,20 @@ N_BOOT_MODEL = 300
 REGULARIZATION_C = 1.0          # sklearn default L2 strength; no tuning (the brief asks for signals, not a tuned model)
 
 # ---------------------------------------------------------------------------------- signals
+# name: full label (tables, axis titles); short: chart titles and evidence text; tile: <= 16 characters for a KPI value
 SIGNALS: dict[str, dict] = {
-    "gate_hits_per_wau": dict(name="Premium-feature paywall hits per active user", short="Paywall hits / active user", fmt="num2"),
-    "gate_user_share": dict(name="Share of active users who hit the Premium paywall", short="Users hitting paywall", fmt="pct"),
-    "seat_growth_3m": dict(name="Seat growth vs 3 months ago", short="Seat growth, 3 months", fmt="pct"),
-    "invites_per_seat_13w": dict(name="Teammate invitations per seat (13 weeks)", short="Invites / seat", fmt="num2"),
-    "utilization_13w": dict(name="Seat utilization: active users / seats (13 weeks)", short="Seat utilization", fmt="pct"),
-    "max_weekly_utilization_13w": dict(name="Peak weekly seat utilization (13 weeks)", short="Peak weekly utilization", fmt="pct"),
-    "wau_trend": dict(name="Weekly-active-user trend (last 4 weeks vs prior 9)", short="WAU trend", fmt="pct"),
-    "automation_per_wau": dict(name="Automation runs per active user", short="Automations / active user", fmt="num2"),
-    "reports_per_wau": dict(name="Analytics report views per active user", short="Report views / active user", fmt="num2"),
-    "core_actions_per_wau": dict(name="Core work actions per active user", short="Core actions / active user", fmt="num1"),
-    "integration_syncs_per_week": dict(name="Integration syncs per week", short="Integration syncs / week", fmt="num0"),
-    "seats": dict(name="Seats on the subscription", short="Seats", fmt="num0"),
+    "gate_hits_per_wau": dict(name="Premium-feature paywall hits per active user", short="Paywall hits / active user", tile="Paywall hits", fmt="num2"),
+    "gate_user_share": dict(name="Share of active users who hit the Premium paywall", short="Users hitting paywall", tile="Paywall users", fmt="pct"),
+    "seat_growth_3m": dict(name="Seat growth vs 3 months ago", short="Seat growth, 3 months", tile="Seat growth", fmt="pct"),
+    "invites_per_seat_13w": dict(name="Teammate invitations per seat (13 weeks)", short="Invites / seat", tile="Invites / seat", fmt="num2"),
+    "utilization_13w": dict(name="Seat utilization: active users / seats (13 weeks)", short="Seat utilization", tile="Utilization", fmt="pct"),
+    "max_weekly_utilization_13w": dict(name="Peak weekly seat utilization (13 weeks)", short="Peak weekly utilization", tile="Peak utilization", fmt="pct"),
+    "wau_trend": dict(name="Weekly-active-user trend (last 4 weeks vs prior 9)", short="WAU trend", tile="WAU trend", fmt="pct"),
+    "automation_per_wau": dict(name="Automation runs per active user", short="Automations / active user", tile="Automations", fmt="num2"),
+    "reports_per_wau": dict(name="Analytics report views per active user", short="Report views / active user", tile="Report views", fmt="num2"),
+    "core_actions_per_wau": dict(name="Core work actions per active user", short="Core actions / active user", tile="Core actions", fmt="num1"),
+    "integration_syncs_per_week": dict(name="Integration syncs per week", short="Integration syncs / week", tile="Integrations", fmt="num0"),
+    "seats": dict(name="Seats on the subscription", short="Seats", tile="Seats", fmt="num0"),
 }
 SIGNAL_COLS = list(SIGNALS)
 
@@ -158,7 +176,8 @@ def population() -> pd.DataFrame:
     p["forced"] = p["label_forced_upgrade_90d"].astype(bool)
     p["churn_in_window"] = p["label_churn_3m"].astype(bool)
     p["period"] = np.where(p["month_end"] >= FIRST_POST_MONTH, "post", "pre")
-    p["split"] = np.where(p["month_end"] <= TRAIN_END, "train", "test")
+    p["split"] = np.select([p["month_end"] <= TRAIN_END, (p["month_end"] >= TEST_START) & (p["month_end"] <= TEST_END)],
+                           ["train", "test"], "embargo")
     p["tenure_band"] = _tenure_band(p["tenure_months"])
     p = _add_percentiles(p)
     p = p.sort_values(["customer_id", "month_end"], kind="stable")   # row order must not depend on how the mart was written
@@ -234,30 +253,74 @@ def _quintile_span(start: float, end: float) -> str:
     return f"Q{a}" if a >= b else f"Q{a}–Q{b}"
 
 
-def quintiles(pop: pd.DataFrame, signal: str, period: str = "all") -> pd.DataFrame:
-    """90-day upgrade rate by quintile of a signal on the full eligible population (forced rows excluded).
-    Signals with a mass point (e.g. 78% of rows have zero seat growth) get fewer than five bins; the `quintile_span`
-    column says which quintiles a bin covers. Bin rates carry a Wilson 95% interval."""
-    d = pop[~pop["forced"]]
-    if period in ("pre", "post"):
-        d = d[d["period"] == period]
-    d = d[d[signal].notna()]
-    x = d[signal]
-    # Quintile edges, left-closed so a row tied at an edge falls in the upper bin ("signal >= threshold").
-    # A value that holds 20% or more of the rows (e.g. zero seat growth, 100% peak utilization) gets a bin of its own,
-    # so the bins above and below it keep their meaning; duplicate edges collapse into fewer bins.
+def _bin_edges(x: pd.Series) -> np.ndarray:
+    """Quintile edges of a signal, left-closed so a row tied at an edge falls in the upper bin ("signal >= threshold").
+    A value that holds 20% or more of the rows (e.g. zero seat growth, 100% peak utilization) gets a bin of its own,
+    so the bins above and below it keep their meaning; duplicate edges collapse into fewer bins. A bin thinner than
+    MIN_BIN_SHARE (the sliver above a mass point) is merged into the bin below it (a thin bottom bin into the one above)."""
     edges = set(x.quantile([0.2, 0.4, 0.6, 0.8]).to_numpy()) | {float(x.min()), float(np.nextafter(x.max(), np.inf))}
     shares = x.value_counts(normalize=True)
     for m in shares[shares >= 0.2].index:
         edges |= {float(m), float(np.nextafter(m, np.inf))}
     edges = np.array(sorted(edges))
+    while len(edges) > 2:
+        share = pd.cut(x, bins=edges, right=False, labels=False).value_counts(normalize=True).reindex(range(len(edges) - 1), fill_value=0.0)
+        thin = share[share < MIN_BIN_SHARE]
+        if thin.empty:
+            break
+        i = int(thin.index[-1])                      # thinnest-from-the-top first; the loop re-checks the rest
+        edges = np.delete(edges, i if i > 0 else 1)  # drop the edge below bin i (or above it, for the bottom bin)
+    return edges
+
+
+def _cluster_bootstrap_bins(account: np.ndarray, member: np.ndarray, label: np.ndarray, n_bins: int,
+                            n_boot: int = N_BOOT_BINS) -> tuple[np.ndarray, np.ndarray]:
+    """Account-level bootstrap of per-bin upgrade rates and of their lift over the pooled base rate.
+    `member` is the bin index of each row (bin membership stays fixed; accounts are resampled with replacement).
+    Returns two (n_boot, n_bins) arrays: rates and lifts. Vectorized: the draw is a multinomial count per account,
+    so a draw costs one matrix product."""
+    ids, inv = np.unique(account, return_inverse=True)          # sorted ids: the draw never depends on row order
+    n_acc = len(ids)
+    counts = np.zeros((n_acc, n_bins)), np.zeros((n_acc, n_bins))
+    np.add.at(counts[0], (inv, member), 1.0)
+    np.add.at(counts[1], (inv, member), label.astype(float))
+    rng = np.random.default_rng(get_settings().seed)
+    w = rng.multinomial(n_acc, np.full(n_acc, 1.0 / n_acc), size=n_boot).astype(float)   # times each account is drawn
+    n_b, u_b = w @ counts[0], w @ counts[1]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rates = np.where(n_b > 0, u_b / n_b, np.nan)
+        base = u_b.sum(axis=1, keepdims=True) / n_b.sum(axis=1, keepdims=True)
+        lifts = rates / base
+    return rates, lifts
+
+
+def _interval(draws: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    lo, hi = np.nanpercentile(draws, [2.5, 97.5], axis=0)
+    return lo, hi
+
+
+def quintiles(pop: pd.DataFrame, signal: str, period: str = "all") -> pd.DataFrame:
+    """90-day upgrade rate by quintile of a signal on the full eligible population (forced rows excluded).
+    Signals with a mass point (e.g. 78% of rows have zero seat growth) get fewer than five bins; the `quintile_span`
+    column says which quintiles a bin covers (see _bin_edges). Bin rates and lifts carry an account-level bootstrap
+    95% interval (N_BOOT_BINS draws; bin edges fixed), so the ~10 rows an account contributes do not count as
+    independent evidence. Rows with a missing signal value are left out (`n_missing`)."""
+    d = pop[~pop["forced"]]
+    if period in ("pre", "post"):
+        d = d[d["period"] == period]
+    n_missing = int(d[signal].isna().sum())
+    d = d[d[signal].notna()]
+    x = d[signal]
+    edges = _bin_edges(x)
     cats = pd.cut(x, bins=edges, right=False, labels=False) if len(edges) > 2 else pd.Series([0] * len(x), index=x.index)
     g = d.groupby(cats, observed=True).agg(n=("label", "size"), upgrades=("label", "sum"), lo=(signal, "min"),
                                            hi=(signal, "max")).reset_index(drop=True)
     base = d["label"].mean()
     g["rate"] = g["upgrades"] / g["n"]
-    g["rate_lo"], g["rate_hi"] = _wilson(g["upgrades"], g["n"])
-    g["lift"], g["lift_lo"], g["lift_hi"] = g["rate"] / base, g["rate_lo"] / base, g["rate_hi"] / base
+    g["lift"] = g["rate"] / base
+    rates, lifts = _cluster_bootstrap_bins(d["customer_id"].to_numpy(), cats.to_numpy().astype(int), d["label"].to_numpy(), len(g))
+    g["rate_lo"], g["rate_hi"] = _interval(rates)
+    g["lift_lo"], g["lift_hi"] = _interval(lifts)
     g["share_of_rows"] = g["n"] / g["n"].sum()
     cum = g["share_of_rows"].cumsum()
     g["quintile_span"] = [_quintile_span(a, b) for a, b in zip(cum - g["share_of_rows"], cum)]
@@ -265,24 +328,47 @@ def quintiles(pop: pd.DataFrame, signal: str, period: str = "all") -> pd.DataFra
     g.insert(0, "signal", signal)
     g.insert(1, "period", period)
     g["base_rate"] = base
+    g["n_missing"] = n_missing
+    g["estimable"] = g["upgrades"] >= MIN_UPGRADES_FOR_LIFT
     return g
 
 
+def rule_threshold(x: pd.Series, top_share: float) -> float:
+    """Signal value at which a 'top `top_share` of account-months' rule starts (dashboard control; rows tied at the
+    threshold count as above it). When the value at that quantile is a mass point (20%+ of rows, e.g. zero seat
+    growth) the rule starts just above it, so it does not sweep in the whole mass — the same convention as the
+    quintile bins — unless almost nothing (< MIN_BIN_SHARE) lies above the mass point (100% peak utilization), in
+    which case the mass point itself is the rule. The share actually captured is reported with the rule."""
+    x = x.dropna()
+    t = float(x.quantile(1 - top_share))
+    if (x == t).mean() >= 0.2:
+        above = x[x > t]
+        if len(above) / len(x) >= MIN_BIN_SHARE:
+            t = float(above.min())
+    return t
+
+
 def threshold_rule(pop: pd.DataFrame, signal: str, threshold: float, period: str = "all") -> dict:
-    """Upgrade rate above vs below a threshold of one signal (dashboard control)."""
+    """Upgrade rate above vs below a threshold of one signal (dashboard control). Rows with a missing value for the
+    signal cannot be placed on either side and are left out (`n_missing`). The rate above and the lift carry an
+    account-level bootstrap 95% interval."""
     d = pop[~pop["forced"]]
     if period in ("pre", "post"):
         d = d[d["period"] == period]
+    n_missing = int(d[signal].isna().sum())
     d = d[d[signal].notna()]
     above = d[signal] >= threshold
     base = d["label"].mean()
     n_above, n_up = int(above.sum()), int(d["label"].sum())
     rate_above = d.loc[above, "label"].mean() if n_above else np.nan
     rate_below = d.loc[~above, "label"].mean() if n_above < len(d) else np.nan
-    lo, hi = _wilson([d.loc[above, "label"].sum()], [max(n_above, 1)])
-    return dict(period=period, threshold=threshold, n=len(d), n_above=n_above, share_above=n_above / len(d),
-                rate_above=rate_above, rate_above_lo=float(lo[0]), rate_above_hi=float(hi[0]), rate_below=rate_below,
-                base_rate=base, lift=rate_above / base if base else np.nan,
+    rates, lifts = _cluster_bootstrap_bins(d["customer_id"].to_numpy(), above.to_numpy().astype(int), d["label"].to_numpy(), 2)
+    rate_lo, rate_hi = _interval(rates[:, 1])
+    lift_lo, lift_hi = _interval(lifts[:, 1])
+    return dict(period=period, threshold=threshold, n=len(d), n_missing=n_missing, n_accounts=int(d["customer_id"].nunique()),
+                n_above=n_above, share_above=n_above / len(d), rate_above=rate_above, rate_above_lo=float(rate_lo),
+                rate_above_hi=float(rate_hi), rate_below=rate_below, base_rate=base,
+                lift=rate_above / base if base else np.nan, lift_lo=float(lift_lo), lift_hi=float(lift_hi),
                 upgrades_above=int(d.loc[above, "label"].sum()), upgrades_total=n_up,
                 recall=d.loc[above, "label"].sum() / n_up if n_up else np.nan)
 
@@ -336,17 +422,36 @@ def drift_weekly() -> pd.DataFrame:
 
 DRIFT_PRE = ("pre: Oct 2025 – Mar 2026", "2025-10-31", "2026-03-31")
 DRIFT_POST = ("post: Jul – Sep 2026", "2026-07-31", "2026-09-30")
+DRIFT_SIGNALS = ("gate_hits_per_wau", "gate_user_share", "automation_per_wau")
+
+
+def _drift_base() -> pd.DataFrame:
+    """Basic accounts with tenure >= 3 at each month-end: the population behind the drift key numbers (every
+    month-end, including those whose 90-day label window is not complete)."""
+    f = marts.load("fct_account_month_features")
+    return f[(f["plan_id"] == "basic") & (f["tenure_months"] >= MIN_TENURE)]
+
+
+def drift_monthly() -> pd.DataFrame:
+    """Mean and median of each packaging-sensitive signal (the 13-week rate per account) at every month-end."""
+    b = _drift_base()
+    g = b.groupby("month_end").agg(accounts=("customer_id", "size"), **{f"{s}_mean": (s, "mean") for s in DRIFT_SIGNALS},
+                                   **{f"{s}_median": (s, "median") for s in DRIFT_SIGNALS}).reset_index()
+    g["drift_window"] = np.select([(g["month_end"] >= DRIFT_PRE[1]) & (g["month_end"] <= DRIFT_PRE[2]),
+                                   (g["month_end"] >= DRIFT_POST[1]) & (g["month_end"] <= DRIFT_POST[2])],
+                                  [DRIFT_PRE[0], DRIFT_POST[0]], "")
+    return g
 
 
 def drift_distribution() -> pd.DataFrame:
     """Distribution of the packaging-sensitive signals for Basic accounts (tenure >= 3) before the change and in
-    the months whose 13-week windows lie entirely after it."""
-    f = marts.load("fct_account_month_features")
-    b = f[(f["plan_id"] == "basic") & (f["tenure_months"] >= MIN_TENURE)]
+    the months whose 13-week windows lie entirely after it. This table is the source of the gate_hits_* /
+    automation_* key numbers and of the fig_gate_drift title."""
+    b = _drift_base()
     rows = []
     for label, a, z in (DRIFT_PRE, DRIFT_POST):
         d = b[(b["month_end"] >= a) & (b["month_end"] <= z)]
-        for s in ("gate_hits_per_wau", "gate_user_share", "automation_per_wau"):
+        for s in DRIFT_SIGNALS:
             x = d[s].dropna()
             qs = x.quantile([0.1, 0.25, 0.5, 0.75, 0.9])
             rows.append(dict(period=label, signal=s, name=SIGNALS[s]["name"], account_months=len(x), mean=x.mean(),
@@ -422,20 +527,25 @@ def contributions(bundle: dict, X: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(Z * bundle["model"].coef_[0], index=X.index, columns=bundle["columns"])
 
 
+def _cluster_indices(account: np.ndarray, n_boot: int):
+    """Yield row-index arrays for `n_boot` account-level bootstrap draws (accounts resampled with replacement,
+    every row of a drawn account included). Account ids are sorted, so the draw never depends on row order."""
+    rng = np.random.default_rng(get_settings().seed)
+    ids, inv = np.unique(account, return_inverse=True)
+    order = np.argsort(inv, kind="stable")
+    starts = np.searchsorted(inv[order], np.arange(len(ids)))
+    ends = np.append(starts[1:], len(order))
+    for _ in range(n_boot):
+        samp = rng.integers(0, len(ids), len(ids))
+        yield np.concatenate([order[starts[i]:ends[i]] for i in samp])
+
+
 def odds_ratios(bundle: dict, X: pd.DataFrame, y: np.ndarray, account: pd.Series, n_boot: int = N_BOOT_MODEL) -> pd.DataFrame:
     """Odds ratio per 1 SD of each feature with an account-level (cluster) bootstrap 95% interval."""
     Z = bundle["scaler"].transform(X[bundle["columns"]])
     w = _account_weights(account)
-    rng = np.random.default_rng(get_settings().seed)
-    acc = account.to_numpy()
-    ids, inv = np.unique(acc, return_inverse=True)
-    order = np.argsort(inv, kind="stable")
-    starts = np.searchsorted(inv[order], np.arange(len(ids)))
-    ends = np.append(starts[1:], len(order))
     coefs = []
-    for _ in range(n_boot):
-        samp = rng.integers(0, len(ids), len(ids))
-        idx = np.concatenate([order[starts[i]:ends[i]] for i in samp])
+    for idx in _cluster_indices(account.to_numpy(), n_boot):
         m = LogisticRegression(C=REGULARIZATION_C, solver="lbfgs", max_iter=2000)
         m.fit(Z[idx], y[idx], sample_weight=w[idx])
         coefs.append(m.coef_[0])
@@ -502,19 +612,49 @@ def calibration_table(ts: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(rows, ignore_index=True)
 
 
+def auc_interval(d: pd.DataFrame, n_boot: int = N_BOOT_MODEL) -> tuple[float, float]:
+    """Account-level bootstrap 95% interval of the AUC on scored rows (accounts resampled, scores fixed)."""
+    y, s = d["label"].to_numpy(), d["score"].to_numpy()
+    draws = []
+    for idx in _cluster_indices(d["customer_id"].to_numpy(), n_boot):
+        if 0 < y[idx].sum() < len(idx):
+            draws.append(roc_auc_score(y[idx], s[idx]))
+    lo, hi = np.percentile(draws, [2.5, 97.5])
+    return float(lo), float(hi)
+
+
 def model_metrics(ts: pd.DataFrame) -> pd.DataFrame:
+    """Test-period metrics (all / pre / post the packaging change). AUC carries an account-level bootstrap interval;
+    precision and recall at a capacity are means over the period's months (see capacity_metrics)."""
     rows = []
     for period in ("all", "pre", "post"):
         d = ts if period == "all" else ts[ts["period"] == period]
+        auc_lo, auc_hi = auc_interval(d)
         r = dict(period=period, rows=len(d), accounts=int(d["customer_id"].nunique()), months=int(d["month_end"].nunique()),
                  upgrades=int(d["label"].sum()), base_rate=float(d["label"].mean()),
-                 auc=float(roc_auc_score(d["label"], d["score"])), mean_predicted=float(d["score"].mean()))
+                 auc=float(roc_auc_score(d["label"], d["score"])), auc_lo=auc_lo, auc_hi=auc_hi,
+                 mean_predicted=float(d["score"].mean()))
         for k in CAPACITIES:
             c = capacity_metrics(ts, k, period)
             r.update({f"precision_at_{k}": c["precision"], f"recall_at_{k}": c["recall"], f"lift_at_{k}": c["lift"],
                       f"upgrades_per_month_at_{k}": c["upgrades_per_month"], f"mrr_covered_per_month_at_{k}": c["mrr_covered_per_month"]})
         rows.append(r)
     return pd.DataFrame(rows)
+
+
+def auc_change_sentence(k: dict) -> str:
+    """Before / after AUC with intervals and a verdict that does not exceed the evidence (shared by the page and the
+    notebook, so both say the same thing about whether the ranking survived the packaging change)."""
+    pre = f"{k['auc_test_pre']:.2f} ({k['auc_test_pre_lo']:.2f}–{k['auc_test_pre_hi']:.2f})"
+    post = f"{k['auc_test_post']:.2f} ({k['auc_test_post_lo']:.2f}–{k['auc_test_post_hi']:.2f})"
+    if k["auc_test_post"] >= k["auc_test_pre"]:
+        verdict = "no sign the ranking degraded"
+    elif k["auc_test_post_hi"] >= k["auc_test_pre_lo"]:
+        verdict = "no clear change in the ranking"
+    else:
+        verdict = "the ranking weakened"
+    return (f"AUC {pre} before the change and {post} after — {verdict}, though three months with "
+            f"{k['test_upgrades_post']} upgrades cannot show a small change either way")
 
 
 def _scores_frame(d: pd.DataFrame, p: np.ndarray) -> pd.DataFrame:
@@ -525,7 +665,9 @@ def _scores_frame(d: pd.DataFrame, p: np.ndarray) -> pd.DataFrame:
 
 
 def train_and_test(pop: pd.DataFrame, raw_levels: bool = False) -> tuple[dict, pd.DataFrame]:
-    """Time split per 02 §13: train on t <= 2025-12-31, test on 2026-01-31 .. 2026-06-30 (forced rows excluded)."""
+    """Purged time split per 02 §13: train on t <= TRAIN_END (2025-09-30), test on TEST_START .. TEST_END
+    (2026-01-31 .. 2026-06-30); the Oct – Dec 2025 month-ends are an embargo equal to the 90-day label horizon, so no
+    training label window reaches the test period (forced rows excluded)."""
     d = pop[~pop["forced"]]
     tr, te = d[d["split"] == "train"], d[d["split"] == "test"]
     Xtr, fill = feature_frame(tr, raw_levels=raw_levels)
@@ -685,12 +827,16 @@ def build() -> dict[str, pd.DataFrame]:
                                 "coef": deploy["model"].coef_[0], "odds_ratio": np.exp(deploy["model"].coef_[0]),
                                 "sd": deploy["scaler"].scale_})
     reasons = pd.DataFrame({"reason_code": list(REASON_CODES), "definition": list(REASON_CODES.values())})
+    emb = pop[~pop["forced"] & (pop["split"] == "embargo")]
     meta = pd.DataFrame([dict(
         train_end=TRAIN_END, test_start=TEST_START, test_end=TEST_END, packaging_change=PACKAGING_CHANGE,
+        embargo_start=pd.Timestamp(EMBARGO_MONTHS[0]), embargo_end=pd.Timestamp(EMBARGO_MONTHS[-1]),
+        embargo_rows=len(emb), embargo_accounts=int(emb["customer_id"].nunique()), embargo_upgrades=int(emb["label"].sum()),
         prior_correction_train=bundle["prior_correction"], prior_correction_deploy=deploy["prior_correction"],
         deploy_post_shift=deploy["post_shift"], deploy_post_base_rate=deploy["post_base_rate"], regularization_c=REGULARIZATION_C,
         train_rows=bundle["n_rows"], train_accounts=bundle["n_accounts"], train_base_rate=bundle["base_rate"],
-        deploy_rows=deploy["n_rows"], deploy_accounts=deploy["n_accounts"], deploy_base_rate=deploy["base_rate"])])
+        deploy_rows=deploy["n_rows"], deploy_accounts=deploy["n_accounts"], deploy_base_rate=deploy["base_rate"],
+        n_boot_bins=N_BOOT_BINS, n_boot_model=N_BOOT_MODEL, n_boot_smd=N_BOOT_SMD)])
     tables = {
         "expansion__population": pop,
         "expansion__upgrade_events": ev,
@@ -698,6 +844,7 @@ def build() -> dict[str, pd.DataFrame]:
         "expansion__signal_table": sig,
         "expansion__quintiles": quint,
         "expansion__drift_weekly": drift_weekly(),
+        "expansion__drift_monthly": drift_monthly(),
         "expansion__drift_distribution": drift_distribution(),
         "expansion__test_scores": ts,
         "expansion__model_metrics": model_metrics(ts),
@@ -754,11 +901,20 @@ def key_numbers() -> dict:
                                             "post_lo": float(r.top_quintile_lift_post_lo), "post_hi": float(r.top_quintile_lift_post_hi)}
                                  for r in sig.itertuples()},
         "signals_lift_holds_post": [r.signal for r in sig.itertuples() if r.top_quintile_lift_post_lo > 1.0],
+        "interval_method": "account-level bootstrap 95% (bin rates, lifts, threshold rule, AUC); ordinary bootstrap for SMD",
+        "n_boot_bins": N_BOOT_BINS, "n_boot_model": N_BOOT_MODEL, "n_boot_smd": N_BOOT_SMD,
+        "train_end": str(TRAIN_END.date()), "embargo_months": list(EMBARGO_MONTHS),
+        "test_start": str(TEST_START.date()), "test_end": str(TEST_END.date()),
         "train_rows": int(meta["train_rows"]), "train_accounts": int(meta["train_accounts"]), "base_rate_train": float(meta["train_base_rate"]),
-        "test_rows": int(mm.loc["all", "rows"]), "test_upgrades": int(mm.loc["all", "upgrades"]),
+        "embargo_rows": int(meta["embargo_rows"]), "embargo_accounts": int(meta["embargo_accounts"]), "embargo_upgrades": int(meta["embargo_upgrades"]),
+        "test_rows": int(mm.loc["all", "rows"]), "test_accounts": int(mm.loc["all", "accounts"]), "test_upgrades": int(mm.loc["all", "upgrades"]),
+        "test_upgrades_pre": int(mm.loc["pre", "upgrades"]), "test_upgrades_post": int(mm.loc["post", "upgrades"]),
         "base_rate_test": float(mm.loc["all", "base_rate"]), "base_rate_test_pre": float(mm.loc["pre", "base_rate"]),
         "base_rate_test_post": float(mm.loc["post", "base_rate"]),
         "auc_test": float(mm.loc["all", "auc"]), "auc_test_pre": float(mm.loc["pre", "auc"]), "auc_test_post": float(mm.loc["post", "auc"]),
+        "auc_test_lo": float(mm.loc["all", "auc_lo"]), "auc_test_hi": float(mm.loc["all", "auc_hi"]),
+        "auc_test_pre_lo": float(mm.loc["pre", "auc_lo"]), "auc_test_pre_hi": float(mm.loc["pre", "auc_hi"]),
+        "auc_test_post_lo": float(mm.loc["post", "auc_lo"]), "auc_test_post_hi": float(mm.loc["post", "auc_hi"]),
         "mean_predicted_test_pre": float(mm.loc["pre", "mean_predicted"]), "mean_predicted_test_post": float(mm.loc["post", "mean_predicted"]),
         "capacity_default": CAPACITY_DEFAULT,
         "n_opportunities": int(len(opp)), "opportunities_expected_upgrades": float(opp["propensity"].sum()),
@@ -791,12 +947,16 @@ def key_numbers() -> dict:
 # =============================================================================== figures
 PERIOD_LABEL = {"all": "Jan 2024 – Jun 2026", "pre": "before the Apr 2026 packaging change (to Mar 2026)",
                 "post": "after the change (Apr – Jun 2026 month-ends)"}
+# Direction encoding on this page: blue (ACCENT) = higher / raises, the red end of the theme's diverging scale =
+# lower / lowers, gray = the interval includes the null. Orange is reserved for Technology accounts and not used here.
+LOWER = theme.DIVERGING_SCALE[1][1]
+BOOT_NOTE = "account-level bootstrap 95% interval"
 
 
 def fig_smd_dotplot(sig: pd.DataFrame | None = None) -> go.Figure:
     s = (marts.load("expansion__signal_table") if sig is None else sig).sort_values("smd")
     kind = np.where(s["smd_lo"] > 0, "higher", np.where(s["smd_hi"] < 0, "lower", "unclear"))
-    style = {"higher": ("Higher among upgraders", theme.ACCENT), "lower": ("Lower among upgraders", theme.SERIES[1]),
+    style = {"higher": ("Higher among upgraders", theme.ACCENT), "lower": ("Lower among upgraders", LOWER),
              "unclear": ("Interval includes zero", theme.DEEMPH)}
     fig = go.Figure()
     for key, (label, color) in style.items():
@@ -835,72 +995,95 @@ def fig_quintile_lift(signal: str, period: str = "all", pop: pd.DataFrame | None
     base = float(q["base_rate"].iloc[0])
     colors = [theme.ACCENT if i == len(q) - 1 else theme.DEEMPH for i in range(len(q))]
     fig = go.Figure(go.Bar(
-        x=q["bin"], y=q["rate"], marker=dict(color=colors), text=[f"{v:.1f}×" for v in q["lift"]], textposition="outside",
-        textfont=dict(color=theme.INK), cliponaxis=False,
+        x=q["bin"], y=q["rate"], marker=dict(color=colors), cliponaxis=False,
         error_y=dict(type="data", symmetric=False, array=q["rate_hi"] - q["rate"], arrayminus=q["rate"] - q["rate_lo"],
                      color=theme.INK_2, thickness=1.5, width=4),
-        customdata=np.c_[q["quintile_span"], q["n"], q["upgrades"], q["share_of_rows"]],
+        customdata=np.c_[q["quintile_span"], q["n"], q["upgrades"], q["share_of_rows"], q["lift_lo"], q["lift_hi"]],
         hovertemplate="%{customdata[0]} · %{x}<br>upgrade rate %{y:.1%} (%{customdata[2]} of %{customdata[1]:,} account-months, "
-                      "%{customdata[3]:.0%} of rows)<extra></extra>"))
+                      "%{customdata[3]:.0%} of rows)<br>lift interval %{customdata[4]:.1f}–%{customdata[5]:.1f}×<extra></extra>"))
+    # lift labels sit above the upper whisker, not on the bar top where the error cap would strike through them
+    fig.add_trace(go.Scatter(x=q["bin"], y=q["rate_hi"], mode="text", text=[f"{v:.1f}×" for v in q["lift"]],
+                             textposition="top center", textfont=dict(color=theme.INK, size=12), cliponaxis=False,
+                             hoverinfo="skip", showlegend=False))
     fig.add_hline(y=base, line=dict(color=theme.INK_2, width=1, dash="dot"),
                   annotation_text=f"base rate {pct(base)}", annotation_position="top left",
                   annotation_font=dict(color=theme.INK_2, size=11))
-    fig.update_yaxes(tickformat=".0%", rangemode="tozero", title_text="90-day voluntary upgrade rate")
+    fig.update_yaxes(tickformat=".0%", rangemode="tozero", title_text="90-day voluntary upgrade rate",
+                     range=[0, float(q["rate_hi"].max()) * 1.25])
     fig.update_xaxes(title_text=f"{SIGNALS[signal]['name']} — quintile bins (low → high)")
     fig.update_layout(showlegend=False, bargap=0.4)
     top = q.iloc[-1]
     return theme.apply(fig, f"{SIGNALS[signal]['short']}: the top bin upgrades at {pct(top['rate'])}, "
-                            f"{top['lift']:.1f}× the base rate ({top['quintile_span']})",
+                            f"{top['lift']:.1f}× the base rate ({top['quintile_span']}; interval {top['lift_lo']:.1f}–{top['lift_hi']:.1f}×)",
                        f"All eligible Basic account-months {PERIOD_LABEL[period]}; bins are quintiles of the signal "
-                       "(fewer when many rows tie); whiskers = Wilson 95% interval", height=400)
+                       f"(fewer when many rows tie); whiskers = {BOOT_NOTE} of the bin rate; labels = lift vs base rate", height=400)
 
 
-def fig_gate_drift(weekly: pd.DataFrame | None = None, start: str = "2025-07-01") -> go.Figure:
+def fig_gate_drift(weekly: pd.DataFrame | None = None, dist: pd.DataFrame | None = None,
+                   monthly: pd.DataFrame | None = None, start: str = "2025-07-01") -> go.Figure:
+    """Weekly pooled paywall rate around the packaging change, with the month-end 13-week median behind the key
+    numbers. The title's drop is read from expansion__drift_distribution — the same table key_numbers() uses — so the
+    chart, the tiles and the documents agree (Oct 2025 – Mar 2026 vs Jul – Sep 2026 month-ends)."""
     w = (marts.load("expansion__drift_weekly") if weekly is None else weekly)
     w = w[w["week_start"] >= start]
-    pre = w[w["week_start"] < PACKAGING_CHANGE - pd.Timedelta(days=7)]
-    post = w[w["week_start"] >= pd.Timestamp("2026-05-01")]
+    dd = (marts.load("expansion__drift_distribution") if dist is None else dist)
+    gate = dd[dd["signal"] == "gate_hits_per_wau"].set_index("period")
+    m = (marts.load("expansion__drift_monthly") if monthly is None else monthly)
+    m = m[m["month_end"] >= start]
+    pre_mean, post_mean = float(gate.loc[DRIFT_PRE[0], "mean"]), float(gate.loc[DRIFT_POST[0], "mean"])
+    drop = post_mean / pre_mean - 1
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=w["week_start"], y=w["gate_hits_per_wau"], mode="lines", name="All Basic accounts pooled",
+    for (label, a, z), mean in ((DRIFT_PRE, pre_mean), (DRIFT_POST, post_mean)):
+        x0 = pd.Timestamp(a) - pd.offsets.MonthBegin(1)
+        fig.add_vrect(x0=x0, x1=pd.Timestamp(z), fillcolor=theme.NEUTRAL_MID, opacity=0.6, layer="below", line_width=0)
+        fig.add_annotation(x=x0 + (pd.Timestamp(z) - x0) / 2, y=0.98, yref="paper", yanchor="top", showarrow=False,
+                           text=f"{label.split(':')[0]}: mean {mean:.2f}", font=dict(color=theme.INK_2, size=11))
+    fig.add_trace(go.Scatter(x=w["week_start"], y=w["gate_hits_per_wau"], mode="lines", name="All Basic accounts pooled, by week",
                              line=dict(color=theme.ACCENT, width=2),
                              hovertemplate="week of %{x|%d %b %Y}<br>paywall hits per active user %{y:.3f}<extra></extra>"))
-    fig.add_trace(go.Scatter(x=w["week_start"], y=w["gate_hits_per_wau_median"], mode="lines", name="Median Basic account",
-                             line=dict(color=theme.SERIES[1], width=2),
-                             hovertemplate="week of %{x|%d %b %Y}<br>median account %{y:.3f}<extra></extra>"))
+    fig.add_trace(go.Scatter(x=m["month_end"], y=m["gate_hits_per_wau_median"], mode="lines+markers",
+                             name="Median Basic account, 13-week rate at month-end",
+                             line=dict(color=theme.INK_2, width=1.5, dash="dash"), marker=dict(size=6, color=theme.INK_2),
+                             hovertemplate="month-end %{x|%d %b %Y}<br>median account, 13-week rate %{y:.3f}<extra></extra>"))
     fig.add_vline(x=PACKAGING_CHANGE, line=dict(color=theme.INK_2, width=1, dash="dash"))
-    fig.add_annotation(x=PACKAGING_CHANGE, y=1.0, yref="paper", text="Packaging change 15 Apr 2026", showarrow=False,
+    fig.add_annotation(x=PACKAGING_CHANGE, y=0.86, yref="paper", text="Packaging change 15 Apr 2026", showarrow=False,
                        xanchor="left", yanchor="top", xshift=6, font=dict(color=theme.INK_2, size=11))
     fig.update_yaxes(rangemode="tozero", tickformat=".2f", title_text="Paywall hits per active user per week")
     fig.update_xaxes(tickformat="%b %Y", dtick="M2")
-    drop = post["gate_hits_per_wau"].mean() / pre["gate_hits_per_wau"].mean() - 1
     return theme.apply(fig, f"Paywall hits per active user fell {pct(-drop, 0)} after the April packaging change "
-                            f"({pre['gate_hits_per_wau'].mean():.2f} → {post['gate_hits_per_wau'].mean():.2f} per week)",
-                       "Premium-feature gate hits ÷ weekly active users, Basic accounts live at week end, complete weeks only",
-                       height=380)
+                            f"({pre_mean:.2f} → {post_mean:.2f} per week)",
+                       "Premium-feature gate hits ÷ weekly active users, Basic accounts with 3+ months tenure; shaded = the month-ends "
+                       "behind the headline means (13-week windows entirely before / after the change); the median lags the "
+                       "change by its 13-week window", height=400)
 
 
 def fig_lift_pre_post(sig: pd.DataFrame | None = None) -> go.Figure:
     s = (marts.load("expansion__signal_table") if sig is None else sig).sort_values("top_quintile_lift_post")
+    # a post-change top bin with fewer than MIN_UPGRADES_FOR_LIFT upgrades has no usable lift: it is listed, not plotted
+    weak = s[s["top_quintile_upgrades_post"] < MIN_UPGRADES_FOR_LIFT]
     fig = go.Figure()
-    for col, label, color, dy in (("pre", "Before the change (to Mar 2026)", theme.DEEMPH, 0),
-                                  ("post", "After the change (Apr – Jun 2026)", theme.ACCENT, 0)):
+    for col, label, color, d in (("pre", "Before the change (to Mar 2026)", theme.DEEMPH, s),
+                                 ("post", "After the change (Apr – Jun 2026)", theme.ACCENT, s.drop(weak.index))):
         fig.add_trace(go.Scatter(
-            x=s[f"top_quintile_lift_{col}"], y=s["name"], mode="markers", name=label,
+            x=d[f"top_quintile_lift_{col}"], y=d["name"], mode="markers", name=label,
             marker=dict(size=10, color=color, line=dict(color=theme.SURFACE, width=2)),
-            error_x=dict(type="data", symmetric=False, array=s[f"top_quintile_lift_{col}_hi"] - s[f"top_quintile_lift_{col}"],
-                         arrayminus=s[f"top_quintile_lift_{col}"] - s[f"top_quintile_lift_{col}_lo"], color=color,
+            error_x=dict(type="data", symmetric=False, array=d[f"top_quintile_lift_{col}_hi"] - d[f"top_quintile_lift_{col}"],
+                         arrayminus=d[f"top_quintile_lift_{col}"] - d[f"top_quintile_lift_{col}_lo"], color=color,
                          thickness=1.5, width=3),
-            hovertemplate="%{y}<br>" + label + ": top-quintile lift %{x:.2f}×<extra></extra>"))
+            customdata=np.c_[d[f"top_quintile_lift_{col}_lo"], d[f"top_quintile_lift_{col}_hi"]],
+            hovertemplate="%{y}<br>" + label + ": top-bin lift %{x:.2f}× (%{customdata[0]:.2f}–%{customdata[1]:.2f}×)<extra></extra>"))
     fig.add_vline(x=1.0, line=dict(color=theme.AXIS, width=1))
-    fig.update_xaxes(title_text="Top-quintile upgrade rate ÷ base rate (lift)", showgrid=True, gridcolor=theme.GRID,
+    fig.update_xaxes(title_text="Top-bin upgrade rate ÷ base rate (lift)", showgrid=True, gridcolor=theme.GRID,
                      rangemode="tozero")
     fig.update_yaxes(showgrid=False, automargin=True, categoryorder="array", categoryarray=s["name"].tolist())
     fig.update_layout(margin=dict(l=40, r=30))
     holds = s[s["top_quintile_lift_post_lo"] > 1.0]
+    note = (f"; not estimable after the change (under {MIN_UPGRADES_FOR_LIFT} upgrades in the top bin): "
+            + ", ".join(weak["short"].str.lower())) if len(weak) else ""
     return theme.apply(fig, f"{len(holds)} of {len(s)} signals still separate upgraders after the change "
                             f"(interval above 1×); the rest are too small or too noisy in three months",
-                       "Lift of the highest signal quintile, computed within each period so a level shift does not matter; "
-                       "bars = Wilson 95% interval of the bin rate ÷ base rate", height=max(420, 90 + 30 * len(s)))
+                       "Lift of the highest signal bin, computed within each period so a level shift does not matter; "
+                       f"bars = {BOOT_NOTE} of the bin rate ÷ base rate{note}", height=max(420, 90 + 30 * len(s)))
 
 
 def fig_capture_curve(k: int = CAPACITY_DEFAULT, curve: pd.DataFrame | None = None, max_k: int = 600) -> go.Figure:
@@ -923,8 +1106,7 @@ def fig_capture_curve(k: int = CAPACITY_DEFAULT, curve: pd.DataFrame | None = No
     fig.update_xaxes(title_text="Accounts contacted per month (ranked by propensity)", showgrid=True, gridcolor=theme.GRID)
     return theme.apply(fig, f"Working the top {k} accounts a month captures {pct(at.get('pre', np.nan), 0)} of upgrades before the "
                             f"change and {pct(at.get('post', np.nan), 0)} after",
-                       "Test period Jan – Jun 2026, model trained on month-ends to Dec 2025; each month ranked separately and averaged",
-                       height=400)
+                       f"Model {SPLIT_NOTE}; each test month ranked separately and averaged", height=400)
 
 
 def fig_calibration(period: str = "all", cal: pd.DataFrame | None = None) -> go.Figure:
@@ -954,7 +1136,7 @@ def fig_calibration(period: str = "all", cal: pd.DataFrame | None = None) -> go.
 def fig_odds_ratios(ors: pd.DataFrame | None = None) -> go.Figure:
     o = (marts.load("expansion__odds_ratios") if ors is None else ors).sort_values("odds_ratio")
     kind = np.where(o["or_lo"] > 1, "up", np.where(o["or_hi"] < 1, "down", "unclear"))
-    style = {"up": ("Raises propensity", theme.ACCENT), "down": ("Lowers propensity", theme.SERIES[1]),
+    style = {"up": ("Raises propensity", theme.ACCENT), "down": ("Lowers propensity", LOWER),
              "unclear": ("Interval includes 1", theme.DEEMPH)}
     fig = go.Figure()
     for key, (label, color) in style.items():
@@ -974,8 +1156,8 @@ def fig_odds_ratios(ors: pd.DataFrame | None = None) -> go.Figure:
     top = o.sort_values("odds_ratio", ascending=False).head(2)
     return theme.apply(fig, f"Strongest positive signals per 1 SD: {top.iloc[0]['label'].lower()} ({top.iloc[0]['odds_ratio']:.2f}×) "
                             f"and {top.iloc[1]['label'].lower()} ({top.iloc[1]['odds_ratio']:.2f}×)",
-                       "Logistic regression on month-ends to Dec 2025, standardized features, L2 (C = 1), one vote per account; "
-                       "bars = account-level bootstrap 95% interval", height=max(420, 90 + 28 * len(o)))
+                       "Logistic regression on month-ends to Sep 2025 (Oct – Dec 2025 held out), standardized features, "
+                       f"L2 (C = 1), one vote per account; bars = {BOOT_NOTE}", height=max(420, 90 + 28 * len(o)))
 
 
 def fig_group_medians(sig: pd.DataFrame | None = None) -> go.Figure:

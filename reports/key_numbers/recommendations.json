@@ -1,13 +1,13 @@
 {
   "forward_base_mrr": 2062545.14,
   "csm_capacity_per_quarter": 120,
-  "total_impact_mrr_base": 31430.68581633409,
-  "total_impact_mrr_low": 15545.789875555516,
-  "total_impact_mrr_high": 49416.23512510736,
-  "total_impact_arr_base": 377168.2297960091,
-  "total_nrr_pts_base": 0.015238786878785156,
-  "total_nrr_pts_low": 0.007537187707589041,
-  "total_nrr_pts_high": 0.02395886236221107,
+  "total_impact_mrr_base": 31200.285816334093,
+  "total_impact_mrr_low": 15430.589875555515,
+  "total_impact_mrr_high": 49032.235125107356,
+  "total_impact_arr_base": 374403.4297960091,
+  "total_nrr_pts_base": 0.01512708023269449,
+  "total_nrr_pts_low": 0.007481334384543709,
+  "total_nrr_pts_high": 0.023772684618726628,
   "loss_rates": {
     "all_paying": 0.1450899237479648,
     "all_paying_n": 21292.0,
@@ -25,22 +25,60 @@
     "silent_n": 609.0,
     "saved_re_risk": 0.22964786065884135,
     "saved_re_risk_n": 89.0,
-    "renewal_loss_tech_apr_sep_2026": 0.1813342645906334,
+    "renewal_loss_tech_apr_sep_2026": 0.18133426459063326,
     "renewal_loss_tech_apr_sep_2026_n": 136.0,
-    "renewal_loss_non_tech_apr_sep_2026": 0.11953766146721867,
+    "renewal_loss_tech_apr_sep_2026_lo": 0.11958546689663778,
+    "renewal_loss_tech_apr_sep_2026_hi": 0.2440840916473123,
+    "renewal_event_rate_tech_apr_sep_2026": 0.4117647058823529,
+    "renewal_loss_non_tech_apr_sep_2026": 0.1195376614672188,
     "renewal_loss_non_tech_apr_sep_2026_n": 420.0,
+    "renewal_loss_non_tech_apr_sep_2026_lo": 0.07498612618698623,
+    "renewal_loss_non_tech_apr_sep_2026_hi": 0.1725333695343742,
+    "renewal_event_rate_non_tech_apr_sep_2026": 0.23333333333333334,
     "renewal_loss_tech_apr_sep_2025": 0.12866787290856474,
     "renewal_loss_tech_apr_sep_2025_n": 66.0,
+    "renewal_loss_tech_apr_sep_2025_lo": 0.04371118636380901,
+    "renewal_loss_tech_apr_sep_2025_hi": 0.24716815593064165,
+    "renewal_event_rate_tech_apr_sep_2025": 0.3181818181818182,
     "renewal_loss_non_tech_apr_sep_2025": 0.11832545750797363,
-    "renewal_loss_non_tech_apr_sep_2025_n": 164.0
+    "renewal_loss_non_tech_apr_sep_2025_n": 164.0,
+    "renewal_loss_non_tech_apr_sep_2025_lo": 0.06160581675418255,
+    "renewal_loss_non_tech_apr_sep_2025_hi": 0.1997704093559785,
+    "renewal_event_rate_non_tech_apr_sep_2025": 0.2865853658536585
   },
   "dunning_recovery_rate": 0.6618075801749271,
   "head_of_cs_trigger": {
     "threshold": 0.6,
     "share_by_priority": 0.6606092031084326,
-    "share_by_arr_at_stake": 0.6850827112356725,
+    "share_by_arr_at_stake": 0.6850827112356727,
     "met": true,
-    "arr_at_stake_total": 1736531.9191159212
+    "arr_at_stake_total": 1736531.919115921
+  },
+  "tech_rates": {
+    "q3_2025": {
+      "start_mrr": 242028.68000000002,
+      "expansion_rate": 0.061571545983723906,
+      "contraction_rate": 0.009412107689055692
+    },
+    "q3_2026": {
+      "start_mrr": 447328.66,
+      "expansion_rate": 0.011808498923364311,
+      "contraction_rate": 0.056758223360872974
+    }
+  },
+  "cohort_grr_6m": {
+    "paid_social": {
+      "grr": 0.7622512922694851,
+      "lo": 0.6904527095146331,
+      "hi": 0.8245272162236694,
+      "n": 309
+    },
+    "other_smb": {
+      "grr": 0.8254546537484116,
+      "lo": 0.7840347777246149,
+      "hi": 0.8624387618637925,
+      "n": 701
+    }
   },
   "plays": [
     {
@@ -48,8 +86,8 @@
       "play": "CSM renewal desk for the top 120 at-risk accounts",
       "owner": "Head of CS (named + pooled CSMs)",
       "accounts": 120.0,
-      "addressable_mrr": 196187.63999999998,
-      "outcome_rate": 0.2950625420782761,
+      "addressable_mrr": 196187.64,
+      "outcome_rate": 0.29506254207827604,
       "effect_low": 0.1,
       "effect_base": 0.2,
       "effect_high": 0.3,
@@ -85,35 +123,35 @@
       "owner": "Sales (renewal AEs) + Customer Success",
       "accounts": 190.0,
       "addressable_mrr": 132870.88,
-      "outcome_rate": 0.20289335287560367,
+      "outcome_rate": 0.20289335287560356,
       "effect_low": 0.1,
       "effect_base": 0.2,
       "effect_high": 0.35,
       "reach": 1.0,
-      "impact_mrr": 5391.723668546399,
-      "impact_mrr_low": 2695.8618342731993,
-      "impact_mrr_high": 9435.516419956197,
-      "nrr_pts": 0.0026141118388063006,
-      "nrr_pts_low": 0.0013070559194031503,
-      "nrr_pts_high": 0.004574695717911026
+      "impact_mrr": 5391.723668546396,
+      "impact_mrr_low": 2695.861834273198,
+      "impact_mrr_high": 9435.516419956191,
+      "nrr_pts": 0.0026141118388062993,
+      "nrr_pts_low": 0.0013070559194031496,
+      "nrr_pts_high": 0.004574695717911023
     },
     {
       "id": "P4",
       "play": "Premium trial for the highest-propensity Basic accounts",
       "owner": "Sales-assist + Product",
       "accounts": 100.0,
-      "addressable_mrr": 5856.0,
+      "addressable_mrr": 5088.0,
       "outcome_rate": 1.0,
       "effect_low": 0.15,
       "effect_base": 0.3,
       "effect_high": 0.5,
       "reach": 1.0,
-      "impact_mrr": 1756.8,
-      "impact_mrr_low": 878.4,
-      "impact_mrr_high": 2928.0,
-      "nrr_pts": 0.0008517631764413166,
-      "nrr_pts_low": 0.0004258815882206583,
-      "nrr_pts_high": 0.001419605294068861
+      "impact_mrr": 1526.3999999999999,
+      "impact_mrr_low": 763.1999999999999,
+      "impact_mrr_high": 2544.0,
+      "nrr_pts": 0.0007400565303506521,
+      "nrr_pts_low": 0.00037002826517532604,
+      "nrr_pts_high": 0.0012334275505844203
     },
     {
       "id": "P5",

@@ -101,7 +101,7 @@ def s_summary() -> dict:
     k = _k("metrics")
     body = kpis([
         ("ARR at 30 Sep 2026", money(k["arr"]), f"{pct(k['mrr_yoy_growth'], 0, signed=True)} vs Sep 2025"),
-        ("12-month NRR", pct(k["nrr_ttm"]), f"{pts(k['nrr_ttm'] - k['nrr_ttm_2026_06'])} vs Jun 2026"),
+        ("12-month NRR", pct(k["nrr_ttm"]), f"{pts(k['nrr_ttm'] - k['nrr_ttm_2025_09'])} vs Sep 2025 ({pts(k['nrr_ttm'] - k['nrr_ttm_2026_06'])} since June)"),
         ("12-month GRR", pct(k["grr_ttm"]), f"{pts(k['grr_ttm'] - k['grr_ttm_2025_09'])} vs Sep 2025"),
         ("Q3 expansion rate", pct(k["expansion_rate_q3_2026"]), f"{pts(k['expansion_rate_q3_2026'] - k['expansion_rate_q3_2025'])} vs Q3 2025"),
         ("Q3 run-rate NRR", pct(k["nrr_runrate_q3_2026"]), f"vs {pct(k['nrr_runrate_q3_2025'])} in Q3 2025"),
@@ -115,10 +115,16 @@ def s_summary() -> dict:
                     f"({pct(k['one_off_expansion_mrr'] / drop, 0)} of the {money(drop)} drop). Like for like, the expansion rate fell from "
                     f"{pct(k['expansion_rate_q2_2026_ex_one_off'])} (Q2) and {pct(k['expansion_rate_q3_2025'])} (Q3 2025) to "
                     f"{pct(k['expansion_rate_q3_2026'])} of starting MRR — more than the 1-point threshold the VP set for re-forecasting.")
-    body += finding(f"<b>Two drivers explain it:</b> Technology-sector accounts stopped adding seats and started cutting "
-                    f"({money(abs(k['bridge_yoy']['Technology (all)']))} less expansion than their Q3 2025 rate), and Basic → Premium upgrades "
-                    f"roughly halved after the April packaging change ({money(abs(k['bridge_yoy']['Non-Tech plan upgrades']))} less). "
-                    f"Seat expansion outside Technology is healthy ({money(k['bridge_yoy']['Non-Tech seat expansion'])} more).")
+    tr_ = _k("recommendations").get("tech_rates", {})
+    t25, t26 = tr_.get("q3_2025", {}), tr_.get("q3_2026", {})
+    tech_detail = (f"; their expansion fell from {pct(t25['expansion_rate'], 1)} to {pct(t26['expansion_rate'], 1)} of their own starting MRR "
+                   f"a quarter and their contraction rose from {pct(t25['contraction_rate'], 1)} to {pct(t26['contraction_rate'], 1)}"
+                   if t25 and t26 else "")
+    body += finding(f"<b>Two drivers explain it:</b> Technology-sector accounts all but stopped adding seats and started cutting "
+                    f"them ({money(abs(k['bridge_yoy']['Technology (all)']))} less expansion than their Q3 2025 rate{tech_detail}), and "
+                    f"plan upgrades outside Technology — mostly Basic → Premium — brought {money(abs(k['bridge_yoy']['Non-Tech plan upgrades']))} "
+                    f"less: the Basic upgrade rate was already falling before April and fell again after the packaging change. Seat expansion outside "
+                    f"Technology is healthy ({money(k['bridge_yoy']['Non-Tech seat expansion'])} more).")
     body += finding(f"<b>The 12-month NRR of {pct(k['nrr_ttm'])} flatters the trend:</b> without the one-off it is {pct(k['nrr_ttm_ex_one_off'])}, "
                     f"and the Q3 run-rate annualises to {pct(k['nrr_runrate_q3_2026'])}. GRR is {pct(k['grr_ttm'])}: contraction nearly doubled "
                     f"({pct(k['contraction_rate_q3_2025'])} → {pct(k['contraction_rate_q3_2026'])} of starting MRR per quarter).")
@@ -136,7 +142,7 @@ SUMMARY_EXTRA: dict = {}   # filled by the slice sections below when their resul
 
 def s_request() -> dict:
     body = """
-<p><b>The request (VP of Revenue, 3 Nov 2026):</b> <i>"The board wants to see NRR. Expansion clearly slowed last quarter — why?
+<p><b>The request (VP of Revenue, 13 Oct 2026):</b> <i>"The board wants to see NRR. Expansion clearly slowed last quarter — why?
 Which customers are quietly downgrading? Which accounts should the CS team prioritize?"</i></p>
 <p>Clarified into six questions (full scope in <code>docs/01_request_and_scope.md</code>):</p>
 """ + table(pd.DataFrame([
@@ -220,13 +226,28 @@ def s_mrr() -> dict:
     from .analysis import metrics as M
     k = _k("metrics")
     q = M.quarterly_base()
-    body = fig(M.fig_mrr_trend(), "Growth is still mostly new logos: new MRR adds about "
-               f"{pct(q.loc['2026-Q3', 'new_rate'])} of starting MRR per quarter.")
+    body = fig(M.fig_mrr_trend(), "Growth is still mostly new logos: they added "
+               f"{pct(q.loc['2026-Q3', 'new_rate'])} of starting MRR in Q3 2026 ({pct(q.loc['2025-Q3', 'new_rate'])} in Q3 2025).")
+    c3 = q.loc["2026-Q3"]
+    losses = c3["contraction_mrr"] + c3["churn_mrr"]
+    gains = c3["expansion_mrr"] + c3["reactivation_mrr"]
+    earlier = q.loc[[i for i in q.index if i < "2026-Q3"]]
+    first_time = bool(((earlier["contraction_mrr"] + earlier["churn_mrr"]) <= (earlier["expansion_mrr"] + earlier["reactivation_mrr"])).all())
     body += fig(M.fig_monthly_movements(), f"<b>Reading:</b> bars above zero add MRR, below zero remove it; the black line is the net. "
-                f"In Q3 2026 contraction ({money(q.loc['2026-Q3', 'contraction_mrr'])}) and churn ({money(q.loc['2026-Q3', 'churn_mrr'])}) "
-                f"together nearly matched expansion + win-backs.")
+                f"In Q3 2026 contraction ({money(c3['contraction_mrr'])}) and churn ({money(c3['churn_mrr'])}) came to {money(losses)} — "
+                f"{'more than' if losses > gains else 'less than'} expansion + win-backs ({money(gains)})"
+                + (", for the first time in the series" if losses > gains and first_time else "")
+                + (f": the existing base lost {money(losses - gains)} net and only new logos kept MRR growing." if losses > gains else "."))
     body += fig(M.fig_quarter_waterfall("2026-Q3"))
     return section("mrr", "MRR and the monthly waterfall", body)
+
+
+def _nrr_peak_sentence(k: dict) -> str:
+    n = marts.load("rpt_nrr_grr_ttm")
+    n = n[n["is_reportable"]]
+    peak = n.loc[n["nrr"].idxmax()]
+    return (f"NRR peaked in {pd.Timestamp(peak['month_end']):%B %Y} ({pct(peak['nrr'])}), the month of the one-off rollout; excluding "
+            f"the rollout, NRR went from {pct(k['nrr_ttm_2026_06_ex_one_off'])} in June to {pct(k['nrr_ttm_ex_one_off'])} in September.")
 
 
 def s_nrr() -> dict:
@@ -234,8 +255,7 @@ def s_nrr() -> dict:
     k = _k("metrics")
     body = fig(M.fig_nrr_trend(), f"<b>Reading:</b> the {k['nrr_base_customers']:,} customers paying on 30 Sep 2025 now pay {pct(k['nrr_ttm'])} "
                f"of what they paid then; capped at their starting MRR they keep {pct(k['grr_ttm'])}. Gray points rest on fewer than 1,000 "
-               f"customers. The June peak includes the one-off rollout; excluding it, NRR drifted from {pct(k['nrr_ttm_2026_06_ex_one_off'])} "
-               f"to {pct(k['nrr_ttm_ex_one_off'])}.")
+               f"customers. " + _nrr_peak_sentence(k))
     body += fig(M.fig_nrr_runrate(), "Run-rate NRR reacts within a quarter but is seasonal and noisy — use it as the early warning that the "
                 "12-month figure will keep falling, not as the board number.")
     return section("nrr", "NRR and GRR", body)
@@ -263,9 +283,12 @@ def s_segments() -> dict:
     from .analysis import metrics as M
     body = "<div class='grid2'>" + fig(M.fig_segment_dumbbell("industry")) + fig(M.fig_segment_dumbbell("acquisition_channel")) + "</div>"
     body += fig(M.fig_segment_dumbbell("segment"))
+    from .docs_mbr import _cohort_sentence
+    coh = marts.load("rpt_cohort_retention")
     body += fig(M.fig_cohort_heatmap("nrr", "quarter"), "<b>Reading the cohorts:</b> each row is the customers who first paid in that "
-                "quarter; each column is months since then. Every cohort dips at month 12 — the first annual renewal, where customers "
-                "right-size seats or leave. Blank cells are not observed yet for the whole cohort.")
+                "quarter; each column is months since then; blank cells are not observed yet for the whole cohort. "
+                + _cohort_sentence(coh[coh["cohort_grain"] == "quarter"])
+                + " The month-12 dip is the first annual renewal, where customers right-size seats or leave.")
     return section("segments", "Segments and cohorts", body)
 
 
