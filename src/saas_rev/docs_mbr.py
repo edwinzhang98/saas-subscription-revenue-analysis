@@ -52,7 +52,8 @@ def account_health_list() -> pd.DataFrame | None:
         r["play"] = r["customer_id"].map(plays).fillna("P2")
         r["queue"] = r["play"].map({"P1": "csm", "P3": "renewal_desk"}).fillna("digital")
         urgent = r["renewal_within_120d"] & (r["days_to_renewal"] < 45)
-        r.loc[urgent, "suggested_play"] = "Urgent (renews in " + r.loc[urgent, "days_to_renewal"].astype(int).astype(str) + " days): " + r.loc[urgent, "suggested_play"]
+        r.loc[urgent, "suggested_play"] = ("Urgent — renews in " + r.loc[urgent, "days_to_renewal"].astype(int).astype(str) + " days: "
+                                           + r.loc[urgent, "suggested_play"].str.replace(" 60 days out", " now", regex=False))
         r = r.sort_values(["renewal_within_120d", "arr_at_stake", "customer_id"], ascending=[False, False, True])
         frames.append(r)
     if opp is not None:

@@ -61,7 +61,7 @@ with right:
     rc = load("datamodel__row_counts")
     st.subheader("Volumes")
     st.dataframe(rc.rename(columns={"table": "Table", "rows": "Rows"}), hide_index=True, width="stretch",
-                 column_config={"Rows": st.column_config.NumberColumn(format="%d")})
+                 column_config={"Rows": st.column_config.NumberColumn(format="localized")})
     st.markdown("""
 - 36 months: GA on 2 Oct 2023 → data cutoff 30 Sep 2026
 - seat-based pricing, 3 tiers (Basic \\$15 / Premium \\$35 per seat-month; Enterprise \\$600 per seat-year, negotiated)
