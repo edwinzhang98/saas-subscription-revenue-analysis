@@ -1,0 +1,16 @@
+# Project configuration. Paths may use "~"; they are expanded at runtime.
+# Override the data directory without editing this file:
+#   export SAAS_DATA_DIR=/some/other/path      (or put SAAS_DATA_DIR=... in a .env file)
+data_dir: ~/projects/data-projects/datasets/p5-saas-synthetic
+
+# Sub-folders / files inside data_dir
+raw_subdir: raw              # synthetic source tables written by data_gen/ (parquet)
+warehouse_file: warehouse.duckdb
+marts_subdir: marts          # parquet cache read by the dashboard and report
+
+# Reporting calendar
+as_of_date: "2026-09-30"     # last closed month (Q3 2026 close)
+window_start: "2023-10-01"   # general availability / first billing month
+
+# Reproducibility
+seed: 20261103
